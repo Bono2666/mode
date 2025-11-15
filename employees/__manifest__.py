@@ -1,10 +1,10 @@
 {
-    'name': "Sales by KSI",
+    'name': "Employees by KSI",
 
-    'summary': "From quotations to invoices",
+    'summary': "Centralize employee information",
 
     'description': """
-From quotations to invoices
+Centralize employee information
     """,
 
     'author': "KSI Solusi",
@@ -13,11 +13,11 @@ From quotations to invoices
     # Categories can be used to filter modules in modules listing
     # Check https://github.com/odoo/odoo/blob/15.0/odoo/addons/base/data/ir_module_category_data.xml
     # for the full list
-    'category': 'Sales',
+    'category': 'Human Resources',
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['base', 'general', 'employees'],
+    'depends': ['base', 'general'],
 
     # always loaded
     'data': [
@@ -29,5 +29,4 @@ From quotations to invoices
     'demo': [
         'demo/demo.xml',
     ],
-    'application': True,
 }

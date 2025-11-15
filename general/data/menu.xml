@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="country" model="general.menu">
+        <field name="menuid">country</field>
+        <field name="menunm">Country</field>
+    </record>
+    <record id="state" model="general.menu">
+        <field name="menuid">state</field>
+        <field name="menunm">State</field>
+    </record>
+    <record id="city" model="general.menu">
+        <field name="menuid">city</field>
+        <field name="menunm">City</field>
+    </record>
+    <record id="region" model="general.menu">
+        <field name="menuid">region</field>
+        <field name="menunm">Region</field>
+    </record>
+    <record id="position" model="general.menu">
+        <field name="menuid">position</field>
+        <field name="menunm">Position</field>
+    </record>
+    <record id="department" model="general.menu">
+        <field name="menuid">department</field>
+        <field name="menunm">Department</field>
+    </record>
+    <record id="employee" model="general.menu">
+        <field name="menuid">employee</field>
+        <field name="menunm">Employee</field>
+    </record>
+    <record id="cust_category" model="general.menu">
+        <field name="menuid">cust_category</field>
+        <field name="menunm">Customer Category</field>
+    </record>
+    <record id="cust_type" model="general.menu">
+        <field name="menuid">cust_type</field>
+        <field name="menunm">Customer Type</field>
+    </record>
+    <record id="cust_area" model="general.menu">
+        <field name="menuid">cust_area</field>
+        <field name="menunm">Customer Area</field>
+    </record>
+    <record id="products" model="general.menu">
+        <field name="menuid">products</field>
+        <field name="menunm">Products</field>
+    </record>
+    <record id="price_condition" model="general.menu">
+        <field name="menuid">price_condition</field>
+        <field name="menunm">Price Condition</field>
+    </record>
+    <record id="customer" model="general.menu">
+        <field name="menuid">customer</field>
+        <field name="menunm">Customer</field>
+    </record>
+</odoo>
