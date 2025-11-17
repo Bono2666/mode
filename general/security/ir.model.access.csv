@@ -1,2 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_general_general,general.general,model_general_general,base.group_user,1,1,1,1
+access_general_country,general.country_sec,model_general_country,,1,1,1,1
+access_general_state,general.state,model_general_state,,1,1,1,1
+access_general_city,general.city,model_general_city,,1,1,1,1
+access_general_district,general.district,model_general_district,,1,1,1,1
+access_general_position,general.position,model_general_position,,1,1,1,1
+access_general_department,general.department,model_general_department,,1,1,1,1

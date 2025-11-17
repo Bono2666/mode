@@ -16,13 +16,37 @@
 -->
 
     <!-- actions opening views on models -->
-<!--
-    <record model="ir.actions.act_window" id="sales.action_window">
-      <field name="name">sales window</field>
-      <field name="res_model">sales.sales</field>
+
+    <record model="ir.actions.act_window" id="sales.cust_category_action">
+      <field name="name">Customer Category</field>
+      <field name="res_model">sales.cust_category</field>
       <field name="view_mode">list,form</field>
     </record>
--->
+    <record model="ir.actions.act_window" id="sales.cust_type_action">
+      <field name="name">Customer Type</field>
+      <field name="res_model">sales.cust_type</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record model="ir.actions.act_window" id="sales.cust_area_action">
+      <field name="name">Customer Area</field>
+      <field name="res_model">sales.cust_area</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record model="ir.actions.act_window" id="sales.customer_action">
+      <field name="name">Customer</field>
+      <field name="res_model">sales.customer</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record model="ir.actions.act_window" id="sales.products_action">
+      <field name="name">Products</field>
+      <field name="res_model">sales.products</field>
+      <field name="view_mode">kanban,form</field>
+    </record>
+    <record model="ir.actions.act_window" id="sales.price_condition_action">
+      <field name="name">Price Condition</field>
+      <field name="res_model">sales.price_condition</field>
+      <field name="view_mode">list,form</field>
+    </record>
 
     <!-- server action to the one above -->
 <!--
@@ -41,20 +65,24 @@
 -->
 
     <!-- Top menu item -->
-<!--
-    <menuitem name="sales" id="sales.menu_root"/>
--->
+
+    <menuitem name="Sales" id="sales.menu_root" sequence="30"/>
+
     <!-- menu categories -->
-<!--
-    <menuitem name="Menu 1" id="sales.menu_1" parent="sales.menu_root"/>
-    <menuitem name="Menu 2" id="sales.menu_2" parent="sales.menu_root"/>
--->
+
+    <menuitem name="Customer" id="sales.customer_menu" parent="sales.menu_root" action="sales.customer_action" sequence="1"/>
+    <menuitem name="Product" id="sales.product_menu" parent="sales.menu_root" action="sales.products_action" sequence="2"/>
+    <menuitem name="Customer Settings" id="sales.customer_settings_menu" parent="sales.menu_root" sequence="3"/>
+    <menuitem name="Price Condition" id="sales.price_condition_menu" parent="sales.menu_root" action="sales.price_condition_action" sequence="4"/>
+
     <!-- actions -->
-<!--
-    <menuitem name="List" id="sales.menu_1_list" parent="sales.menu_1"
-              action="sales.action_window"/>
-    <menuitem name="Server to list" id="sales" parent="sales.menu_2"
-              action="sales.action_server"/>
--->
+
+    <menuitem name="Customer Category" id="sales.cust_category" parent="sales.customer_settings_menu"
+              action="sales.cust_category_action"/>
+    <menuitem name="Customer Type" id="sales.cust_type" parent="sales.customer_settings_menu"
+              action="sales.cust_type_action"/>
+    <menuitem name="Customer Area" id="sales.cust_area" parent="sales.customer_settings_menu"
+              action="sales.cust_area_action"/>
+    
   </data>
 </odoo>

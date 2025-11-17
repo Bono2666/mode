@@ -21,10 +21,11 @@ General Master Table
 
     # always loaded
     'data': [
-        # 'security/ir.model.access.csv',
+        'security/ir.model.access.csv',
         'views/views.xml',
         'views/templates.xml',
         'data/menu.xml',
+        'data/sequence.xml',
     ],
     # only loaded in demonstration mode
     'demo': [

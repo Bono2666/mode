@@ -1,2 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_sales_sales,sales.sales,model_sales_sales,base.group_user,1,1,1,1
+access_sales_customer,sales.customer,sales.model_sales_customer,,1,1,1,1
+access_sales_cust_category,sales.cust_category,sales.model_sales_cust_category,,1,1,1,1
+access_sales_cust_type,sales.cust_type,sales.model_sales_cust_type,,1,1,1,1
+access_sales_cust_area,sales.cust_area,sales.model_sales_cust_area,,1,1,1,1
+access_sales_ship_to,sales.ship_to,sales.model_sales_ship_to,,1,1,1,1
+access_sales_products,sales.products,sales.model_sales_products,,1,1,1,1
+access_sales_price_condition,sales.price_condition,sales.model_sales_price_condition,,1,1,1,1

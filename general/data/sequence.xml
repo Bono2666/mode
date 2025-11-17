@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <data>
+        <record id="seq_country" model="ir.sequence">
+        <field name="name">Country Sequence</field>
+        <field name="code">general.country.sequence</field>
+        <field name="prefix">CTRY</field>
+        <field name="padding">4</field>
+        <field name="number_increment">1</field>
+        </record>
+        <record id="seq_state" model="ir.sequence">
+        <field name="name">State Sequence</field>
+        <field name="code">general.state.sequence</field>
+        <field name="prefix">STAT</field>
+        <field name="padding">4</field>
+        <field name="number_increment">1</field>
+        </record>
+        <record id="seq_city" model="ir.sequence">
+        <field name="name">City Sequence</field>
+        <field name="code">general.city.sequence</field>
+        <field name="prefix">CITY</field>
+        <field name="padding">4</field>
+        <field name="number_increment">1</field>
+        </record>
+        <record id="seq_district" model="ir.sequence">
+        <field name="name">District Sequence</field>
+        <field name="code">general.district.sequence</field>
+        <field name="prefix">DIST</field>
+        <field name="padding">4</field>
+        <field name="number_increment">1</field>
+        </record>
+        <record id="seq_position" model="ir.sequence">
+        <field name="name">Position Sequence</field>
+        <field name="code">general.position.sequence</field>
+        <field name="prefix">POSI</field>
+        <field name="padding">4</field>
+        <field name="number_increment">1</field>
+        </record>
+        <record id="seq_department" model="ir.sequence">
+        <field name="name">Department Sequence</field>
+        <field name="code">general.department.sequence</field>
+        <field name="prefix">DEPT</field>
+        <field name="padding">4</field>
+        <field name="number_increment">1</field>
+        </record>
+    </data>
+
+</odoo>

@@ -1,5 +1,6 @@
 <odoo>
   <data>
+
     <!-- explicit list view definition -->
 <!--
     <record model="ir.ui.view" id="general.list">
@@ -16,13 +17,36 @@
 -->
 
     <!-- actions opening views on models -->
-<!--
-    <record model="ir.actions.act_window" id="general.action_window">
-      <field name="name">general window</field>
-      <field name="res_model">general.general</field>
+    <record model="ir.actions.act_window" id="general.country_action">
+      <field name="name">Country</field>
+      <field name="res_model">general.country</field>
       <field name="view_mode">list,form</field>
     </record>
--->
+    <record model="ir.actions.act_window" id="general.state_action">
+      <field name="name">State</field>
+      <field name="res_model">general.state</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record model="ir.actions.act_window" id="general.city_action">
+      <field name="name">City</field>
+      <field name="res_model">general.city</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record model="ir.actions.act_window" id="general.district_action">
+      <field name="name">District</field>
+      <field name="res_model">general.district</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record model="ir.actions.act_window" id="general.position_action">
+      <field name="name">Position</field>
+      <field name="res_model">general.position</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record model="ir.actions.act_window" id="general.department_action">
+      <field name="name">Department</field>
+      <field name="res_model">general.department</field>
+      <field name="view_mode">list,form</field>
+    </record>
 
     <!-- server action to the one above -->
 <!--
@@ -41,20 +65,17 @@
 -->
 
     <!-- Top menu item -->
-<!--
-    <menuitem name="general" id="general.menu_root"/>
--->
-    <!-- menu categories -->
-<!--
-    <menuitem name="Menu 1" id="general.menu_1" parent="general.menu_root"/>
-    <menuitem name="Menu 2" id="general.menu_2" parent="general.menu_root"/>
--->
-    <!-- actions -->
-<!--
-    <menuitem name="List" id="general.menu_1_list" parent="general.menu_1"
-              action="general.action_window"/>
-    <menuitem name="Server to list" id="general" parent="general.menu_2"
-              action="general.action_server"/>
--->
+
+    <menuitem name="General" id="general.menu_root" sequence="90"/>
+
+    <menuitem id="master_menu" name="Master Data" parent="general.menu_root" sequence="20"/>
+
+    <menuitem name="Country" id="general.country_act" parent="general.master_menu" action="general.country_action" sequence="1"/>
+    <menuitem name="State" id="general.state_act" parent="general.master_menu" action="general.state_action" sequence="2"/>
+    <menuitem name="City" id="general.city_act" parent="general.master_menu" action="general.city_action" sequence="3"/>
+    <menuitem name="District" id="general.district_act" parent="general.master_menu" action="general.district_action" sequence="4"/>
+    <menuitem name="Position" id="general.position_act" parent="general.master_menu" action="general.position_action" sequence="5"/>
+    <menuitem name="Department" id="general.department_act" parent="general.master_menu" action="general.department_action" sequence="6"/>
+
   </data>
 </odoo>
