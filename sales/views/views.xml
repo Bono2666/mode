@@ -1,19 +1,225 @@
 <odoo>
   <data>
     <!-- explicit list view definition -->
-<!--
-    <record model="ir.ui.view" id="sales.list">
-      <field name="name">sales list</field>
-      <field name="model">sales.sales</field>
+
+    <record model="ir.ui.view" id="sales.cust_category_list">
+      <field name="name">Customer Category</field>
+      <field name="model">sales.cust_category</field>
       <field name="arch" type="xml">
         <list>
-          <field name="name"/>
-          <field name="value"/>
-          <field name="value2"/>
+          <field name="category_id"/>
+          <field name="category_name"/>
         </list>
       </field>
     </record>
--->
+
+    <record model="ir.ui.view" id="sales.cust_type_list">
+      <field name="name">Customer Type</field>
+      <field name="model">sales.cust_type</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="type_id"/>
+          <field name="type_name"/>
+        </list>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="sales.cust_area_list">
+      <field name="name">Customer Area</field>
+      <field name="model">sales.cust_area</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="area_id"/>
+          <field name="area_name"/>
+        </list>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="sales.customer_list">
+      <field name="name">Customer</field>
+      <field name="model">sales.customer</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="customer_id"/>
+          <field name="customer_name"/>
+          <field name="cust_category"/>
+          <field name="cust_type"/>
+          <field name="cust_area"/>
+          <field name="sales_code"/>
+        </list>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="sales.products_kanban">
+      <field name="name">Products</field>
+      <field name="model">sales.products</field>
+      <field name="arch" type="xml">
+        <kanban>
+          <field name="image"/>
+          <field name="product_id"/>
+          <field name="product_name"/>
+        </kanban>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="sales.price_condition_list">
+      <field name="name">Price Condition</field>
+      <field name="model">sales.price_condition</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="price_id"/>
+          <field name="price_name"/>
+          <field name="date_start"/>
+          <field name="date_end"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- sales.cust_category form view -->
+    <record id="sales.cust_category_view_form" model="ir.ui.view">
+      <field name="name">sales.cust_category.view.form</field>
+      <field name="model">sales.cust_category</field>
+      <field name="arch" type="xml">
+        <form string="">
+          <sheet>
+            <group>
+              <!-- Add your fields here -->
+              <field name="category_id"/>
+              <field name="category_name"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- sales.cust_type form view -->
+    <record id="sales.cust_type_view_form" model="ir.ui.view">
+      <field name="name">sales.cust_type.view.form</field>
+      <field name="model">sales.cust_type</field>
+      <field name="arch" type="xml">
+        <form string="">
+          <sheet>
+            <group>
+              <!-- Add your fields here -->
+              <field name="type_id"/>
+              <field name="type_name"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- sales.cust_area form view -->
+    <record id="sales.cust_area_view_form" model="ir.ui.view">
+      <field name="name">sales.cust_area.view.form</field>
+      <field name="model">sales.cust_area</field>
+      <field name="arch" type="xml">
+        <form string="">
+          <sheet>
+            <group>
+              <!-- Add your fields here -->
+              <field name="area_id"/>
+              <field name="area_name"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- sales.customer form view -->
+    <record id="sales.customer_view_form" model="ir.ui.view">
+      <field name="name">sales.customer.view.form</field>
+      <field name="model">sales.customer</field>
+      <field name="arch" type="xml">
+        <form string="">
+          <sheet>
+            <group>
+              <!-- Add your fields here -->
+              <field name="customer_id"/>
+              <field name="customer_name"/>
+              <field name="address"/>
+              <field name="city"/>
+              <field name="district"/>
+              <field name="sales_code"/>
+              <field name="npwp"/>
+              <field name="cust_category"/>
+              <field name="cust_type"/>
+              <field name="cust_area"/>
+            </group>
+            <group>
+              <field name="price_condition"/>
+            </group>
+            <group>
+              <field name="contact_name"/>
+              <field name="telephone"/>
+              <field name="email"/>
+              <field name="website"/>
+            </group>
+            <field name="ship_to_ids" string="Shipping Addresses">
+              <list editable="bottom">
+                <field name="ship_name"/>
+                <field name="address"/>
+                <field name="country"/>
+                <field name="state"/>
+                <field name="city"/>
+                <field name="district"/>
+                <field name="customer_id" column_invisible="1"/>
+              </list>
+              <form>
+                <field name="ship_name"/>
+                <field name="address"/>
+                <field name="country"/>
+                <field name="state"/>
+                <field name="city"/>
+                <field name="district"/>
+                <field name="customer_id" column_invisible="1"/>
+              </form>
+            </field>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- sales.price_condition form view -->
+    <record id="sales.price_condition_view_form" model="ir.ui.view">
+      <field name="name">sales.price_condition.view.form</field>
+      <field name="model">sales.price_condition</field>
+      <field name="arch" type="xml">
+        <form string="">
+          <sheet>
+            <group>
+              <!-- Add your fields here -->
+              <field name="price_id"/>
+              <field name="price_name"/>
+              <field name="date_start"/>
+              <field name="date_end"/>
+            </group>
+            <field name="product_ids" string="Products">
+              <list editable="bottom">
+                <field name="product_id"/>
+                <field name="price"/>
+                <field name="price_id" column_invisible="1"/>
+              </list>
+              <form>
+                <field name="product_id"/>
+                <field name="price"/>
+                <field name="price_id" column_invisible="1"/>
+              </form>
+            </field>
+            <field name="customer_ids" string="Customers">
+              <list editable="bottom">
+                <field name="customer_id"/>
+                <field name="price_id" column_invisible="1"/>
+              </list>
+              <form>
+                <field name="customer_id"/>
+                <field name="price_id" column_invisible="1"/>
+              </form>
+            </field>
+          </sheet>
+        </form>
+      </field>
+    </record>
 
     <!-- actions opening views on models -->
 

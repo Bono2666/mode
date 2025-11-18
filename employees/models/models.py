@@ -6,13 +6,13 @@ class employees(models.Model):
     _description = 'employees.employees'
 
     employee_id = fields.Char(string="Employee ID",
-                              primary_key=True, readonly=True, unique=True, auto_save=False)
-    employee_name = fields.Char(string="Employee Name", auto_save=False)
+                              primary_key=True, readonly=True, unique=True)
+    employee_name = fields.Char(string="Employee Name")
     position_id = fields.Many2one(
-        comodel_name='general.position', string='Job Position', auto_save=False)
+        comodel_name='general.position', string='Job Position')
     department_id = fields.Many2one(
-        comodel_name='general.department', string='Department', auto_save=False)
-    salescode = fields.Char(string="Sales Code", auto_save=False)
+        comodel_name='general.department', string='Department')
+    sales_code = fields.Char(string="Sales Code")
 
     @api.model
     def create(self, vals):

@@ -2,19 +2,184 @@
   <data>
 
     <!-- explicit list view definition -->
-<!--
-    <record model="ir.ui.view" id="general.list">
-      <field name="name">general list</field>
-      <field name="model">general.general</field>
+
+    <record model="ir.ui.view" id="general.country_list">
+      <field name="name">Country list</field>
+      <field name="model">general.country</field>
       <field name="arch" type="xml">
         <list>
-          <field name="name"/>
-          <field name="value"/>
-          <field name="value2"/>
+          <field name="country_id"/>
+          <field name="country_name"/>
         </list>
       </field>
     </record>
--->
+
+    <!-- general.country form view -->
+    <record id="general.country_view_form" model="ir.ui.view">
+      <field name="name">general.country.view.form</field>
+      <field name="model">general.country</field>
+      <field name="arch" type="xml">
+      <form string="Country">
+        <sheet>
+        <group>
+          <!-- Add your fields here -->
+          <field name="country_id"/>
+          <field name="country_name"/>
+        </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+    
+    <!-- general.state list view -->
+    <record id="general.state_view_list" model="ir.ui.view">
+      <field name="name">general.state.view.list</field>
+      <field name="model">general.state</field>
+      <field name="arch" type="xml">
+        <list>
+          <!-- Add your fields here -->
+          <field name="state_id"/>
+          <field name="state_name"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- general.state form view -->
+    <record id="general.state_view_form" model="ir.ui.view">
+      <field name="name">general.state.view.form</field>
+      <field name="model">general.state</field>
+      <field name="arch" type="xml">
+      <form string="State">
+        <sheet>
+        <group>
+          <!-- Add your fields here -->
+          <field name="state_id"/>
+          <field name="state_name"/>
+        </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <!-- general.city list view -->
+    <record id="general.city_view_list" model="ir.ui.view">
+      <field name="name">general.city.view.list</field>
+      <field name="model">general.city</field>
+      <field name="arch" type="xml">
+        <list>
+          <!-- Add your fields here -->
+          <field name="city_id"/>
+          <field name="city_name"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- general.city form view -->
+    <record id="general.city_view_form" model="ir.ui.view">
+      <field name="name">general.city.view.form</field>
+      <field name="model">general.city</field>
+      <field name="arch" type="xml">
+      <form string="City">
+        <sheet>
+        <group>
+          <!-- Add your fields here -->
+          <field name="city_id"/>
+          <field name="city_name"/>
+        </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <!-- general.district list view -->
+    <record id="general.district_view_list" model="ir.ui.view">
+      <field name="name">general.district.view.list</field>
+      <field name="model">general.district</field>
+      <field name="arch" type="xml">
+        <list>
+          <!-- Add your fields here -->
+          <field name="district_id"/>
+          <field name="district_name"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- general.district form view -->
+    <record id="general.district_view_form" model="ir.ui.view">
+      <field name="name">general.district.view.form</field>
+      <field name="model">general.district</field>
+      <field name="arch" type="xml">
+      <form string="District">
+        <sheet>
+        <group>
+          <!-- Add your fields here -->
+          <field name="district_id"/>
+          <field name="district_name"/>
+        </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <!-- general.position list view -->
+    <record id="general.position_view_list" model="ir.ui.view">
+      <field name="name">general.position.view.list</field>
+      <field name="model">general.position</field>
+      <field name="arch" type="xml">
+        <list>
+          <!-- Add your fields here -->
+          <field name="position_id"/>
+          <field name="position_name"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- general.position form view -->
+    <record id="general.position_view_form" model="ir.ui.view">
+      <field name="name">general.position.view.form</field>
+      <field name="model">general.position</field>
+      <field name="arch" type="xml">
+      <form string="Position">
+        <sheet>
+        <group>
+          <!-- Add your fields here -->
+          <field name="position_id"/>
+          <field name="position_name"/>
+        </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <!-- general.department list view -->
+    <record id="general.department_view_list" model="ir.ui.view">
+      <field name="name">general.department.view.list</field>
+      <field name="model">general.department</field>
+      <field name="arch" type="xml">
+        <list>
+          <!-- Add your fields here -->
+          <field name="department_id"/>
+          <field name="department_name"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- general.department form view -->
+    <record id="general.department_view_form" model="ir.ui.view">
+      <field name="name">general.department.view.form</field>
+      <field name="model">general.department</field>
+      <field name="arch" type="xml">
+      <form string="Department">
+        <sheet>
+        <group>
+          <!-- Add your fields here -->
+          <field name="department_id">{'no_breadcrumbs': True}</field>
+          <field name="department_name">{'no_breadcrumbs': True}</field>
+        </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
 
     <!-- actions opening views on models -->
     <record model="ir.actions.act_window" id="general.country_action">

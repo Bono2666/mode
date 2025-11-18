@@ -1,19 +1,40 @@
 <odoo>
   <data>
     <!-- explicit list view definition -->
-<!--
+
     <record model="ir.ui.view" id="employees.list">
-      <field name="name">employees list</field>
+      <field name="name">Employees</field>
       <field name="model">employees.employees</field>
       <field name="arch" type="xml">
         <list>
-          <field name="name"/>
-          <field name="value"/>
-          <field name="value2"/>
+          <field name="employee_id"/>
+          <field name="employee_name"/>
+          <field name="position_id"/>
+          <field name="department_id"/>
+          <field name="sales_code"/>
         </list>
       </field>
     </record>
--->
+
+    <!-- employees.employees form view -->
+    <record id="employees.employees_view_form" model="ir.ui.view">
+      <field name="name">employees.employees.view.form</field>
+      <field name="model">employees.employees</field>
+      <field name="arch" type="xml">
+        <form string="">
+          <sheet>
+            <group>
+              <!-- Add your fields here -->
+              <field name="employee_id"/>
+              <field name="employee_name"/>
+              <field name="position_id"/>
+              <field name="department_id"/>
+              <field name="sales_code"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
 
     <!-- actions opening views on models -->
 

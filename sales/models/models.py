@@ -83,7 +83,7 @@ class customer(models.Model):
         comodel_name='general.district', string='District', ondelete='set null', index=True)
     sales_code = fields.Many2one(
         comodel_name='employees.employees', string='Sales', ondelete='set null', index=True,
-        domain=[('salescode', '!=', False)])
+        domain=[('sales_code', '!=', False)])
     npwp = fields.Char(string="NPWP")
     cust_category = fields.Many2one(
         comodel_name='sales.cust_category', string='Customer Category', ondelete='set null', index=True)
@@ -93,10 +93,12 @@ class customer(models.Model):
         comodel_name='sales.cust_area', string='Customer Area', ondelete='set null', index=True)
     price_condition = fields.Many2one(
         comodel_name='sales.price_condition', string='Price Condition', ondelete='set null', index=True)
-    contactname = fields.Char(string="Contact Name")
+    contact_name = fields.Char(string="Contact Name")
     telephone = fields.Char(string="Telephone")
     email = fields.Char(string="Email")
     website = fields.Char(string="Website")
+    ship_to_ids = fields.One2many(
+        'sales.ship_to', 'customer_id', string="Ship To Addresses")
 
     @api.model
     def create(self, vals):
@@ -176,6 +178,10 @@ class price_condition(models.Model):
     price_name = fields.Char(string="Price Name")
     date_start = fields.Date(string="Start Date")
     date_end = fields.Date(string="End Date")
+    product_ids = fields.One2many(
+        'sales.price_condition_product', 'price_id', string="Products")
+    customer_ids = fields.One2many(
+        'sales.price_condition_customer', 'price_id', string="Customers")
 
     @api.model
     def create(self, vals):
@@ -195,7 +201,7 @@ class price_condition_product(models.Model):
     _name = 'sales.price_condition_product'
     _description = 'sales.price_condition_product'
 
-    condition_id = fields.Many2one(
+    price_id = fields.Many2one(
         comodel_name='sales.price_condition', string='Price Condition', ondelete='cascade', index=True)
     product_id = fields.Many2one(
         comodel_name='sales.products', string='Product', ondelete='set null', index=True)
@@ -206,7 +212,7 @@ class price_condition_customer(models.Model):
     _name = 'sales.price_condition_customer'
     _description = 'sales.price_condition_customer'
 
-    condition_id = fields.Many2one(
+    price_id = fields.Many2one(
         comodel_name='sales.price_condition', string='Price Condition', ondelete='cascade', index=True)
     customer_id = fields.Many2one(
         comodel_name='sales.customer', string='Customer', ondelete='set null', index=True)

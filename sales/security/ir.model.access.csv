@@ -6,3 +6,5 @@ access_sales_cust_area,sales.cust_area,sales.model_sales_cust_area,,1,1,1,1
 access_sales_ship_to,sales.ship_to,sales.model_sales_ship_to,,1,1,1,1
 access_sales_products,sales.products,sales.model_sales_products,,1,1,1,1
 access_sales_price_condition,sales.price_condition,sales.model_sales_price_condition,,1,1,1,1
+access_sales_price_condition_product,sales.price_condition_product,sales.model_sales_price_condition_product,,1,1,1,1
+access_sales_price_condition_customer,sales.price_condition_customer,sales.model_sales_price_condition_customer,,1,1,1,1
