@@ -56,22 +56,22 @@ patch(FormController.prototype, {
 
 });
 
-document.addEventListener('mouseleave', function(event) {
-    if (event.clientY <= 0) {  // Check if mouse is leaving through the top
-        var save_hide = document.querySelector('.o_form_status_indicator_buttons.d-flex.invisible');
-        if (document.querySelector('.o_form_status_indicator_buttons.d-flex')) {
-            if (save_hide === null) {
-                alert("Saving or Discarding changes before leaving the page.");
-            }
-        }
-    }
-});
+// document.addEventListener('mouseleave', function(event) {
+//     if (event.clientY <= 0) {  // Check if mouse is leaving through the top
+//         var save_hide = document.querySelector('.o_form_status_indicator_buttons.d-flex.invisible');
+//         if (document.querySelector('.o_form_status_indicator_buttons.d-flex')) {
+//             if (save_hide === null) {
+//                 alert("Saving or Discarding changes before leaving the page.");
+//             }
+//         }
+//     }
+// });
 
-window.addEventListener('blur', function() {
-    var save_hide = document.querySelector('.o_form_status_indicator_buttons.d-flex.invisible');
-    if (document.querySelector('.o_form_status_indicator_buttons.d-flex')) {
-        if (save_hide === null) {
-            alert("Saving or Discarding changes before leaving the page.");
-        }
-    }
-});
+// window.addEventListener('blur', function() {
+//     var save_hide = document.querySelector('.o_form_status_indicator_buttons.d-flex.invisible');
+//     if (document.querySelector('.o_form_status_indicator_buttons.d-flex')) {
+//         if (save_hide === null) {
+//             alert("Saving or Discarding changes before leaving the page.");
+//         }
+//     }
+// });

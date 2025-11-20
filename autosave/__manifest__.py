@@ -37,4 +37,5 @@ This module allows the user to disable the auto save feature of Odoo
         ],
     },
     'images': ['static/description/banner.jpg'],
+    'license': 'LGPL-3',
 }

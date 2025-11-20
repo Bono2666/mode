@@ -31,4 +31,5 @@ General Master Table
     'demo': [
         'demo/demo.xml',
     ],
+    'license': 'LGPL-3',
 }

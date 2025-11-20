@@ -5,8 +5,7 @@ class country(models.Model):
     _name = 'general.country'
     _description = 'general.country'
 
-    country_id = fields.Char(
-        string="Country ID", readonly=True, primary_key=True)
+    country_id = fields.Char(string="Country ID", readonly=True)
     country_name = fields.Char(string="Country Name")
 
     @api.model
@@ -27,7 +26,7 @@ class state(models.Model):
     _name = 'general.state'
     _description = 'general.state'
 
-    state_id = fields.Char(string="State ID", readonly=True, primary_key=True)
+    state_id = fields.Char(string="State ID", readonly=True)
     state_name = fields.Char(string="State Name")
 
     @api.model
@@ -48,7 +47,7 @@ class city(models.Model):
     _name = 'general.city'
     _description = 'general.city'
 
-    city_id = fields.Char(string="City ID", readonly=True, primary_key=True)
+    city_id = fields.Char(string="City ID", readonly=True)
     city_name = fields.Char(string="City Name")
 
     @api.model
@@ -69,8 +68,7 @@ class district(models.Model):
     _name = 'general.district'
     _description = 'general.district'
 
-    district_id = fields.Char(string="District ID",
-                              readonly=True, primary_key=True)
+    district_id = fields.Char(string="District ID", readonly=True)
     district_name = fields.Char(string="District Name")
 
     @api.model
@@ -91,8 +89,7 @@ class position(models.Model):
     _name = 'general.position'
     _description = 'general.position'
 
-    position_id = fields.Char(string="Position ID",
-                              readonly=True, primary_key=True)
+    position_id = fields.Char(string="Position ID", readonly=True)
     position_name = fields.Char(string="Position Name")
 
     @api.model
@@ -113,8 +110,7 @@ class department(models.Model):
     _name = 'general.department'
     _description = 'general.department'
 
-    department_id = fields.Char(
-        string="Department ID", readonly=True, primary_key=True)
+    department_id = fields.Char(string="Department ID", readonly=True)
     department_name = fields.Char(string="Department Name")
 
     @api.model
@@ -135,5 +131,5 @@ class menu(models.Model):
     _name = 'general.menu'
     _description = 'general.menu'
 
-    menuid = fields.Char(string="Menu ID", primary_key=True)
+    menuid = fields.Char(string="Menu ID")
     menunm = fields.Char(string="Menu Name")

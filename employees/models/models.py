@@ -5,8 +5,7 @@ class employees(models.Model):
     _name = 'employees.employees'
     _description = 'employees.employees'
 
-    employee_id = fields.Char(string="Employee ID",
-                              primary_key=True, readonly=True, unique=True)
+    employee_id = fields.Char(string="Employee ID", readonly=True)
     employee_name = fields.Char(string="Employee Name")
     position_id = fields.Many2one(
         comodel_name='general.position', string='Job Position')

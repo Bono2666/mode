@@ -5,8 +5,7 @@ class cust_category(models.Model):
     _name = 'sales.cust_category'
     _description = 'sales.cust_category'
 
-    category_id = fields.Char(string="Category ID",
-                              primary_key=True, readonly=True)
+    category_id = fields.Char(string="Category ID", readonly=True)
     category_name = fields.Char(string="Category Name")
 
     @api.model
@@ -27,7 +26,7 @@ class cust_type(models.Model):
     _name = 'sales.cust_type'
     _description = 'sales.cust_type'
 
-    type_id = fields.Char(string="Type ID", primary_key=True, readonly=True)
+    type_id = fields.Char(string="Type ID", readonly=True)
     type_name = fields.Char(string="Type Name")
 
     @api.model
@@ -48,7 +47,7 @@ class cust_area(models.Model):
     _name = 'sales.cust_area'
     _description = 'sales.cust_area'
 
-    area_id = fields.Char(string="Area ID", primary_key=True, readonly=True)
+    area_id = fields.Char(string="Area ID", readonly=True)
     area_name = fields.Char(string="Area Name")
 
     @api.model
@@ -69,8 +68,7 @@ class customer(models.Model):
     _name = 'sales.customer'
     _description = 'sales.customer'
 
-    customer_id = fields.Char(string="Customer ID",
-                              primary_key=True, readonly=True)
+    customer_id = fields.Char(string="Customer ID", readonly=True)
     customer_name = fields.Char(string="Customer Name")
     address = fields.Text(string="Address", size=100)
     country = fields.Many2one(
@@ -118,7 +116,7 @@ class ship_to(models.Model):
     _name = 'sales.ship_to'
     _description = 'sales.ship_to'
 
-    ship_id = fields.Char(string="Ship ID", primary_key=True, readonly=True)
+    ship_id = fields.Char(string="Ship ID", readonly=True)
     ship_name = fields.Char(string="Ship Name")
     customer_id = fields.Many2one(
         comodel_name='sales.customer', string='Customer', ondelete='cascade', index=True)
@@ -150,8 +148,7 @@ class products(models.Model):
     _name = 'sales.products'
     _description = 'sales.products'
 
-    product_id = fields.Char(
-        string="Product ID", primary_key=True, readonly=True)
+    product_id = fields.Char(string="Product ID", readonly=True)
     product_name = fields.Char(string="Product Name")
     image = fields.Binary(string="Image")
 
@@ -173,8 +170,7 @@ class price_condition(models.Model):
     _name = 'sales.price_condition'
     _description = 'sales.price_condition'
 
-    price_id = fields.Char(
-        string="Price ID", primary_key=True, readonly=True)
+    price_id = fields.Char(string="Price ID", readonly=True)
     price_name = fields.Char(string="Price Name")
     date_start = fields.Date(string="Start Date")
     date_end = fields.Date(string="End Date")
