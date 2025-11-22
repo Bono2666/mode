@@ -51,7 +51,19 @@
 
     <!-- menu categories -->
 
-    <menuitem name="Employees" id="employees.employee_menu" parent="employees.menu_root" action="employees.action_window"/>
+    <menuitem name="Employees" id="employees.employees_menu" parent="employees.menu_root" action="employees.action_window" sequence="1"/>
+    <menuitem name="Master Data" id="employees.employees_master_menu" parent="employees.menu_root" sequence="2"/>
+
+    <!-- general menus -->
+
+    <menuitem name="Others" id="employees.employees_others_menu" parent="employees.employees_master_menu" sequence="4"/>
+    
+    <menuitem name="Country" id="employees.employees_country_act" parent="employees.employees_others_menu" action="general.country_action" sequence="1"/>
+    <menuitem name="State" id="employees.employees_state_act" parent="employees.employees_others_menu" action="general.state_action" sequence="2"/>
+    <menuitem name="City" id="employees.employees_city_act" parent="employees.employees_others_menu" action="general.city_action" sequence="3"/>
+    <menuitem name="District" id="employees.employees_district_act" parent="employees.employees_others_menu" action="general.district_action" sequence="4"/>
+    <menuitem name="Position" id="employees.employees_position_act" parent="employees.employees_others_menu" action="general.position_action" sequence="5"/>
+    <menuitem name="Department" id="employees.employees_department_act" parent="employees.employees_others_menu" action="general.department_action" sequence="6"/>
 
   </data>
 </odoo>

@@ -57,7 +57,6 @@ patch(FormController.prototype, {
             const root = this.model.root;
             if (document.hidden && shouldPrevent(this.model.root.resModel)) {
                 console.warn("Disable Browser - visibilityChange");
-                root.discard();
                 return true;
             }
         });

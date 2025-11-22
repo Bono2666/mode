@@ -284,19 +284,33 @@
 
     <!-- menu categories -->
 
-    <menuitem name="Customer" id="sales.customer_menu" parent="sales.menu_root" action="sales.customer_action" sequence="1"/>
-    <menuitem name="Product" id="sales.product_menu" parent="sales.menu_root" action="sales.products_action" sequence="2"/>
-    <menuitem name="Customer Settings" id="sales.customer_settings_menu" parent="sales.menu_root" sequence="3"/>
-    <menuitem name="Price Condition" id="sales.price_condition_menu" parent="sales.menu_root" action="sales.price_condition_action" sequence="4"/>
+    <menuitem name="Master Data" id="sales.sales_master_menu" parent="sales.menu_root" sequence="1"/>
+
+    <menuitem name="Customer" id="sales.customer_menu" parent="sales.sales_master_menu" sequence="1"/>
+    <menuitem name="Product" id="sales.product_menu" parent="sales.sales_master_menu" sequence="2"/>
+    <menuitem name="Price Condition" id="sales.price_condition_menu" parent="sales.sales_master_menu" action="sales.price_condition_action" sequence="3"/>
 
     <!-- actions -->
 
-    <menuitem name="Customer Category" id="sales.cust_category" parent="sales.customer_settings_menu"
+    <menuitem name="Customers" id="sales.customer_customer_menu" parent="sales.customer_menu" action="sales.customer_action" sequence="1"/>
+    <menuitem name="Category" id="sales.cust_category" parent="sales.customer_menu"
               action="sales.cust_category_action"/>
-    <menuitem name="Customer Type" id="sales.cust_type" parent="sales.customer_settings_menu"
+    <menuitem name="Type" id="sales.cust_type" parent="sales.customer_menu"
               action="sales.cust_type_action"/>
-    <menuitem name="Customer Area" id="sales.cust_area" parent="sales.customer_settings_menu"
+    <menuitem name="Area" id="sales.cust_area" parent="sales.customer_menu"
               action="sales.cust_area_action"/>
+    <menuitem name="Products" id="sales.product_product_menu" parent="sales.product_menu" action="sales.products_action" sequence="1"/>
     
+    <!-- general menus -->
+
+    <menuitem name="Others" id="sales.sales_others_menu" parent="sales.sales_master_menu" sequence="4"/>
+    
+    <menuitem name="Country" id="sales.sales_country_act" parent="sales.sales_others_menu" action="general.country_action" sequence="1"/>
+    <menuitem name="State" id="sales.sales_state_act" parent="sales.sales_others_menu" action="general.state_action" sequence="2"/>
+    <menuitem name="City" id="sales.sales_city_act" parent="sales.sales_others_menu" action="general.city_action" sequence="3"/>
+    <menuitem name="District" id="sales.sales_district_act" parent="sales.sales_others_menu" action="general.district_action" sequence="4"/>
+    <menuitem name="Position" id="sales.sales_position_act" parent="sales.sales_others_menu" action="general.position_action" sequence="5"/>
+    <menuitem name="Department" id="sales.sales_department_act" parent="sales.sales_others_menu" action="general.department_action" sequence="6"/>
+
   </data>
 </odoo>
