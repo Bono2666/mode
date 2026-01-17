@@ -1,0 +1,145 @@
+<odoo>
+  <data>
+    <!-- explicit list view definition -->
+
+    <record id="view_general_password_form" model="ir.ui.view">
+        <field name="name">general.password</field>
+        <field name="model">general.password</field>
+        <field name="arch" type="xml">
+            <form string="Change Password">
+                <sheet>
+                    <group>
+                        <field name="user_id" invisible="1"/>
+                        <field name="new_password" password="True"/>
+                        <field name="confirm_password" password="True"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_update_password" string="Save" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record model="ir.ui.view" id="user_management.custom_users_tree">
+      <field name="name">Users</field>
+      <field name="model">general.custom_users</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="login"/>
+          <field name="position"/>
+          <field name="custom_login_date"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="user_management.custom_users_view_form" model="ir.ui.view">
+      <field name="name">user_management.custom_users.view.form</field>
+      <field name="model">general.custom_users</field>
+      <field name="arch" type="xml">
+      <form string="Users">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
+        <sheet>
+          <field name="image_1920" widget="image" class="oe_avatar" options="{&quot;preview_image&quot;: &quot;image_1920&quot;}" on_change="1" field_id="image_1920_0" readonly="not is_edit and id"/>
+          <div class="oe_title">
+              <label for="name"/>
+              <h1><field name="name" placeholder="e.g. John Doe" required="1" readonly="not is_edit and id"/></h1>
+              <label for="login" string="Email Address"/>
+              <h2><field name="login" placeholder="e.g. email@yourcompany.com" readonly="not is_edit and id"/></h2>
+              <group>
+                  <field name="position" required="0" readonly="not is_edit and id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
+              </group>
+              <notebook>
+                <page string="Account Security" name="security" invisible="id">
+                  <group string="Password Management">
+                    <field name="password" password="True" width="20px"/>
+                  </group>
+                </page>
+                <page string="Access Rights" name="authentication" invisible="not id">
+                  <field name="menu_ids" readonly="not is_edit and id">
+                    <tree editable="bottom">
+                        <field name="menu_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
+                        <field name="can_create"/>
+                        <field name="can_update"/>
+                        <field name="can_delete"/>
+                    </tree>
+                  </field>
+                </page>
+              </notebook>
+          </div>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <!-- actions opening views on models -->
+
+    <record model="ir.actions.act_window" id="user_management.custom_users_action">
+      <field name="name">Users</field>
+      <field name="res_model">general.custom_users</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Users
+        </p>
+      </field>
+    </record>
+
+
+    <!-- server action to the one above -->
+<!--
+    <record model="ir.actions.server" id="user_management.action_server">
+      <field name="name">user_management server</field>
+      <field name="model_id" ref="model_user_management_user_management"/>
+      <field name="state">code</field>
+      <field name="code">
+        action = {
+          "type": "ir.actions.act_window",
+          "view_mode": "tree,form",
+          "res_model": model._name,
+        }
+      </field>
+    </record>
+-->
+
+    <!-- Top menu item -->
+<!--
+    <menuitem name="user_management" id="user_management.menu_root"/>
+-->
+    <!-- menu categories -->
+
+    <menuitem name="Users" id="user_management.custom_user_menu" parent="general.menu_master_menu" sequence="4" action="user_management.custom_users_action"/>
+    
+    <!-- actions -->
+<!--
+    <menuitem name="List" id="user_management.menu_1_list" parent="user_management.menu_1"
+              action="user_management.action_window"/>
+    <menuitem name="Server to list" id="user_management" parent="user_management.menu_2"
+              action="user_management.action_server"/>
+-->
+  </data>
+</odoo>

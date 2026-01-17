@@ -44,6 +44,13 @@
         <field name="padding">4</field>
         <field name="number_increment">1</field>
         </record>
+        <record id="seq_custom_user" model="ir.sequence">
+        <field name="name">User Sequence</field>
+        <field name="code">general.custom_user.sequence</field>
+        <field name="prefix">USER</field>
+        <field name="padding">4</field>
+        <field name="number_increment">1</field>
+        </record>
     </data>
 
 </odoo>

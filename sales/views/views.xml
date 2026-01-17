@@ -141,24 +141,46 @@
       <field name="model">sales.payment_terms</field>
       <field name="arch" type="xml">
         <form string="">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
           <sheet>
             <div class="oe_title">
               <field name="payment_terms_id"/>
               <h1>
                 <div class="d-flex">
-                  <field class="text-break" name="sales_text" options="{'line_breaks': False}" widget="text" placeholder="e.g. 2% 10, Net 30"/>
+                  <field class="text-break" name="sales_text" options="{'line_breaks': False}" widget="text" placeholder="e.g. 2% 10, Net 30" readonly="not is_edit and id"/>
                 </div>
               </h1>
             </div>
             <notebook>
               <page string="General Information" name="general_information">
                 <group>
-                  <field name="account_type" widget="many2many_tags"/>
-                  <field name="baseline_date"/>
+                  <field name="account_type" widget="many2many_tags" readonly="not is_edit and id"/>
+                  <field name="baseline_date" readonly="not is_edit and id"/>
                 </group>
               </page>
               <page string="Payment Terms" name="payment_terms">
-                <field name="payment_terms_ids" string="Payment Terms">
+                <field name="payment_terms_ids" string="Payment Terms" readonly="not is_edit and id">
                   <tree editable="bottom">
                     <field name="percentage"/>
                     <field name="no_of_days"/>
@@ -185,12 +207,34 @@
       <field name="model">sales.cust_category</field>
       <field name="arch" type="xml">
         <form string="">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
           <sheet>
             <div class="oe_title">
               <field name="category_id"/>
               <h1>
                 <div class="d-flex">
-                  <field class="text-break" name="category_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Retail Customer"/>
+                  <field class="text-break" name="category_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Retail Customer" readonly="not is_edit and id"/>
                 </div>
               </h1>
             </div>
@@ -205,12 +249,34 @@
       <field name="model">sales.cust_type</field>
       <field name="arch" type="xml">
         <form string="">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
           <sheet>
             <div class="oe_title">
               <field name="type_id"/>
               <h1>
                 <div class="d-flex">
-                  <field class="text-break" name="type_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Sales &amp; Distribution (SD) Customer"/>
+                  <field class="text-break" name="type_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Sales &amp; Distribution (SD) Customer" readonly="not is_edit and id"/>
                 </div>
               </h1>
             </div>
@@ -225,12 +291,34 @@
       <field name="model">sales.cust_area</field>
       <field name="arch" type="xml">
         <form string="">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
           <sheet>
             <div class="oe_title">
               <field name="area_id"/>
               <h1>
                 <div class="d-flex">
-                  <field class="text-break" name="area_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. West Region"/>
+                  <field class="text-break" name="area_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. West Region" readonly="not is_edit and id"/>
                 </div>
               </h1>
             </div>
@@ -244,27 +332,49 @@
       <field name="name">sales.products.view.form</field>
       <field name="model">sales.products</field>
       <field name="arch" type="xml">
-        <form string="">
-          <sheet>
-            <field name="image" widget="image" class="oe_avatar"/>
-            <div class="oe_title">
-              <field name="product_id"/>
-              <h1>
-                <div class="d-flex">
-                  <field class="text-break" name="product_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Dim Sum"/>
-                </div>
-              </h1>
-            </div>
-            <notebook>
-              <page string="General Information" name="general_information">
-                <group>
-                  <field name="product_unit" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                  <field name="product_type" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                </group>
-              </page>
-            </notebook>
-          </sheet>
-        </form>
+          <form string="">
+            <header>
+              <field name="id" invisible="1"/>
+              <field name="is_edit" invisible="1"/>
+              <field name="user_can_update" invisible="1"/>
+              <field name="user_can_delete" invisible="1"/>
+              <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+              <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+              <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+              <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+              <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+              <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+              <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+              <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+              <span class="min-w-0 text-truncate">
+                <field name="model_description"/>
+              </span>
+              <style>
+                .o_control_panel {
+                  display: none !important;
+                }
+              </style>
+            </header>
+            <sheet>
+              <field name="image" widget="image" class="oe_avatar" readonly="not is_edit and id"/>
+              <div class="oe_title">
+                <field name="product_id"/>
+                <h1>
+                  <div class="d-flex">
+                    <field class="text-break" name="product_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Dim Sum" readonly="not is_edit and id"/>
+                  </div>
+                </h1>
+              </div>
+              <notebook>
+                <page string="General Information" name="general_information">
+                  <group>
+                    <field name="product_unit" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                    <field name="product_type" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                  </group>
+                </page>
+              </notebook>
+            </sheet>
+          </form>
       </field>
     </record>
 
@@ -273,18 +383,40 @@
       <field name="name">sales.product_type.view.form</field>
       <field name="model">sales.product_type</field>
       <field name="arch" type="xml">
-        <form string="">
-          <sheet>
-            <div class="oe_title">
-              <label for="name" string="Product Type"/>
-              <h1>
-                <div class="d-flex">
-                  <field class="text-break" name="name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Raw Materials"/>
-                </div>
-              </h1>
-            </div>
-          </sheet>
-        </form>
+          <form string="">
+            <header>
+              <field name="id" invisible="1"/>
+              <field name="is_edit" invisible="1"/>
+              <field name="user_can_update" invisible="1"/>
+              <field name="user_can_delete" invisible="1"/>
+              <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+              <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+              <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+              <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+              <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+              <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+              <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+              <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+              <span class="min-w-0 text-truncate">
+                <field name="model_description"/>
+              </span>
+              <style>
+                .o_control_panel {
+                  display: none !important;
+                }
+              </style>
+            </header>
+            <sheet>
+              <div class="oe_title">
+                <label for="name" string="Product Type"/>
+                <h1>
+                  <div class="d-flex">
+                    <field class="text-break" name="name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Raw Materials" readonly="not is_edit and id"/>
+                  </div>
+                </h1>
+              </div>
+            </sheet>
+          </form>
       </field>
     </record>
 
@@ -294,23 +426,45 @@
       <field name="model">sales.product_unit</field>
       <field name="arch" type="xml">
         <form string="">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
           <sheet>
             <div class="oe_title">
               <span class="d-inline-flex">
                   <label for="qty" string="Quantity"/>
-                  <field name="qty"/>
+                  <field name="qty" readonly="not is_edit and id"/>
               </span>
               <h1>
                 <div class="d-flex">
-                  <field class="text-break" name="uom" options="{'line_breaks': False}" widget="text" placeholder="e.g. Piece" default_focus="1"/>
+                  <field class="text-break" name="uom" options="{'line_breaks': False}" widget="text" placeholder="e.g. Piece" default_focus="1" readonly="not is_edit and id"/>
                 </div>
               </h1>
             </div>
             <notebook>
               <page string="Base Information" name="base_information">
                 <group>
-                  <field name="base_qty"/>
-                  <field name="base_uom"/>
+                  <field name="base_qty" readonly="not is_edit and id"/>
+                  <field name="base_uom" readonly="not is_edit and id"/>
                 </group>
               </page>
             </notebook>
@@ -324,25 +478,47 @@
       <field name="name">sales.price_condition.view.form</field>
       <field name="model">sales.price_condition</field>
       <field name="arch" type="xml">
-        <form string="">
+          <form string="">
+            <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
           <sheet>
             <div class="oe_title">
               <field name="price_id"/>
               <h1>
                 <div class="d-flex">
-                  <field class="text-break" name="price_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. a 10% discount for a particular customer-material combination"/>
+                  <field class="text-break" name="price_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. a 10% discount for a particular customer-material combination" readonly="not is_edit and id"/>
                 </div>
               </h1>
             </div>
             <notebook>
               <page name="validity_period" string="Validity Period">
                 <group>
-                  <field name="date_start"/>
-                  <field name="date_end"/>
+                  <field name="date_start" readonly="not is_edit and id"/>
+                  <field name="date_end" readonly="not is_edit and id"/>
                 </group>
               </page>
               <page name="products" string="Products">
-                <field name="product_ids" string="Products">
+                <field name="product_ids" string="Products" readonly="not is_edit and id">
                   <tree editable="bottom">
                     <field name="product_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
                     <field name="price"/>
@@ -356,7 +532,7 @@
                 </field>
               </page>
               <page name="customers" string="Customers">
-                <field name="customer_ids" string="Customers">
+                <field name="customer_ids" string="Customers" readonly="not is_edit and id">
                   <tree editable="bottom">
                     <field name="customer_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
                     <field name="price_id" column_invisible="1"/>
@@ -378,107 +554,129 @@
       <field name="name">sales.customer.view.form</field>
       <field name="model">sales.customer</field>
       <field name="arch" type="xml">
-        <form string="">
-          <sheet>
-            <div class="oe_title mb24">
-                <field name="customer_id"/>
-                <h1>
-                    <field id="company" options="{'line_breaks': False}" widget="text" class="text-break" name="customer_name" placeholder="e.g. PT Kreatif Citra Indonesia" required="1"/>
-                </h1>
-            </div>
+          <form string="">
+            <header>
+              <field name="id" invisible="1"/>
+              <field name="is_edit" invisible="1"/>
+              <field name="user_can_update" invisible="1"/>
+              <field name="user_can_delete" invisible="1"/>
+              <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+              <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+              <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+              <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+              <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+              <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+              <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+              <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+              <span class="min-w-0 text-truncate">
+                <field name="model_description"/>
+              </span>
+              <style>
+                .o_control_panel {
+                  display: none !important;
+                }
+              </style>
+            </header>
+            <sheet>
+              <div class="oe_title mb24">
+                  <field name="customer_id"/>
+                  <h1>
+                      <field id="company" options="{'line_breaks': False}" widget="text" class="text-break" name="customer_name" placeholder="e.g. PT Kreatif Citra Indonesia" required="1" readonly="not is_edit and id"/>
+                  </h1>
+              </div>
 
-            <group>
-                <group>
-                    <span class="o_form_label o_td_label" name="address_name">
-                        <b>Address</b>
-                    </span>
-                    <div class="o_address_format">
-                        <field name="address" placeholder="Street..."/>
-                        <field name="district" placeholder="District" class="o_address_street" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                        <field name="city" placeholder="City" class="o_address_city" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                        <field name="state" class="o_address_state" placeholder="State" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                        <div name="partner_address_country" class="d-flex justify-content-between">
-                            <field name="country" placeholder="Country" class="o_address_country" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                        </div>
-                    </div>
-                    <field name="npwp" placeholder="e.g. 08.178.554.2-123.321"/>
-                </group>
-                <group>
-                    <field name="contact_name"/>
-                    <field name="telephone" widget="phone"/>
-                    <field name="email" widget="email" context="{'gravatar_image': True}"/>
-                    <field name="website" string="Website" widget="url" placeholder="e.g. https://www.odoo.com"/>
-                </group>
-            </group>
+              <group>
+                  <group>
+                      <span class="o_form_label o_td_label" name="address_name">
+                          <b>Address</b>
+                      </span>
+                      <div class="o_address_format">
+                          <field name="address" placeholder="Street..." readonly="not is_edit and id"/>
+                          <field name="district" placeholder="District" class="o_address_street" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                          <field name="city" placeholder="City" class="o_address_city" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                          <field name="state" class="o_address_state" placeholder="State" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                          <div name="partner_address_country" class="d-flex justify-content-between">
+                              <field name="country" placeholder="Country" class="o_address_country" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                          </div>
+                      </div>
+                      <field name="npwp" placeholder="e.g. 08.178.554.2-123.321" readonly="not is_edit and id"/>
+                  </group>
+                  <group>
+                      <field name="contact_name" readonly="not is_edit and id"/>
+                      <field name="telephone" widget="phone" readonly="not is_edit and id"/>
+                      <field name="email" widget="email" context="{'gravatar_image': True}" readonly="not is_edit and id"/>
+                      <field name="website" string="Website" widget="url" placeholder="e.g. https://www.odoo.com" readonly="not is_edit and id"/>
+                  </group>
+              </group>
 
-            <notebook colspan="4">
-                <page string="Shipping Addresses" name="shipping_addresses" autofocus="autofocus">
-                    <field name="ship_to_ids" mode="kanban">
-                        <kanban>
-                            <field name="customer_id" invisible="1"/>
-                            <templates>
-                                <t t-name="kanban-box">
-                                    <div t-att-class="oe_kanban_global_click">
-                                        <div class="o_kanban_image">
-                                            <img alt="Contact image" t-attf-src="general/static/src/img/shipping.png"/>
-                                        </div>
-                                        <div class="oe_kanban_details">
-                                            <field name="ship_name"/>
-                                            <div t-if="record.address">
-                                                <div>
-                                                    <field name="district"/><t t-if="record.city"> </t>
-                                                    <field name="city"/>
-                                                </div>
-                                                <field t-if="record.state.raw_value" name="state"/><t t-if="record.country"> </t>
-                                                <field name="country"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </t>
-                            </templates>
-                        </kanban>
-                        <form string="Shipping Address">
-                            <sheet>
-                                <field name="customer_id" invisible="1"/>
-                                <hr/>
-                                <group>
-                                    <field name="ship_name" string="Ship Name" required="1"/>
-                                    <label for="address" string="Address"/>
-                                    <div>
-                                        <div class="o_address_format" name="div_address">
-                                            <field name="address" placeholder="Street..."/>
-                                            <field name="district" placeholder="District" class="o_address_street" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                                            <field name="city" placeholder="City" class="o_address_city" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                                            <field name="state" class="o_address_state" placeholder="State" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                                            <field name="country" placeholder="Country" class="o_address_country" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                                        </div>
-                                    </div>
-                                </group>
-                            </sheet>
-                        </form>
-                    </field>
-                </page>
-                <page name="sales" string="Sales">
-                    <group name="container_row_2">
-                        <group string="Sales" name="sale" priority="1">
-                            <field name="sales_code" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                        </group>
-                        <group name="misc" string="Misc">
-                            <field name="cust_category" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                            <field name="cust_type" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                            <field name="cust_area" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                        </group>
-                    </group>
-                </page>
-                <page name="price_condition" string="Price Condition">
-                    <field name="price_condition" placeholder="Price condition..." options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                </page>
-                <page name="payment_terms" string="Payment Terms">
-                    <field name="payment_terms" placeholder="Payment terms..." options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                </page>
-            </notebook>
-          </sheet>
-        </form>
+              <notebook colspan="4">
+                  <page string="Shipping Addresses" name="shipping_addresses" autofocus="autofocus">
+                      <field name="ship_to_ids" mode="kanban" readonly="not is_edit and id">
+                          <kanban>
+                              <field name="customer_id" invisible="1"/>
+                              <templates>
+                                  <t t-name="kanban-box">
+                                      <div t-att-class="oe_kanban_global_click">
+                                          <div class="o_kanban_image">
+                                              <img alt="Contact image" t-attf-src="general/static/src/img/shipping.png"/>
+                                          </div>
+                                          <div class="oe_kanban_details">
+                                              <field name="ship_name"/>
+                                              <div t-if="record.address">
+                                                  <div>
+                                                      <field name="district"/><t t-if="record.city"> </t>
+                                                      <field name="city"/>
+                                                  </div>
+                                                  <field t-if="record.state.raw_value" name="state"/><t t-if="record.country"> </t>
+                                                  <field name="country"/>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </t>
+                              </templates>
+                          </kanban>
+                          <form string="Shipping Address">
+                              <sheet>
+                                  <field name="customer_id" invisible="1"/>
+                                  <hr/>
+                                  <group>
+                                      <field name="ship_name" string="Ship Name" required="1"/>
+                                      <label for="address" string="Address"/>
+                                      <div>
+                                          <div class="o_address_format" name="div_address">
+                                              <field name="address" placeholder="Street..."/>
+                                              <field name="district" placeholder="District" class="o_address_street" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
+                                              <field name="city" placeholder="City" class="o_address_city" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
+                                              <field name="state" class="o_address_state" placeholder="State" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
+                                              <field name="country" placeholder="Country" class="o_address_country" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
+                                          </div>
+                                      </div>
+                                  </group>
+                              </sheet>
+                          </form>
+                      </field>
+                  </page>
+                  <page name="sales" string="Sales">
+                      <group name="container_row_2">
+                          <group string="Sales" name="sale" priority="1">
+                              <field name="sales_code" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                          </group>
+                          <group name="misc" string="Misc">
+                              <field name="cust_category" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                              <field name="cust_type" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                              <field name="cust_area" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                          </group>
+                      </group>
+                  </page>
+                  <page name="price_condition" string="Price Condition">
+                      <field name="price_condition" placeholder="Price condition..." options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                  </page>
+                  <page name="payment_terms" string="Payment Terms">
+                      <field name="payment_terms" placeholder="Payment terms..." options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                  </page>
+              </notebook>
+            </sheet>
+          </form>
       </field>
     </record>
 
@@ -486,46 +684,100 @@
       <field name="name">Price Condition</field>
       <field name="res_model">sales.price_condition</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Price Condition
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sales.customer_action">
       <field name="name">Customer</field>
       <field name="res_model">sales.customer</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Customer
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sales.payment_terms_action">
       <field name="name">Payment Terms</field>
       <field name="res_model">sales.payment_terms</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Payment Terms
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sales.cust_category_action">
       <field name="name">Customer Category</field>
       <field name="res_model">sales.cust_category</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Customer Category
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sales.cust_type_action">
       <field name="name">Customer Type</field>
       <field name="res_model">sales.cust_type</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Customer Type
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sales.cust_area_action">
       <field name="name">Customer Area</field>
       <field name="res_model">sales.cust_area</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Customer Area
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sales.products_action">
       <field name="name">Products</field>
       <field name="res_model">sales.products</field>
       <field name="view_mode">kanban,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Product
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sales.product_type_action">
       <field name="name">Product Type</field>
       <field name="res_model">sales.product_type</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Product Type
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sales.product_unit_action">
       <field name="name">Unit of Measure</field>
       <field name="res_model">sales.product_unit</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Unit of Measure
+        </p>
+      </field>
     </record>
 
     <!-- Top menu item -->
@@ -543,14 +795,14 @@
     
     <menuitem name="Customers" id="sales.customer_customer_menu" parent="sales.customer_menu" action="sales.customer_action" sequence="1"/>
     <menuitem name="Payment Terms" id="sales.payment_terms_menu_act"  parent="sales.customer_menu" action="sales.payment_terms_action" sequence="2"/>
-    <menuitem name="Category" id="sales.cust_category" parent="sales.customer_menu"
+    <menuitem name="Customer Category" id="sales.cust_category" parent="sales.customer_menu"
               action="sales.cust_category_action" sequence="3"/>
-    <menuitem name="Type" id="sales.cust_type" parent="sales.customer_menu"
+    <menuitem name="Customer Type" id="sales.cust_type" parent="sales.customer_menu"
               action="sales.cust_type_action" sequence="4"/>
-    <menuitem name="Area" id="sales.cust_area" parent="sales.customer_menu"
+    <menuitem name="Customer Area" id="sales.cust_area" parent="sales.customer_menu"
               action="sales.cust_area_action" sequence="5"/>
     <menuitem name="Products" id="sales.product_product_menu" parent="sales.product_menu" action="sales.products_action" sequence="1"/>
-    <menuitem id="product_type_menu_act" name="Type" parent="sales.product_menu" action="sales.product_type_action" sequence="2"/>
+    <menuitem id="product_type_menu_act" name="Product Type" parent="sales.product_menu" action="sales.product_type_action" sequence="2"/>
     <menuitem id="product_unit_menu_act" name="Unit of Measure" parent="sales.product_menu" action="sales.product_unit_action" sequence="3"/>
     
   </data>

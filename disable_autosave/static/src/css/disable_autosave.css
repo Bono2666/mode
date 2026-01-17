@@ -1,0 +1,8 @@
+.dropdown-item[data-menu="settings"] {
+    display: none !important;
+}
+
+/* Sembunyikan elemen menu yang memiliki class ini */
+.o_hidden_menu {
+    display: none !important;
+}

@@ -5,3 +5,10 @@ access_general_city,general.city,model_general_city,,1,1,1,1
 access_general_district,general.district,model_general_district,,1,1,1,1
 access_general_position,general.position,model_general_position,,1,1,1,1
 access_general_department,general.department,model_general_department,,1,1,1,1
+access_general_custom_users,general.custom_users,model_general_custom_users,,1,1,1,1
+access_general_password,general.password,model_general_password,,1,1,1,1
+access_general_password_preferences,general.password_preferences,model_general_password_preferences,base.group_user,1,1,1,1
+access_general_preferences,general.preferences,model_general_preferences,base.group_user,1,1,1,1
+access_general_auth,general.auth,model_general_auth,,1,1,1,1
+access_general_menu,general.menu,model_general_menu,,1,1,1,1
+access_general_home,general.home,model_general_home,,1,0,0,0

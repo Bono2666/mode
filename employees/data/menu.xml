@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="employee_menu" model="general.menu">
+        <field name="menu_id">employee</field>
+        <field name="menu_name">Employee</field>
+    </record>
+    
+</odoo>

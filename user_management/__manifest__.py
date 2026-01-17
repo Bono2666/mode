@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 {
-    'name': "Employees by Bonoworx",
+    'name': "User Management by Bonoworx",
 
-    'summary': "Centralize employee information",
+    'summary': "Manage user identities and access rights efficiently",
 
     'description': """
-Centralize employee information
+This module extends Odoo's standard functionality to provide deeper control over user management and custom profile settings
     """,
 
     'author': "Bonoworx",
@@ -21,11 +22,9 @@ Centralize employee information
 
     # always loaded
     'data': [
-        'security/ir.model.access.csv',
-        'data/menu.xml',
+        # 'security/ir.model.access.csv',
         'views/views.xml',
         'views/templates.xml',
-        'data/sequence.xml',
     ],
     # only loaded in demonstration mode
     'demo': [

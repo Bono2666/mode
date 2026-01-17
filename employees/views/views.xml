@@ -22,6 +22,28 @@
       <field name="model">employees.employees</field>
       <field name="arch" type="xml">
         <form string="">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
           <sheet>
             <div class="oe_title">
               <span class="d-inline-flex">
@@ -29,16 +51,16 @@
               </span>
               <h1>
                 <div class="d-flex">
-                  <field class="text-break" name="employee_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Fulan" default_focus="1"/>
+                  <field class="text-break" name="employee_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Fulan" default_focus="1" readonly="not is_edit and id"/>
                 </div>
               </h1>
             </div>
             <notebook>
               <page string="General Information" name="general_information">
                 <group>
-                  <field name="position_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                  <field name="department_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                  <field name="sales_code"/>
+                  <field name="position_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                  <field name="department_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                  <field name="sales_code" readonly="not is_edit and id"/>
                 </group>
               </page>
             </notebook>
@@ -53,6 +75,12 @@
       <field name="name">Employees</field>
       <field name="res_model">employees.employees</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first employee
+        </p>
+      </field>
     </record>
 
 

@@ -20,12 +20,34 @@
       <field name="model">general.country</field>
       <field name="arch" type="xml">
       <form string="Country">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
         <sheet>
           <div class="oe_title">
             <field name="country_id"/>
             <h1>
               <div class="d-flex">
-                <field class="text-break" name="country_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Indonesia"/>
+                <field class="text-break" name="country_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Indonesia" readonly="not is_edit and id"/>
               </div>
             </h1>
           </div>
@@ -53,12 +75,34 @@
       <field name="model">general.state</field>
       <field name="arch" type="xml">
       <form string="State">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
         <sheet>
           <div class="oe_title">
             <field name="state_id"/>
             <h1>
               <div class="d-flex">
-                <field class="text-break" name="state_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. DKI Jakarta"/>
+                <field class="text-break" name="state_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. DKI Jakarta" readonly="not is_edit and id"/>
               </div>
             </h1>
           </div>
@@ -86,12 +130,34 @@
       <field name="model">general.city</field>
       <field name="arch" type="xml">
       <form string="City">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
         <sheet>
           <div class="oe_title">
             <field name="city_id"/>
             <h1>
               <div class="d-flex">
-                <field class="text-break" name="city_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Bandung"/>
+                <field class="text-break" name="city_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Bandung" readonly="not is_edit and id"/>
               </div>
             </h1>
           </div>
@@ -119,6 +185,28 @@
       <field name="model">general.district</field>
       <field name="arch" type="xml">
       <form string="District">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
         <sheet>
           <div class="oe_title">
             <field name="district_id"/>
@@ -152,12 +240,34 @@
       <field name="model">general.position</field>
       <field name="arch" type="xml">
       <form string="Position">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
         <sheet>
           <div class="oe_title">
             <field name="position_id"/>
             <h1>
               <div class="d-flex">
-                <field class="text-break" name="position_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Sales"/>
+                <field class="text-break" name="position_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Sales" readonly="not is_edit and id"/>
               </div>
             </h1>
           </div>
@@ -184,13 +294,35 @@
       <field name="name">general.department.view.form</field>
       <field name="model">general.department</field>
       <field name="arch" type="xml">
-      <form string="Department">
+      <form string="Department" create="false">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
         <sheet>
           <div class="oe_title">
             <field name="department_id"/>
             <h1>
               <div class="d-flex">
-                <field class="text-break" name="department_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Shipping"/>
+                <field class="text-break" name="department_name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Shipping" readonly="not is_edit and id"/>
               </div>
             </h1>
           </div>
@@ -202,9 +334,14 @@
     <!-- general.home form view -->
     <record id="general.home_view_form" model="ir.ui.view">
       <field name="name">general.home.view.form</field>
-      <field name="model">ir.ui.view</field>
+      <field name="model">general.home</field>
       <field name="arch" type="xml">
         <form string="Home" create="false" edit="false">
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
           <!-- Centered Image Container -->
           <div class="d-flex justify-content-center align-items-center" style="height: 85vh; flex-direction: column;">
             <img src="/general/static/src/img/transparent_logo.webp" 
@@ -215,40 +352,165 @@
       </field>
     </record>
 
+    <!-- my preferences form -->
+    <record id="view_general_preferences_form" model="ir.ui.view">
+        <field name="name">general.preferences.form</field>
+        <field name="model">general.preferences</field>
+        <field name="arch" type="xml">
+            <form string="Change My Preferences">
+                <sheet>
+                    <div class="oe_avatar">
+                        <field name="image_1920" widget="image" class="oe_avatar" options="{'preview_image': 'image_1920'}"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="user_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/></h1>
+                    </div>
+                    <notebook>
+                        <page string="Preferences" name="general_info">
+                            <group>
+                                <group>
+                                    <field name="login" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        
+                        <page string="Account Security" name="security">
+                            <group string="Password Management">
+                                <div colspan="2">
+                                    <button name="action_open_change_password" string="Change Password" type="object" class="btn btn-secondary"/>
+                                </div>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button name="action_save_preferences" string="Save" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_general_password_preferences_step_form" model="ir.ui.view">
+        <field name="name">general.password_preferences.step.form</field>
+        <field name="model">general.password_preferences</field>
+        <field name="arch" type="xml">
+            <form string="Security Control">
+                <sheet>
+                    <field name="is_verified" invisible="1"/>
+                    
+                    <!-- TAMPILAN LANGKAH 1: Verifikasi -->
+                    <div invisible="is_verified == True">
+                        <h3><strong>Please enter your password to confirm you own this account</strong></h3>
+                        <div>
+                            <field class="o_field_highlight col-10 col-md-6 px-0" name="old_password" autocomplete="current-password" password="True" required="is_verified == False" placeholder="************" field_id="password_0"/>
+                        </div>
+                    </div>
+
+                    <!-- TAMPILAN LANGKAH 2: Input Baru -->
+                    <div invisible="is_verified == False">
+                        <group>
+                            <field name="new_password" password="True" required="is_verified == True"/>
+                            <field name="confirm_password" password="True" required="is_verified == True"/>
+                        </group>
+                    </div>
+                </sheet>
+                <footer>
+                    <!-- Tombol Langkah 1 -->
+                    <button name="action_verify_old_password" string="Confirm Password" 
+                            type="object" class="btn-primary" invisible="is_verified == True"/>
+                    
+                    <!-- Tombol Langkah 2 -->
+                    <button name="action_update_password" string="Change Password" 
+                            type="object" class="btn-primary" invisible="is_verified == False"/>
+                    
+                    <button string="Batal" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Menimpa menu Apps agar hanya bisa dilihat oleh Administrator (Grup Settings) -->
+    <record id="base.menu_management" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_system')])]"/>
+    </record>
+    
     <!-- actions opening views on models -->
+    <record id="general.action_my_preferences" model="ir.actions.act_window">
+        <field name="name">My Preferences</field>
+        <field name="res_model">general.preferences</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field> <!-- Membuka sebagai Popup agar fokus -->
+    </record>
     <record model="ir.actions.act_window" id="general.country_action">
       <field name="name">Country</field>
       <field name="res_model">general.country</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Country
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="general.state_action">
       <field name="name">State</field>
       <field name="res_model">general.state</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first State
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="general.city_action">
       <field name="name">City</field>
       <field name="res_model">general.city</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first City
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="general.district_action">
       <field name="name">District</field>
       <field name="res_model">general.district</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first District
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="general.position_action">
       <field name="name">Position</field>
       <field name="res_model">general.position</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Position
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="general.department_action">
       <field name="name">Department</field>
       <field name="res_model">general.department</field>
       <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create your first Department
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="general.home_action">
       <field name="name">Home</field>
-      <field name="res_model">ir.ui.view</field>
+      <field name="res_model">general.home</field>
       <field name="view_id" ref="general.home_view_form"/>
       <field name="view_mode">form</field>
       <field name="context">{'no_breadcrumbs': True}</field>
@@ -261,7 +523,7 @@
 
     <!-- general menus -->
 
-    <menuitem name="Others" id="general.general_others_menu" parent="general.menu_master_menu" sequence="4"/>
+    <menuitem name="Others" id="general.general_others_menu" parent="general.menu_master_menu" sequence="5"/>
     
     <menuitem name="Country" id="general.general_country_act" parent="general.general_others_menu" action="general.country_action" sequence="1"/>
     <menuitem name="State" id="general.general_state_act" parent="general.general_others_menu" action="general.state_action" sequence="2"/>
@@ -269,5 +531,6 @@
     <menuitem name="District" id="general.general_district_act" parent="general.general_others_menu" action="general.district_action" sequence="4"/>
     <menuitem name="Position" id="general.general_position_act" parent="general.general_others_menu" action="general.position_action" sequence="5"/>
     <menuitem name="Department" id="general.general_department_act" parent="general.general_others_menu" action="general.department_action" sequence="6"/>
+    
   </data>
 </odoo>

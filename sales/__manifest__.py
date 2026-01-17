@@ -1,5 +1,5 @@
 {
-    'name': "Sales by KSI",
+    'name': "Sales by Bonoworx",
 
     'summary': "From quotations to invoices",
 
@@ -7,8 +7,8 @@
 From quotations to invoices
     """,
 
-    'author': "KSI Solusi",
-    'website': "https://www.ksisolusi.com",
+    'author': "Bonoworx",
+    'website': "https://www.bonoworx.com",
 
     # Categories can be used to filter modules in modules listing
     # Check https://github.com/odoo/odoo/blob/15.0/odoo/addons/base/data/ir_module_category_data.xml
@@ -22,8 +22,8 @@ From quotations to invoices
     # always loaded
     'data': [
         'security/ir.model.access.csv',
-        'views/views.xml',
         'views/templates.xml',
+        'views/views.xml',
         'data/sequence.xml',
         'data/account_type.xml',
         'data/product_type.xml'

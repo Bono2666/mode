@@ -1,0 +1,15 @@
+<templates>
+    <t t-inherit="web.NavBar.Items" t-inherit-mode="extension">
+        <xpath expr="//a[contains(@class, 'dropdown-item')]" position="attributes">
+            <attribute name="t-att-class">
+                shouldHide(menu) ? 'o_hidden_menu' : ''
+            </attribute>
+        </xpath>
+        <!-- Untuk menu utama di navbar -->
+        <xpath expr="//button[contains(@class, 'o_menu_sections_more')]" position="attributes">
+            <attribute name="t-att-class">
+                shouldHide(menu) ? 'o_hidden_menu' : ''
+            </attribute>
+        </xpath>
+    </t>
+</templates>

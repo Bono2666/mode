@@ -4,7 +4,6 @@ import { FormController } from "@web/views/form/form_controller";
 import { FormRenderer } from "@web/views/form/form_renderer";
 import { useService } from "@web/core/utils/hooks";
 import { patch } from "@web/core/utils/patch";
-import { ControlPanel } from "@web/search/control_panel/control_panel";
 import { onMounted } from "@odoo/owl";
 
 // GLOBAL STATE
@@ -106,15 +105,69 @@ patch(FormRenderer.prototype, {
     },
 });
 
-/** Hide Control Panel */
-patch(ControlPanel.prototype, {
+patch(FormController.prototype, {
     setup() {
         super.setup();
         onMounted(() => {
-            if (this.env.searchModel?.resModel === 'ir.ui.view') {
-                this.root.el.style.setProperty("display", "none", "important");
+            const btnNew = document.querySelector('.discard-new');
+            const btnEdit = document.querySelector('.discard-edit');
+            if (btnNew) {
+                btnNew.addEventListener('click', async () => {
+                    this.actionService.restore();
+                });
+            }
+            if (btnEdit) {
+                btnEdit.addEventListener('click', async () => {
+                    const record = this.model.root;
+
+                    // 1. Simpan perubahan field 'state' ke server melalui RPC
+                    await record.update({ is_edit: false });
+                    // 2. Simpan seluruh record secara permanen
+                    const saved = await record.save();
+                    if (saved) {
+                        this.actionService.restore();
+                    }
+                });
             }
         });
-    },
+    }
 });
-/** Hide Control Panel */
+
+/** @odoo-module **/
+import { registry } from "@web/core/registry";
+
+const userMenuRegistry = registry.category("user_menuitems");
+
+// 1. Tambahkan menu kustom Anda (jika belum ada)
+userMenuRegistry.add("my_custom_preferences", (env) => {
+    return {
+        type: "item",
+        id: "my_custom_preferences",
+        description: "My Preferences",
+        callback: () => {
+            env.services.action.doAction("general.action_my_preferences");
+        },
+        sequence: 10,
+    };
+}, { force: true });
+
+// 2. Fungsi untuk membersihkan menu lainnya
+function cleanupUserMenu() {
+    const itemsToRemove = [
+        "settings",      // Menu Preferences bawaan
+        "documentation", // Menu Dokumentasi
+        "support",       // Menu Support
+        "odoo_account",  // Menu Odoo.com
+        "shortcuts",     // Menu Shortcuts
+        "debug",         // Menu Debug
+    ];
+
+    itemsToRemove.forEach((item) => {
+        if (userMenuRegistry.contains(item)) {
+            userMenuRegistry.remove(item);
+        }
+    });
+}
+
+// Jalankan pembersihan
+cleanupUserMenu();

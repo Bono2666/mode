@@ -25,10 +25,6 @@
         <field name="menu_id">department</field>
         <field name="menu_name">Department</field>
     </record>
-    <record id="employee_menu" model="general.menu">
-        <field name="menu_id">employee</field>
-        <field name="menu_name">Employee</field>
-    </record>
     <record id="cust_category_menu" model="general.menu">
         <field name="menu_id">cust_category</field>
         <field name="menu_name">Customer Category</field>
@@ -41,16 +37,44 @@
         <field name="menu_id">cust_area</field>
         <field name="menu_name">Customer Area</field>
     </record>
-    <record id="products_menu" model="general.menu">
-        <field name="menu_id">products</field>
-        <field name="menu_name">Products</field>
+    <record id="product_menu" model="general.menu">
+        <field name="menu_id">product</field>
+        <field name="menu_name">Product</field>
+    </record>
+    <record id="product_type_menu" model="general.menu">
+        <field name="menu_id">product_type</field>
+        <field name="menu_name">Product Type</field>
+    </record>
+    <record id="product_unit_menu" model="general.menu">
+        <field name="menu_id">product_unit</field>
+        <field name="menu_name">Unit of Measure</field>
     </record>
     <record id="price_condition_menu" model="general.menu">
         <field name="menu_id">price_condition</field>
         <field name="menu_name">Price Condition</field>
     </record>
+    <record id="payment_terms_menu" model="general.menu">
+        <field name="menu_id">payment_terms</field>
+        <field name="menu_name">Payment Terms</field>
+    </record>
     <record id="customer_menu" model="general.menu">
         <field name="menu_id">customer</field>
         <field name="menu_name">Customer</field>
+    </record>
+    <record id="users_menu" model="general.menu">
+        <field name="menu_id">custom_users</field>
+        <field name="menu_name">Users</field>
+    </record>
+    <record id="others_menu" model="general.menu">
+        <field name="menu_id">others</field>
+        <field name="menu_name">Others</field>
+    </record>
+    <record id="customers_menu" model="general.menu">
+        <field name="menu_id">customers</field>
+        <field name="menu_name">Customers</field>
+    </record>
+    <record id="products_menu" model="general.menu">
+        <field name="menu_id">products</field>
+        <field name="menu_name">Products</field>
     </record>
 </odoo>

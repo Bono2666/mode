@@ -1,10 +1,10 @@
 {
-    'name': "Disable Autosave by KSI",
+    'name': "Disable Autosave by Bonoworx",
     'summary': "This module disables the auto save feature of Odoo",
     'description': "This module disables the auto save feature of Odoo",
 
-    'author': "KSI solusi",
-    'website': "https://www.ksisolusi.com",
+    'author': "Bonoworx",
+    'website': "https://www.bonoworx.com",
 
     'category': 'Technical',
     'version': '0.1',
@@ -25,7 +25,9 @@
     'assets': {
         'web.assets_backend': [
             'disable_autosave/static/src/js/disable_autosave.js',
+            'disable_autosave/static/src/css/disable_autosave.css',
         ],
     },
+
     'license': 'LGPL-3',
 }
