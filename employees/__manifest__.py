@@ -22,7 +22,7 @@ Centralize employee information
     # always loaded
     'data': [
         'security/ir.model.access.csv',
-        'data/menu.xml',
+        # 'data/menu.xml',
         'views/views.xml',
         'views/templates.xml',
         'data/sequence.xml',

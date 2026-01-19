@@ -514,6 +514,8 @@
       <field name="view_id" ref="general.home_view_form"/>
       <field name="view_mode">form</field>
       <field name="context">{'no_breadcrumbs': True}</field>
+      <field name="target">current</field>
+      <field name="res_id" ref="company_home"/>
     </record>
 
     <!-- menu items -->

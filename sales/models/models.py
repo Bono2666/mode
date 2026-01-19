@@ -216,7 +216,7 @@ class customer(models.Model):
     _inherit = ['navigation.mixin']
     _description = 'Customer'
     _rec_name = 'customer_name'
-    _menu_code = 'customer'
+    _menu_code = 'customers'
 
     customer_id = fields.Char(string="Customer ID", readonly=True)
     customer_name = fields.Char(string="Customer Name")
@@ -456,3 +456,35 @@ class payment_terms_detail(models.Model):
     percentage = fields.Float(string="Percentage")
     no_of_days = fields.Integer(string="No of Days")
     explanation = fields.Char(string="Explanation")
+
+
+class sales(models.Model):
+    _name = 'sales.sales'
+    _inherit = ['navigation.mixin']
+    _description = 'Sales'
+    _menu_code = 'sales'
+
+    sales_code = fields.Char(string="Sales Code", readonly=True)
+    customer_id = fields.Many2one(
+        comodel_name='sales.customer', string='Customer', ondelete='set null', index=True)
+    expiry_date = fields.Date(string="Expiration", default=lambda: fields.Date.today(
+    ) + __import__('datetime').timedelta(days=10))
+    payment_terms = fields.Many2one(
+        comodel_name='sales.payment_terms', string='Payment Terms', ondelete='set null', index=True)
+    sales_name = fields.Char(string="Salesperson")
+    products_ids = fields.Many2many(
+        'sales.products', string='Products')
+    is_edit = fields.Boolean(default=False)
+
+    @api.model
+    def create(self, vals):
+        if isinstance(vals, list):
+            for v in vals:
+                if not v.get('sales_code'):
+                    v['sales_code'] = self.env['ir.sequence'].next_by_code(
+                        'sales.sales_order') or '/'
+            return super(sales, self).create(vals)
+        if not vals.get('sales_code'):
+            vals['sales_code'] = self.env['ir.sequence'].next_by_code(
+                'sales.sales_order') or '/'
+        return super(sales, self).create(vals)

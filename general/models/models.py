@@ -289,6 +289,7 @@ class country(models.Model):
     _name = 'general.country'
     _inherit = ['navigation.mixin']
     _description = 'Country'
+    _rec_name = 'country_name'
     _menu_code = 'country'
 
     country_id = fields.Char(string="Country ID", readonly=True)
@@ -452,6 +453,8 @@ class menu(models.Model):
 
     menu_id = fields.Char(string="Menu ID")
     menu_name = fields.Char(string="Menu Name")
+    parent_menu = fields.Char(string="Parent Menu")
+    is_parent = fields.Boolean(string="Is Parent Menu?", default=False)
 
 
 class home(models.Model):
@@ -473,17 +476,18 @@ class custom_users(models.Model):
     password = fields.Char(string="Password", required=True)
     position = fields.Many2one(
         comodel_name='general.position', string='Job Position')
-    image_1920 = fields.Binary(string="Image")
     is_edit = fields.Boolean(default=False)
 
     # Field untuk menyimpan referensi ke record asli res.users
     user_id = fields.Many2one(
         'res.users', string="Related Users", readonly=True)
+    image_1920 = fields.Image(string="Photo Profile",
+                              related='user_id.image_1920', readonly=False)
 
     custom_login_date = fields.Datetime(
         related='user_id.login_date', string="Latest Authentication", readonly=True)
     menu_ids = fields.One2many(
-        'general.auth', 'custom_user_id', string="User Authentication")
+        'general.auth', 'custom_user_id', string="User Authentication", domain=[('is_parent', '=', False)])
 
     @api.model
     def create(self, vals):
@@ -511,6 +515,22 @@ class custom_users(models.Model):
         vals['user_id'] = new_user.id
         return super(custom_users, self).create(vals)
 
+    @api.model
+    def write(self, vals):
+        # Jika ada perubahan pada user_id, update juga res.users
+        if 'name' in vals or 'login' in vals or 'image_1920' in vals:
+            for record in self:
+                user_vals = {}
+                if 'name' in vals:
+                    user_vals['name'] = vals['name']
+                if 'login' in vals:
+                    user_vals['login'] = vals['login']
+                if 'image_1920' in vals:
+                    user_vals['image_1920'] = vals['image_1920']
+                if user_vals:
+                    record.user_id.sudo().write(user_vals)
+        return super(custom_users, self).write(vals)
+
 
 class auth(models.Model):
     _name = 'general.auth'
@@ -520,10 +540,26 @@ class auth(models.Model):
         'general.custom_users', string='User', ondelete='cascade', index=True)
     user_id = fields.Many2one(
         'res.users', related='custom_user_id.user_id', string="User ID", readonly=True)
-    menu_id = fields.Many2one('general.menu', string="Menu")
+    menu_id = fields.Many2one('general.menu', string="Menu", domain=[
+                              ('is_parent', '=', False)])
+    is_parent = fields.Boolean(string="Is Parent Menu?", default=False)
     can_create = fields.Boolean(default=False)
     can_update = fields.Boolean(default=False)
     can_delete = fields.Boolean(default=False)
+
+    @api.model
+    def create(self, vals):
+        # Cek duplikasi
+        existing_record = self.env['general.auth'].search([
+            ('custom_user_id', '=', vals.get('custom_user_id')),
+            ('menu_id', '=', vals.get('menu_id'))
+        ], limit=1)
+
+        if existing_record:
+            raise UserError(
+                _("This user already has access settings for the selected menu."))
+
+        return super(auth, self).create(vals)
 
 
 class ResUsers(models.Model):
@@ -563,6 +599,40 @@ class ResUsers(models.Model):
         menu_obj = self.env['general.auth'].search(
             [('custom_user_id.user_id', '=', self.id)])
         existing_menu_ids = [menu.menu_id.id for menu in menu_obj]
+
+        repeated = True
+        while repeated:
+            repeated = False
+            # Tambahkan parent menu ke daftar menu yang dibatasi jika belum ada
+            for menu in all_menus:
+                if menu.id in existing_menu_ids:
+                    parent_menu_id = menu.parent_menu
+                    if parent_menu_id:
+                        # Cari parent menu di model general.menu untuk mendapatkan ID-nya
+                        parent_menu = self.env['general.menu'].search(
+                            [('menu_id', '=', parent_menu_id)], limit=1)
+                        parent_menu_id = parent_menu.id if parent_menu else False
+                    if parent_menu_id and parent_menu_id not in existing_menu_ids:
+                        # Cek apakah parent menu sudah ada dalam auth
+                        existing_parent = self.env['general.auth'].search([
+                            ('custom_user_id.user_id', '=', self.id),
+                            ('menu_id', '=', parent_menu_id)
+                        ], limit=1)
+                        if not existing_parent:
+                            repeated = True
+                            self.env['general.auth'].create({
+                                'custom_user_id': self.env['general.custom_users'].search(
+                                    [('user_id', '=', self.id)], limit=1).id,
+                                'menu_id': parent_menu_id,
+                                'is_parent': True,
+                                'can_create': False,
+                                'can_update': False,
+                                'can_delete': False,
+                            })
+
+            menu_obj = self.env['general.auth'].search(
+                [('custom_user_id.user_id', '=', self.id)])
+            existing_menu_ids = [menu.menu_id.id for menu in menu_obj]
 
         for menu in all_menus:
             if menu.id not in existing_menu_ids:

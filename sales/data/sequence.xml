@@ -3,60 +3,67 @@
 
     <data>
         <record id="seq_cust_category" model="ir.sequence">
-        <field name="name">Customer Category Sequence</field>
-        <field name="code">sales.cust_category</field>
-        <field name="prefix">CUSTCAT</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
+            <field name="name">Customer Category Sequence</field>
+            <field name="code">sales.cust_category</field>
+            <field name="prefix">CUSTCAT</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
         </record>
         <record id="seq_cust_type" model="ir.sequence">
-        <field name="name">Customer Type Sequence</field>
-        <field name="code">sales.cust_type</field>
-        <field name="prefix">CUSTTYP</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
+            <field name="name">Customer Type Sequence</field>
+            <field name="code">sales.cust_type</field>
+            <field name="prefix">CUSTTYP</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
         </record>
         <record id="seq_cust_area" model="ir.sequence">
-        <field name="name">Customer Area Sequence</field>
-        <field name="code">sales.cust_area</field>
-        <field name="prefix">CUSTARE</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
+            <field name="name">Customer Area Sequence</field>
+            <field name="code">sales.cust_area</field>
+            <field name="prefix">CUSTARE</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
         </record>
         <record id="seq_ship_to" model="ir.sequence">
-        <field name="name">Ship To Sequence</field>
-        <field name="code">sales.ship_to</field>
-        <field name="prefix">SHIPTO</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
+            <field name="name">Ship To Sequence</field>
+            <field name="code">sales.ship_to</field>
+            <field name="prefix">SHIPTO</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
         </record>
         <record id="seq_products" model="ir.sequence">
-        <field name="name">Products Sequence</field>
-        <field name="code">sales.products</field>
-        <field name="prefix">PROD</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
+            <field name="name">Products Sequence</field>
+            <field name="code">sales.products</field>
+            <field name="prefix">PROD</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
         </record>
         <record id="seq_price_condition" model="ir.sequence">
-        <field name="name">Price Condition Sequence</field>
-        <field name="code">sales.price_condition</field>
-        <field name="prefix">PRICE</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
+            <field name="name">Price Condition Sequence</field>
+            <field name="code">sales.price_condition</field>
+            <field name="prefix">PRICE</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
         </record>
         <record id="seq_customer" model="ir.sequence">
-        <field name="name">Customer Sequence</field>
-        <field name="code">sales.customer</field>
-        <field name="prefix">CUST</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
+            <field name="name">Customer Sequence</field>
+            <field name="code">sales.customer</field>
+            <field name="prefix">CUST</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
         </record>
         <record id="seq_payment_terms" model="ir.sequence">
-        <field name="name">Payment Terms Sequence</field>
-        <field name="code">sales.payment_terms</field>
-        <field name="prefix">PAYT</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
+            <field name="name">Payment Terms Sequence</field>
+            <field name="code">sales.payment_terms</field>
+            <field name="prefix">PAYT</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="seq_sales_order" model="ir.sequence">
+            <field name="name">Sales Order Sequence</field>
+            <field name="code">sales.sales_order</field>
+            <field name="prefix">SO</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
         </record>
     </data>
 

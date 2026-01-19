@@ -24,6 +24,7 @@ General Master Table
         'security/ir.model.access.csv',
         'views/templates.xml',
         'data/menu.xml',
+        'data/home.xml',
         'views/views.xml',
         'data/sequence.xml',
         'data/logo.xml',

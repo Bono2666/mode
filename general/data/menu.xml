@@ -4,50 +4,63 @@
     <record id="country_menu" model="general.menu">
         <field name="menu_id">country</field>
         <field name="menu_name">Country</field>
+        <field name="parent_menu">others</field>
     </record>
     <record id="state_menu" model="general.menu">
         <field name="menu_id">state</field>
         <field name="menu_name">State</field>
+        <field name="parent_menu">others</field>
     </record>
     <record id="city_menu" model="general.menu">
         <field name="menu_id">city</field>
         <field name="menu_name">City</field>
+        <field name="parent_menu">others</field>
     </record>
     <record id="district_menu" model="general.menu">
         <field name="menu_id">district</field>
         <field name="menu_name">District</field>
+        <field name="parent_menu">others</field>
     </record>
     <record id="position_menu" model="general.menu">
         <field name="menu_id">position</field>
         <field name="menu_name">Position</field>
+        <field name="parent_menu">others</field>
     </record>
     <record id="department_menu" model="general.menu">
         <field name="menu_id">department</field>
         <field name="menu_name">Department</field>
+        <field name="parent_menu">others</field>
     </record>
     <record id="cust_category_menu" model="general.menu">
         <field name="menu_id">cust_category</field>
         <field name="menu_name">Customer Category</field>
+        <field name="parent_menu">customer</field>
     </record>
     <record id="cust_type_menu" model="general.menu">
         <field name="menu_id">cust_type</field>
         <field name="menu_name">Customer Type</field>
+        <field name="parent_menu">customer</field>
     </record>
     <record id="cust_area_menu" model="general.menu">
         <field name="menu_id">cust_area</field>
         <field name="menu_name">Customer Area</field>
+        <field name="parent_menu">customer</field>
     </record>
     <record id="product_menu" model="general.menu">
         <field name="menu_id">product</field>
         <field name="menu_name">Product</field>
+        <field name="parent_menu">master_data</field>
+        <field name="is_parent">True</field>
     </record>
     <record id="product_type_menu" model="general.menu">
         <field name="menu_id">product_type</field>
         <field name="menu_name">Product Type</field>
+        <field name="parent_menu">product</field>
     </record>
     <record id="product_unit_menu" model="general.menu">
         <field name="menu_id">product_unit</field>
         <field name="menu_name">Unit of Measure</field>
+        <field name="parent_menu">product</field>
     </record>
     <record id="price_condition_menu" model="general.menu">
         <field name="menu_id">price_condition</field>
@@ -56,25 +69,42 @@
     <record id="payment_terms_menu" model="general.menu">
         <field name="menu_id">payment_terms</field>
         <field name="menu_name">Payment Terms</field>
+        <field name="parent_menu">customer</field>
     </record>
     <record id="customer_menu" model="general.menu">
         <field name="menu_id">customer</field>
         <field name="menu_name">Customer</field>
+        <field name="parent_menu">master_data</field>
+        <field name="is_parent">True</field>
     </record>
     <record id="users_menu" model="general.menu">
         <field name="menu_id">custom_users</field>
         <field name="menu_name">Users</field>
+        <field name="parent_menu">master_data</field>
     </record>
     <record id="others_menu" model="general.menu">
         <field name="menu_id">others</field>
         <field name="menu_name">Others</field>
+        <field name="parent_menu">master_data</field>
+        <field name="is_parent">True</field>
     </record>
     <record id="customers_menu" model="general.menu">
         <field name="menu_id">customers</field>
         <field name="menu_name">Customers</field>
+        <field name="parent_menu">customer</field>
     </record>
     <record id="products_menu" model="general.menu">
         <field name="menu_id">products</field>
         <field name="menu_name">Products</field>
+        <field name="parent_menu">product</field>
+    </record>
+    <record id="master_data_menu" model="general.menu">
+        <field name="menu_id">master_data</field>
+        <field name="menu_name">Master Data</field>
+        <field name="is_parent">True</field>
+    </record>
+    <record id="employees_menu" model="general.menu">
+        <field name="menu_id">employees</field>
+        <field name="menu_name">Employees</field>
     </record>
 </odoo>
