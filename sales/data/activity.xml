@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+        <data noupdate="1">
+            <record id="mail_act_sales_approval" model="mail.activity.type">
+                <field name="name">Request Approval</field>
+                <field name="icon">fa-check-square-o</field>
+                <field name="res_model">sales.sales_order</field>
+            </record>
+        </data>
+
+</odoo>

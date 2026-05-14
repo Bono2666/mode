@@ -1,24 +1,279 @@
 <odoo>
     <data>
-<!--
-        <template id="listing">
-          <ul>
-            <li t-foreach="objects" t-as="object">
-              <a t-attf-href="#{ root }/objects/#{ object.id }">
-                <t t-esc="object.display_name"/>
-              </a>
-            </li>
-          </ul>
+
+        <template id="external_layout_standard_inherit" inherit_id="web.external_layout_standard">
+            <!-- Target the column containing the logo -->
+            <xpath expr="//div[hasclass('col-3')]/img[@t-if='company.logo']" position="attributes">
+                <attribute name="style">max-height: 45px; margin-top: 8px !important;</attribute>
+            </xpath>
         </template>
-        <template id="object">
-          <h1><t t-esc="object.display_name"/></h1>
-          <dl>
-            <t t-foreach="object._fields" t-as="field">
-              <dt><t t-esc="field"/></dt>
-              <dd><t t-esc="object[field]"/></dd>
+
+        <template id="external_layout_standard_inherit_v2" inherit_id="web.external_layout_standard">
+            <!-- Target the first row of the header -->
+            <xpath expr="//div[hasclass('row')][1]" position="attributes">
+                <attribute name="style">margin-bottom: 8px !important;</attribute>
+            </xpath>
+        </template>
+
+        <template id="report_sales_order_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="oe_structure"/>
+                            <h2 class="mt-4">
+                                <span>Quotation # </span>
+                                <span t-field="doc.sales_code"/>
+                            </h2>
+
+                            <div class="row mt-4 mb-4">
+                                <div class="col-6">
+                                    <span t-field="doc.customer_id.customer_name"/><br/>
+                                    <span t-field="doc.customer_id.address"/><span> </span>
+                                    <span t-field="doc.customer_id.district.district_name"/><br/>
+                                    <span t-field="doc.customer_id.city.city_name"/><span> </span>
+                                    <span t-field="doc.customer_id.state.state_name"/><span> </span>
+                                    <span t-field="doc.customer_id.postal_code"/><br/>
+                                    <span t-field="doc.customer_id.country.country_name"/><br/>
+                                    <div t-if="doc.customer_id.telephone">
+                                        <i class="fa fa-phone" role="img" aria-label="Phone" title="Phone"/>
+                                        <span class="ms-1" t-field="doc.customer_id.telephone"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-4 mt-4">
+                                <div class="col-4">
+                                    <strong>Quotation Date:</strong>
+                                    <p t-field="doc.quotation_date"/>
+                                </div>
+                                <div class="col-4">
+                                    <strong>Expiration:</strong>
+                                    <p t-field="doc.expiry_date"/>
+                                </div>
+                                <div class="col-4">
+                                    <strong>Salesperson:</strong>
+                                    <p t-field="doc.sales_name.name"/>
+                                </div>
+                            </div>
+
+                            <table class="table table-sm o_main_table mt-4">
+                                <thead>
+                                    <tr>
+                                        <th class="text-start">Description</th>
+                                        <th class="text-end">Quantity</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th class="text-end">Taxes</th>
+                                        <th class="text-end">Disc.%</th>
+                                        <th class="text-start">Info</th>
+                                        <th class="text-end">Sub Total (Tax excl.)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="doc.order_line_ids" t-as="line">
+                                        <tr>
+                                            <td><span t-field="line.product_id.product_name"/></td>
+                                            <td class="text-end"><span t-field="line.quantity"/> <span t-field="line.product_unit"/></td>
+                                            <td class="text-end"><span t-field="line.unit_price"/></td>
+                                            <td class="text-end"><span t-field="line.taxes"/></td>
+                                            <td class="text-end"><span t-field="line.discount"/></td>
+                                            <td class="text-start"><span t-field="line.info"/></td>
+                                            <td class="text-end"><span t-field="line.sub_total"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+
+                            <div class="row justify-content-end">
+                                <div class="col-4">
+                                    <table class="table table-sm">
+                                        <tr class="border-black">
+                                            <td><strong>Untaxed Amount</strong></td>
+                                            <td class="text-end">
+                                                <span t-field="doc.total_amount_untaxed"/>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Tax</strong></td>
+                                            <td class="text-end">
+                                                <span t-field="doc.total_tax"/>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-black o_total">
+                                            <td><strong>Total</strong></td>
+                                            <td class="text-end">
+                                                <span t-field="doc.total_amount"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <!-- if payment terms -->
+                                    <t t-if="doc.payment_terms">
+                                        <span t-field="doc.payment_terms.note"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <p t-field="doc.note"/>
+                                </div>
+                            </div>
+
+                        </div>
+                    </t>
+                </t>
             </t>
-          </dl>
         </template>
--->
+
+        <!-- Invoice PDF Report Template -->
+        <template id="report_sales_invoice_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="oe_structure"/>
+                            <h2 class="mt-4">
+                                <span t-if="doc.document_type == 'invoice'">Invoice # </span>
+                                <span t-if="doc.document_type == 'credit_note'">Invoice # </span>
+                                <span t-field="doc.invoice_number"/>
+                            </h2>
+
+                            <div class="row mt-4 mb-4">
+                                <div class="col-6">
+                                    <strong><span t-field="doc.customer_id.customer_name"/></strong><br/>
+                                    <span t-field="doc.customer_id.address"/><br/>
+                                    <t t-if="doc.customer_id.district">
+                                        <span t-field="doc.customer_id.district.district_name"/><span>, </span>
+                                    </t>
+                                    <t t-if="doc.customer_id.city">
+                                        <span t-field="doc.customer_id.city.city_name"/><span>, </span>
+                                    </t>
+                                    <t t-if="doc.customer_id.state">
+                                        <span t-field="doc.customer_id.state.state_name"/>
+                                    </t>
+                                    <br/>
+                                    <t t-if="doc.customer_id.postal_code">
+                                        <span t-field="doc.customer_id.postal_code"/><br/>
+                                    </t>
+                                    <span t-field="doc.customer_id.country.country_name"/><br/>
+                                    <t t-if="doc.customer_id.npwp">
+                                        <span>NPWP: </span>
+                                        <span t-field="doc.customer_id.npwp"/>
+                                    </t>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td class="text-end"><strong>Invoice Date</strong></td>
+                                            <td class="text-end"><span t-field="doc.invoice_date"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-end"><strong>Sales Order</strong></td>
+                                            <td class="text-end"><span t-field="doc.sales_order_id.sales_code"/></td>
+                                        </tr>
+                                        <t t-if="doc.sales_name">
+                                            <tr>
+                                                <td class="text-end"><strong>Salesperson</strong></td>
+                                                <td class="text-end"><span t-field="doc.sales_name.name"/></td>
+                                            </tr>
+                                        </t>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <table class="table table-sm o_main_table mt-4">
+                                <thead>
+                                    <tr>
+                                        <th class="text-start">#</th>
+                                        <th class="text-start">Description</th>
+                                        <th class="text-end">Qty</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th class="text-end">Disc.%</th>
+                                        <th class="text-end">Tax</th>
+                                        <th class="text-end">Sub Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="doc.line_ids" t-as="line">
+                                        <tr>
+                                            <td><span t-esc="line_index + 1"/></td>
+                                            <td><span t-field="line.description"/></td>
+                                            <td class="text-end"><span t-field="line.quantity"/></td>
+                                            <td class="text-end"><span t-field="line.unit_price"/></td>
+                                            <td class="text-end">
+                                                <t t-if="line.discount">
+                                                    <span t-field="line.discount"/>%
+                                                </t>
+                                                <t t-else="">-</t>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-if="line.tax_id">
+                                                    <span t-field="line.tax_id.name"/>
+                                                </t>
+                                                <t t-else="">-</t>
+                                            </td>
+                                            <td class="text-end"><span t-field="line.sub_total"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+
+                            <div class="row justify-content-end">
+                                <div class="col-4">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Untaxed Amount</strong></td>
+                                            <td class="text-end">
+                                                <span t-field="doc.amount_untaxed"/>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Tax</strong></td>
+                                            <td class="text-end">
+                                                <span t-field="doc.amount_tax"/>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-black o_total">
+                                            <td><strong>Total</strong></td>
+                                            <td class="text-end">
+                                                <span t-field="doc.amount_total"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <t t-if="doc.payment_terms_id and doc.payment_terms_id.payment_terms_ids">
+                                <div class="row mt-4">
+                                    <div class="col-6" style="background-color: #f0f0f0; padding: 10px; border-radius: 4px;">
+                                        <div><b>Payment terms:</b> <t t-esc="doc.payment_terms_id.sales_text"/></div>
+                                        <t t-set="remaining" t-value="doc.amount_total"/>
+                                        <t t-set="term_lines" t-value="doc.payment_terms_id.payment_terms_ids.sorted('no_of_days')"/>
+                                        <t t-set="total_terms" t-value="len(term_lines)"/>
+                                        <t t-foreach="term_lines" t-as="tline">
+                                            <t t-set="is_last" t-value="tline_index + 1 == total_terms"/>
+                                            <t t-set="amount" t-value="remaining if is_last else round(doc.amount_total * (tline.percentage / 100.0), 0)"/>
+                                            <t t-if="not is_last" t-set="remaining" t-value="remaining - amount"/>
+                                            <t t-set="due_date" t-value="(doc.invoice_date or context_today()) + datetime.timedelta(days=tline.no_of_days)"/>
+                                            <div>
+                                                <b><t t-esc="tline_index + 1"/>#</b>
+                                                Installment of
+                                                <b>Rp <t t-esc="'{:,.0f}'.format(amount)"/></b>
+                                                due on
+                                                <b style="color: #704A66;"><t t-esc="due_date.strftime('%m/%d/%Y')"/></b>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+
     </data>
 </odoo>

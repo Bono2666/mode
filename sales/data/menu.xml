@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+        <data noupdate="0">
+            <record id="cust_category_menu" model="general.menu">
+                <field name="menu_id">cust_category</field>
+                <field name="menu_name">Customer Categories</field>
+                <field name="parent_menu">customer</field>
+            </record>
+            <record id="cust_type_menu" model="general.menu">
+                <field name="menu_id">cust_type</field>
+                <field name="menu_name">Customer Types</field>
+                <field name="parent_menu">customer</field>
+            </record>
+            <record id="cust_area_menu" model="general.menu">
+                <field name="menu_id">cust_area</field>
+                <field name="menu_name">Customer Areas</field>
+                <field name="parent_menu">customer</field>
+            </record>
+            <record id="product_parent_menu" model="general.menu">
+                <field name="menu_id">product</field>
+                <field name="menu_name">Product</field>
+                <field name="parent_menu">master_data</field>
+                <field name="is_parent">True</field>
+            </record>
+            <record id="product_type_menu" model="general.menu">
+                <field name="menu_id">product_type</field>
+                <field name="menu_name">Product Types</field>
+                <field name="parent_menu">product</field>
+            </record>
+            <record id="product_unit_menu" model="general.menu">
+                <field name="menu_id">product_unit</field>
+                <field name="menu_name">Unit of Measures</field>
+                <field name="parent_menu">product</field>
+            </record>
+            <record id="price_conditions_menu" model="general.menu">
+                <field name="menu_id">price_condition</field>
+                <field name="menu_name">Price Conditions</field>
+                <field name="parent_menu">master_data</field>
+            </record>
+            <record id="payment_terms_menu" model="general.menu">
+                <field name="menu_id">payment_terms</field>
+                <field name="menu_name">Payment Terms</field>
+                <field name="parent_menu">invoicing</field>
+            </record>
+            <record id="terms_menu" model="general.menu">
+                <field name="menu_id">terms_and_conditions</field>
+                <field name="menu_name">Terms and Conditions</field>
+                <field name="parent_menu">invoicing</field>
+            </record>
+            <record id="sales_invoice_menu" model="general.menu">
+                <field name="menu_id">sales_invoices</field>
+                <field name="menu_name">Invoices</field>
+                <field name="parent_menu">invoicing</field>
+            </record>
+            <record id="customers_menu" model="general.menu">
+                <field name="menu_id">customer</field>
+                <field name="menu_name">Customer</field>
+                <field name="parent_menu">master_data</field>
+                <field name="is_parent">True</field>
+            </record>
+            <record id="invoicings_menu" model="general.menu">
+                <field name="menu_id">invoicing</field>
+                <field name="menu_name">Invoicing</field>
+                <field name="parent_menu">master_data</field>
+                <field name="is_parent">True</field>
+            </record>
+            <record id="order_menu" model="general.menu">
+                <field name="menu_id">orders</field>
+                <field name="menu_name">Order</field>
+                <field name="parent_menu">sales</field>
+                <field name="is_parent">True</field>
+            </record>
+            <record id="customers_orders_menu" model="general.menu">
+                <field name="menu_id">customers</field>
+                <field name="menu_name">Customers</field>
+                <field name="parent_menu">orders</field>
+            </record>
+            <record id="products_menu" model="general.menu">
+                <field name="menu_id">products</field>
+                <field name="menu_name">Products</field>
+                <field name="parent_menu">sales</field>
+            </record>
+            <record id="sales_menu" model="general.menu">
+                <field name="menu_id">sales</field>
+                <field name="menu_name">Sales</field>
+                <field name="is_parent">True</field>
+            </record>
+            <record id="taxes_menu" model="general.menu">
+                <field name="menu_id">taxes</field>
+                <field name="menu_name">Taxes</field>
+                <field name="parent_menu">master_data</field>
+            </record>
+            <record id="product_category_menu" model="general.menu">
+                <field name="menu_id">product_category</field>
+                <field name="menu_name">Product Categories</field>
+                <field name="parent_menu">product</field>
+            </record>
+            <record id="sales_orders_menu" model="general.menu">
+                <field name="menu_id">sales_order</field>
+                <field name="menu_name">Sales Orders</field>
+                <field name="parent_menu">orders</field>
+            </record>
+            <record id="sales_quotation_menu" model="general.menu">
+                <field name="menu_id">quotation</field>
+                <field name="menu_name">Quotations</field>
+                <field name="parent_menu">orders</field>
+            </record>
+            <record id="approvals_sales_menu" model="general.menu">
+                <field name="menu_id">approvals_sales</field>
+                <field name="menu_name">Sales Approval</field>
+                <field name="parent_menu">approvals</field>
+            </record>
+            <record id="approvals_sales_matrix_menu" model="general.menu">
+                <field name="menu_id">sales_approval_matrix</field>
+                <field name="menu_name">Sales Matrix</field>
+                <field name="parent_menu">approvals_config</field>
+            </record>
+        </data>
+
+</odoo>

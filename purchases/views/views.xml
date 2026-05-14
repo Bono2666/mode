@@ -1,0 +1,876 @@
+<odoo>
+  <data>
+
+    <!-- ─── TREE VIEWS ─── -->
+
+    <record id="purchases_vendor_tree" model="ir.ui.view">
+      <field name="name">purchases.vendor.tree</field>
+      <field name="model">purchases.vendor</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="vendor_id"/>
+          <field name="vendor_name"/>
+          <field name="contact_name"/>
+          <field name="telephone"/>
+          <field name="email"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="purchases_product_category_tree" model="ir.ui.view">
+      <field name="name">purchases.product_category.tree</field>
+      <field name="model">sales.product_category</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="category_name"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="purchases_product_unit_tree" model="ir.ui.view">
+      <field name="name">purchases.product_unit.tree</field>
+      <field name="model">sales.product_unit</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="qty"/>
+          <field name="uom"/>
+          <field name="base_qty"/>
+          <field name="base_uom"/>
+        </tree>
+      </field>
+    </record>
+
+
+    <record id="purchases_receipt_tree" model="ir.ui.view">
+      <field name="name">purchases.receipt.tree</field>
+      <field name="model">purchases.receipt</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="receipt_number"/>
+          <field name="receipt_date"/>
+          <field name="purchase_order_id"/>
+          <field name="vendor_id"/>
+          <field name="state" widget="badge"
+                 decoration-info="state == 'draft'"
+                 decoration-success="state == 'received'"
+                 decoration-danger="state == 'cancel'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="purchases_approval_matrix_tree" model="ir.ui.view">
+      <field name="name">purchases.approval.matrix.tree</field>
+      <field name="model">purchases.purchase_approval_matrix</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="sequence"/>
+          <field name="name"/>
+          <field name="position"/>
+          <field name="min_amount"/>
+          <field name="receive_return"/>
+          <field name="approve"/>
+          <field name="revise"/>
+          <field name="returned"/>
+          <field name="reject"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="purchases_purchase_order_tree" model="ir.ui.view">
+      <field name="name">purchases.purchase_order.tree</field>
+      <field name="model">purchases.purchase_order</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="po_code"/>
+          <field name="po_date"/>
+          <field name="vendor_id"/>
+          <field name="buyer_id" widget="many2one_avatar"/>
+          <field name="total_amount" decoration-bf="1"/>
+          <field name="state" widget="badge"
+                 decoration-info="state == 'draft'"
+                 decoration-primary="state == 'approved'"
+                 decoration-warning="state == 'sent'"
+                 decoration-success="state == 'purchase'"
+                 decoration-danger="state == 'cancel'"/>
+          <field name="current_approver_name" string="Wait Approver"
+                 column_invisible="not context.get('is_approval_view')"
+                 invisible="state != 'wait_approval'"/>
+          <field name="receipt_status" widget="badge"
+                 decoration-info="receipt_status == 'to_receive'"
+                 decoration-warning="receipt_status == 'partial'"
+                 decoration-success="receipt_status == 'received'"/>
+          <field name="bill_status" widget="badge"
+                 decoration-info="bill_status == 'to_bill'"
+                 decoration-success="bill_status == 'billed'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="purchases_rfq_tree" model="ir.ui.view">
+      <field name="name">purchases.rfq.tree</field>
+      <field name="model">purchases.purchase_order</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="po_code"/>
+          <field name="po_date"/>
+          <field name="vendor_id"/>
+          <field name="buyer_id" widget="many2one_avatar"/>
+          <field name="total_amount" decoration-bf="1"/>
+          <field name="state" widget="badge"
+                 decoration-info="state == 'draft'"
+                 decoration-primary="state == 'approved'"
+                 decoration-warning="state == 'sent'"
+                 decoration-success="state == 'purchase'"
+                 decoration-danger="state == 'cancel'"/>
+          <field name="current_approver_name" string="Wait Approver"
+                 column_invisible="not context.get('is_approval_view')"
+                 invisible="state != 'wait_approval'"/>
+          <field name="receipt_status" widget="badge"
+                 decoration-info="receipt_status == 'to_receive'"
+                 decoration-warning="receipt_status == 'partial'"
+                 decoration-success="receipt_status == 'received'"/>
+          <field name="bill_status" widget="badge"
+                 decoration-info="bill_status == 'to_bill'"
+                 decoration-success="bill_status == 'billed'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="purchases_po_tree" model="ir.ui.view">
+      <field name="name">purchases.po.tree</field>
+      <field name="model">purchases.purchase_order</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="po_code"/>
+          <field name="po_date"/>
+          <field name="vendor_id"/>
+          <field name="buyer_id" widget="many2one_avatar"/>
+          <field name="total_amount" decoration-bf="1"/>
+          <field name="state" widget="badge"
+                 decoration-info="state == 'draft'"
+                 decoration-primary="state == 'approved'"
+                 decoration-warning="state == 'sent'"
+                 decoration-success="state == 'purchase'"
+                 decoration-danger="state == 'cancel'"/>
+          <field name="current_approver_name" string="Wait Approver"
+                 column_invisible="not context.get('is_approval_view')"
+                 invisible="state != 'wait_approval'"/>
+          <field name="receipt_status" widget="badge"
+                 decoration-info="receipt_status == 'to_receive'"
+                 decoration-warning="receipt_status == 'partial'"
+                 decoration-success="receipt_status == 'received'"/>
+          <field name="bill_status" widget="badge"
+                 decoration-info="bill_status == 'to_bill'"
+                 decoration-success="bill_status == 'billed'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="purchases_bill_tree" model="ir.ui.view">
+      <field name="name">purchases.bill.tree</field>
+      <field name="model">purchases.bill</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="bill_number"/>
+          <field name="bill_date"/>
+          <field name="purchase_order_id"/>
+          <field name="vendor_id"/>
+          <field name="amount_total"/>
+          <field name="state" widget="badge"
+                 decoration-info="state == 'draft'"
+                 decoration-success="state == 'posted'"
+                 decoration-danger="state == 'cancel'"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- ─── FORM VIEWS ─── -->
+
+    <record id="purchases_vendor_form" model="ir.ui.view">
+      <field name="name">purchases.vendor.form</field>
+      <field name="model">purchases.vendor</field>
+      <field name="arch" type="xml">
+        <form string="Vendor">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <style>.o_control_panel { display: none !important; }</style>
+          </header>
+          <sheet>
+            <field name="image_1920" widget="image" class="oe_avatar" readonly="not is_edit and id"/>
+            <div class="oe_title">
+              <field name="vendor_id" readonly="1"/>
+              <h1>
+                <field name="vendor_name" placeholder="e.g. PT Supplier Indonesia"
+                       readonly="not is_edit and id"/>
+              </h1>
+            </div>
+            <group>
+              <group>
+                <label for="address" string="Address"/>
+                <div class="o_address_format">
+                  <field name="address" placeholder="Street..." readonly="not is_edit and id"/>
+                  <field name="district" placeholder="District" class="o_address_street"
+                         options="{'no_open': True, 'no_create': True}" readonly="not is_edit and id"/>
+                  <field name="city" placeholder="City" class="o_address_city"
+                         options="{'no_open': True, 'no_create': True}" readonly="not is_edit and id"/>
+                  <field name="state" placeholder="State" class="o_address_state"
+                         options="{'no_open': True, 'no_create': True}" readonly="not is_edit and id"/>
+                  <field name="postal_code" placeholder="Postal Code" class="o_address_zip"
+                         readonly="not is_edit and id"/>
+                  <field name="country" placeholder="Country" class="o_address_country"
+                         options="{'no_open': True, 'no_create': True}" readonly="not is_edit and id"/>
+                </div>
+                <field name="npwp" placeholder="e.g. 08.178.554.2-123.321" readonly="not is_edit and id"/>
+              </group>
+              <group>
+                <field name="contact_name" readonly="not is_edit and id"/>
+                <field name="telephone" widget="phone" readonly="not is_edit and id"/>
+                <field name="email" widget="email" readonly="not is_edit and id"/>
+                <field name="website" widget="url" readonly="not is_edit and id"/>
+                <field name="payment_terms" options="{'no_open': True, 'no_create': True}"
+                       domain="[('account_type.name', '=', 'Vendor')]"
+                       readonly="not is_edit and id"/>
+              </group>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="purchases_product_form" model="ir.ui.view">
+      <field name="name">purchases.product.form</field>
+      <field name="model">sales.products</field>
+      <field name="arch" type="xml">
+        <form string="Product">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <style>.o_control_panel { display: none !important; }</style>
+          </header>
+          <sheet>
+            <field name="image" widget="image" class="oe_avatar" readonly="not is_edit and id"/>
+            <div class="oe_title">
+              <field name="product_id" readonly="1"/>
+              <h1>
+                <field name="product_name" placeholder="e.g. Raw Material A"
+                       readonly="not is_edit and id"/>
+              </h1>
+            </div>
+            <group>
+              <group>
+                <field name="product_category" options="{'no_open': True, 'no_create': True}"
+                       readonly="not is_edit and id"/>
+                <field name="product_unit" options="{'no_open': True, 'no_create': True}"
+                       readonly="not is_edit and id"/>
+              </group>
+              <group>
+                <field name="base_price" readonly="not is_edit and id"/>
+                <field name="customer_tax" options="{'no_open': True, 'no_create': True}"
+                       readonly="not is_edit and id"/>
+              </group>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+
+    <record id="purchases_approval_matrix_form" model="ir.ui.view">
+      <field name="name">purchases.approval.matrix.form</field>
+      <field name="model">purchases.purchase_approval_matrix</field>
+      <field name="arch" type="xml">
+        <form string="Approval Matrix">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <style>.o_control_panel { display: none !important; }</style>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <h1>
+                <field name="name" options="{'no_create': True, 'no_open': True}"
+                       placeholder="Select approver" readonly="not is_edit and id"/>
+              </h1>
+            </div>
+            <group>
+              <group>
+                <field name="sequence" readonly="not is_edit and id"/>
+                <field name="min_amount" readonly="not is_edit and id"/>
+              </group>
+              <group>
+                <field name="receive_return" readonly="not is_edit and id"/>
+                <field name="approved_as" readonly="not is_edit and id"/>
+              </group>
+            </group>
+            <group string="Release">
+              <field name="approve" readonly="not is_edit and id"/>
+              <field name="revise" readonly="not is_edit and id"/>
+              <field name="returned" readonly="not is_edit and id"/>
+              <field name="reject" readonly="not is_edit and id"/>
+              <field name="notify" readonly="not is_edit and id"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Purchase Order Form -->
+    <record id="purchases_purchase_order_form" model="ir.ui.view">
+      <field name="name">purchases.purchase_order.form</field>
+      <field name="model">purchases.purchase_order</field>
+      <field name="arch" type="xml">
+        <form string="Purchase Order">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="entry_menu_code" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="state" invisible="1"/>
+            <field name="need_approval" invisible="1"/>
+            <field name="approval_status" invisible="1"/>
+            <field name="current_approver" invisible="1"/>
+            <field name="current_approver_name" invisible="1"/>
+            <field name="user_can_approve" invisible="1"/>
+            <field name="user_can_revise" invisible="1"/>
+            <field name="user_can_return" invisible="1"/>
+            <field name="user_can_reject" invisible="1"/>
+            <field name="user_can_submit" invisible="1"/>
+            <field name="user_can_confirm_order" invisible="1"/>
+            <field name="user_can_cancel_order" invisible="1"/>
+            <field name="user_can_send" invisible="1"/>
+            <field name="user_can_receive" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <field name="user_can_billing" invisible="1"/>
+            <field name="is_sent" invisible="1"/>
+            <field name="bill_status" invisible="1"/>
+            <field name="bill_count" invisible="1"/>
+            <field name="receipt_status" invisible="1"/>
+            <field name="receipt_count" invisible="1"/>
+            <button string="Back" name="action_back_from_rfq" type="object"
+                    invisible="is_edit or not id or context.get('is_approval_view') or state not in ['draft', 'wait_approval', 'approved', 'sent', 'cancel'] or context.get('default_entry_menu_code') == 'purchase_order'"/>
+            <button string="Back" name="action_back_to_orders" type="object"
+                    invisible="is_edit or not id or context.get('is_approval_view') or state not in ['draft', 'wait_approval', 'approved', 'sent', 'cancel'] or context.get('default_entry_menu_code') != 'purchase_order'"/>
+            <button string="Back" name="action_back_to_approvals" type="object"
+                    invisible="is_edit or not id or not context.get('is_approval_view')"/>
+            <button string="Back" name="action_back_to_orders" type="object"
+                    invisible="is_edit or not id or state not in ['purchase']"/>
+            <button string="Edit" name="action_edit" type="object"
+                    invisible="not id or is_edit or state not in ['draft', 'approved', 'purchase'] or (state == 'purchase' and (not user_can_update or receipt_status in ['received', 'partial']))"/>
+            <button string="Save" name="action_save" type="object"
+                    invisible="id and not is_edit or context.get('is_approval_view')" class="oe_highlight"/>
+            <button string="Save" name="action_save_revised" type="object"
+                    invisible="id and not is_edit or not context.get('is_approval_view')" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button string="Submit" name="action_submit_rfq" type="object"
+                    class="btn-primary"
+                    invisible="state != 'draft' or is_edit or not id or need_approval"/>
+            <button string="Submit" name="action_submit_for_approval" type="object"
+                    class="btn-primary"
+                    invisible="state != 'draft' or not need_approval or not id or is_edit or not user_can_submit"/>
+            <button string="Confirm Order" name="action_confirm_order" type="object"
+                    class="btn-primary"
+                    invisible="not id or (state not in ['draft', 'approved', 'sent']) or is_edit or (need_approval and state != 'approved') or not user_can_confirm_order"/>
+            <button string="Send by Email" name="action_send_po_by_email" type="object"
+                    class="oe_highlight"
+                    invisible="state != 'purchase' or is_edit or not user_can_send or receipt_status in ['received', 'partial']"/>
+            <button string="Approve" name="action_approve" type="object"
+                    class="oe_highlight"
+                    invisible="not id or is_edit or not user_can_approve or not context.get('is_approval_view')"/>
+            <button string="Revise" name="action_revise" type="object"
+                    class="btn-secondary"
+                    invisible="not id or is_edit or not user_can_revise or not context.get('is_approval_view')"/>
+            <button string="Return" name="action_return" type="object"
+                    class="btn-secondary"
+                    invisible="not id or is_edit or not user_can_return or not context.get('is_approval_view')"/>
+            <button string="Reject" name="action_reject" type="object"
+                    invisible="not id or is_edit or not user_can_reject or not context.get('is_approval_view')"/>
+            <button string="Receive Products" name="action_create_receipt" type="object"
+                    class="btn-primary"
+                    invisible="receipt_status not in ['to_receive', 'partial'] or is_edit or not is_sent or not user_can_receive"/>
+            <button string="Receipts" name="action_view_receipts" type="object"
+                    class="btn-secondary"
+                    invisible="receipt_count == 0"/>
+            <button string="Create Bill" name="action_create_bill" type="object"
+                    class="btn-primary"
+                    invisible="bill_status != 'to_bill' or is_edit or not user_can_billing"/>
+            <button string="Bills" name="action_view_bills" type="object"
+                    class="btn-secondary"
+                    invisible="bill_count == 0"/>
+            <button string="Cancel Order" name="action_cancel" type="object"
+                    confirm="Are you sure you want to cancel this order?"
+                    invisible="not id or state not in ['draft', 'purchase'] or is_edit or not user_can_cancel_order or receipt_status in ['received', 'partial'] or (state == 'purchase' and not user_can_delete)"/>
+            <button string="Reset to Draft" name="action_reset_to_draft" type="object"
+                    invisible="state != 'cancel' or is_edit"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,purchase" invisible="need_approval"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,wait_approval,approved,purchase" invisible="not need_approval"/>
+            <style>
+              .o_control_panel { display: none !important; }
+            </style>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <h1><field name="po_code" readonly="1"/></h1>
+            </div>
+            <group>
+              <group>
+                <field name="vendor_id" options="{'no_create': True, 'no_open': True}"
+                       readonly="state in ['cancel'] or (not is_edit and id)"/>
+                <field name="vendor_address" widget="res_partner_address" readonly="1" string=""/>
+              </group>
+              <group>
+                <field name="po_date" readonly="state in ['cancel'] or (not is_edit and id)"/>
+                <field name="delivery_date" readonly="state in ['cancel'] or (not is_edit and id)"/>
+                <field name="payment_terms" options="{'no_open': True, 'no_create': True}"
+                       domain="[('account_type.name', '=', 'Vendor')]"
+                       readonly="state in ['cancel'] or (not is_edit and id)"/>
+                <field name="buyer_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
+              </group>
+            </group>
+            <notebook>
+              <page string="Order Lines" name="order_lines">
+                <field name="order_line_ids"
+                       readonly="state in ['cancel', 'wait_approval'] or (not is_edit and id)">
+                  <tree editable="bottom">
+                    <field name="product_id" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="description"/>
+                    <field name="quantity"/>
+                    <field name="qty_received" readonly="1"/>
+                    <field name="qty_to_receive" readonly="1"/>
+                    <field name="product_unit" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="unit_price"/>
+                    <field name="taxes" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="sub_total" readonly="1"/>
+                    <field name="tax_amount" readonly="1"/>
+                  </tree>
+                </field>
+                <group class="oe_subtotal_footer" colspan="4">
+                  <field name="total_amount_untaxed" readonly="1"/>
+                  <field name="total_tax" readonly="1"/>
+                  <field name="total_amount" readonly="1"/>
+                </group>
+              </page>
+              <page string="Other Info" name="other_info">
+                <group>
+                  <field name="note" placeholder="Terms and conditions..."
+                         readonly="state in ['cancel', 'wait_approval'] or (not is_edit and id)"/>
+                </group>
+              </page>
+              <page string="Approval Logs" name="approval_logs" invisible="not approval_log_ids">
+                <field name="approval_log_ids" readonly="1">
+                  <tree>
+                    <field name="sequence"/>
+                    <field name="approver"/>
+                    <field name="position"/>
+                    <field name="state" widget="badge"
+                           decoration-danger="state == 'rejected'"
+                           decoration-info="state == 'revised'"
+                           decoration-primary="state == 'approved'"
+                           decoration-warning="state == 'returned'"/>
+                    <field name="action_date"/>
+                    <field name="approval_reason"/>
+                    <field name="note"/>
+                  </tree>
+                </field>
+              </page>
+            </notebook>
+          </sheet>
+          <div class="oe_chatter">
+            <field name="message_follower_ids"/>
+            <field name="activity_ids"/>
+            <field name="message_ids"/>
+          </div>
+        </form>
+      </field>
+    </record>
+
+    <!-- Bill Form -->
+    <record id="purchases_bill_form" model="ir.ui.view">
+      <field name="name">purchases.bill.form</field>
+      <field name="model">purchases.bill</field>
+      <field name="arch" type="xml">
+        <form string="Vendor Bill">
+          <header>
+            <field name="state" invisible="1"/>
+            <field name="payment_state" invisible="1"/>
+            <button string="Back" name="action_open_purchase_order" type="object"/>
+            <button string="Confirm" name="action_post" type="object"
+                    class="btn-primary" invisible="state != 'draft'"/>
+            <button string="Register Payment" name="action_register_payment" type="object"
+                    class="btn-primary"
+                    invisible="state != 'posted' or payment_state == 'paid'"/>
+            <button string="Reset to Draft" name="action_reset_to_draft" type="object"
+                    invisible="state == 'draft'"/>
+            <button string="Cancel" name="action_cancel" type="object"
+                    invisible="state != 'draft'"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,posted"/>
+            <style>.o_control_panel { display: none !important; }</style>
+          </header>
+          <sheet>
+            <widget name="web_ribbon" title="Paid"
+                    bg_color="text-bg-success"
+                    invisible="payment_state != 'paid'"/>
+            <widget name="web_ribbon" title="In Payment"
+                    bg_color="text-bg-info"
+                    invisible="payment_state != 'partial'"/>
+            <div class="oe_title">
+              <h1><field name="bill_number" readonly="1"/></h1>
+            </div>
+            <group>
+              <group>
+                <field name="vendor_id" readonly="1"/>
+                <field name="vendor_address" widget="res_partner_address" readonly="1" string=""/>
+              </group>
+              <group>
+                <field name="purchase_order_id" readonly="1"/>
+                <field name="bill_date" readonly="state != 'draft'"/>
+                <field name="payment_terms_id" readonly="1"/>
+              </group>
+            </group>
+            <notebook>
+              <page string="Bill Lines" name="bill_lines">
+                <field name="line_ids" readonly="state != 'draft'">
+                  <tree editable="bottom">
+                    <field name="product_id"/>
+                    <field name="description"/>
+                    <field name="quantity"/>
+                    <field name="unit_price"/>
+                    <field name="tax_id"/>
+                    <field name="sub_total" readonly="1"/>
+                    <field name="tax_amount" readonly="1"/>
+                    <field name="total" readonly="1"/>
+                  </tree>
+                </field>
+              </page>
+              <page string="Other Info" name="other_info">
+                <group>
+                  <group string="Accounting">
+                    <field name="buyer_id" readonly="1"/>
+                    <field name="posted_date" readonly="1"/>
+                  </group>
+                </group>
+              </page>
+            </notebook>
+            <group class="oe_subtotal_footer" colspan="4">
+              <field name="amount_untaxed" readonly="1"/>
+              <field name="amount_tax" readonly="1"/>
+              <field name="amount_total" readonly="1"/>
+              <field name="amount_paid" readonly="1" invisible="state != 'posted'"/>
+              <field name="amount_due" readonly="1" invisible="state != 'posted'"/>
+              <field name="payment_state" widget="badge"
+                     decoration-warning="payment_state == 'not_paid'"
+                     decoration-info="payment_state == 'partial'"
+                     decoration-success="payment_state == 'paid'"
+                     invisible="state != 'posted'"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Register Payment Wizard -->
+    <record id="purchases_payment_register_form" model="ir.ui.view">
+      <field name="name">purchases.payment.register.form</field>
+      <field name="model">purchases.payment.register</field>
+      <field name="arch" type="xml">
+        <form string="Register Payment">
+          <group>
+            <field name="bill_number" readonly="1"/>
+            <field name="vendor_name" readonly="1"/>
+            <field name="amount_total" readonly="1" string="Bill Total"/>
+            <field name="amount_paid_before" readonly="1" string="Already Paid"/>
+            <field name="amount" required="1"/>
+            <field name="payment_date" required="1"/>
+            <field name="memo"/>
+          </group>
+          <footer>
+            <button string="Register Payment" name="action_confirm_payment"
+                    type="object" class="btn-primary"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="purchases_receipt_form" model="ir.ui.view">
+      <field name="name">purchases.receipt.form</field>
+      <field name="model">purchases.receipt</field>
+      <field name="arch" type="xml">
+        <form string="Purchase Receipt">
+          <header>
+            <field name="state" invisible="1"/>
+            <button string="Back" name="action_open_purchase_order" type="object"/>
+            <button string="Validate Receipt" name="action_receive" type="object"
+                    class="btn-primary" invisible="state != 'draft'"/>
+            <button string="Reset to Draft" name="action_reset_to_draft" type="object"
+                    invisible="state == 'draft'"/>
+            <button string="Cancel Receipt" name="action_cancel" type="object"
+                    invisible="state != 'draft'"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,received"/>
+            <style>.o_control_panel { display: none !important; }</style>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <h1><field name="receipt_number" readonly="1"/></h1>
+            </div>
+            <group>
+              <group>
+                <field name="vendor_id" readonly="1"/>
+                <field name="purchase_order_id" readonly="1"/>
+              </group>
+              <group>
+                <field name="receipt_date" readonly="state != 'draft'"/>
+                <field name="buyer_id" readonly="1"/>
+                <field name="received_date" readonly="1"/>
+              </group>
+            </group>
+            <notebook>
+              <page string="Receipt Lines" name="receipt_lines">
+                <field name="line_ids" readonly="state != 'draft'">
+                  <tree editable="bottom">
+                    <field name="product_id" readonly="1"/>
+                    <field name="description" readonly="1"/>
+                    <field name="ordered_qty" readonly="1"/>
+                    <field name="quantity"/>
+                    <field name="product_unit" readonly="1"/>
+                  </tree>
+                </field>
+              </page>
+              <page string="Other Info" name="receipt_other_info">
+                <group>
+                  <field name="note" placeholder="Notes..." readonly="state != 'draft'"/>
+                </group>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_purchase_approve_wizard_form" model="ir.ui.view">
+      <field name="name">purchases.approve.wizard.form</field>
+      <field name="model">purchases.approve.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Confirmation">
+          <div class="alert alert-info" role="alert" style="margin-bottom:0px;">
+            <field name="message"/>
+          </div>
+          <footer>
+            <button name="action_confirm" string="Yes, Approve" type="object" class="btn-primary"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_purchase_reject_wizard_form" model="ir.ui.view">
+      <field name="name">purchases.reject.wizard.form</field>
+      <field name="model">purchases.reject.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Reject Reason">
+          <group>
+            <field name="reason" placeholder="e.g. Budget is not available yet..."/>
+          </group>
+          <footer>
+            <button name="action_reject_confirm" string="Confirm Reject" type="object" class="btn-danger"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_purchase_return_wizard_form" model="ir.ui.view">
+      <field name="name">purchases.return.wizard.form</field>
+      <field name="model">purchases.return.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Return Reason">
+          <group>
+            <field name="reason" placeholder="e.g. Please revise the quantities or vendor terms..."/>
+          </group>
+          <footer>
+            <button name="action_return_confirm" string="Confirm Return" type="object" class="btn-warning"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_purchase_revise_wizard_form" model="ir.ui.view">
+      <field name="name">purchases.revise.wizard.form</field>
+      <field name="model">purchases.revise.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Revise Message">
+          <group>
+            <field name="message" placeholder="e.g. Please update delivery date and quantities..."/>
+          </group>
+          <footer>
+            <button name="action_revise_confirm" string="Confirm Revise" type="object" class="btn-primary"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <!-- Override wizard mail.compose.message untuk PO: tampilkan vendor_ids, sembunyikan customer_ids -->
+    <record id="email_compose_message_wizard_inherit_vendor" model="ir.ui.view">
+      <field name="name">mail.compose.message.form.inherit.vendor</field>
+      <field name="model">mail.compose.message</field>
+      <field name="inherit_id" ref="mail.email_compose_message_wizard_form"/>
+      <field name="arch" type="xml">
+        <!-- Tambahkan vendor_ids setelah partner_ids -->
+        <xpath expr="//field[@name='partner_ids']" position="after">
+          <field name="vendor_ids"
+                 widget="many2many_tags"
+                 context="{'show_email_in_wizard': True}"
+                 force_save="1"
+                 options="{'no_create': True, 'no_open': True}"
+                 placeholder="Add vendors to notify..."
+                 invisible="context.get('default_model') != 'purchases.purchase_order'"/>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- Sembunyikan customer_ids dari sales wizard saat konteks adalah PO -->
+    <record id="email_compose_message_wizard_hide_customer_for_po" model="ir.ui.view">
+      <field name="name">mail.compose.message.form.hide.customer.for.po</field>
+      <field name="model">mail.compose.message</field>
+      <field name="inherit_id" ref="sales.email_compose_message_wizard_inherit_customer"/>
+      <field name="arch" type="xml">
+        <xpath expr="//field[@name='customer_ids']" position="attributes">
+          <attribute name="invisible">context.get('default_model') == 'purchases.purchase_order'</attribute>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- ─── ACTIONS ─── -->
+
+    <record id="purchases_vendor_action" model="ir.actions.act_window">
+      <field name="name">Vendors</field>
+      <field name="res_model">purchases.vendor</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record id="purchases_product_category_action" model="ir.actions.act_window">
+      <field name="name">Product Categories</field>
+      <field name="res_model">sales.product_category</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record id="purchases_product_unit_action" model="ir.actions.act_window">
+      <field name="name">Units of Measure</field>
+      <field name="res_model">sales.product_unit</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+
+    <record id="purchases_payment_terms_action" model="ir.actions.act_window">
+      <field name="name">Payment Terms</field>
+      <field name="res_model">sales.payment_terms</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="domain">[('account_type.name', '=', 'Vendor')]</field>
+    </record>
+
+    <record id="purchases_receipt_action" model="ir.actions.act_window">
+      <field name="name">Receipts</field>
+      <field name="res_model">purchases.receipt</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="context">{'access_menu_code': 'purchase_receipts'}</field>
+    </record>
+
+    <record id="purchases_approval_matrix_action" model="ir.actions.act_window">
+      <field name="name">Purchase Approval Matrix</field>
+      <field name="res_model">purchases.purchase_approval_matrix</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record id="purchases_purchase_approval_action" model="ir.actions.act_window">
+      <field name="name">Waiting My Approval</field>
+      <field name="res_model">purchases.purchase_order</field>
+      <field name="view_mode">tree,form</field>
+      <field name="domain">[('current_approver', '=', uid), ('state', 'in', ['wait_approval'])]</field>
+      <field name="context">{'search_default_filter_to_approve': 1, 'create': False, 'is_approval_view': True}</field>
+    </record>
+
+    <record id="purchases_rfq_action" model="ir.actions.act_window">
+      <field name="name">Requests for Quotation</field>
+      <field name="res_model">purchases.purchase_order</field>
+      <field name="view_id" ref="purchases_rfq_tree"/>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="domain">[('state', 'in', ['draft', 'wait_approval', 'approved', 'sent', 'cancel'])]</field>
+      <field name="context">{'default_state': 'draft', 'access_menu_code': 'rfq', 'default_entry_menu_code': 'rfq'}</field>
+    </record>
+
+    <record id="purchases_purchase_order_action" model="ir.actions.act_window">
+      <field name="name">Purchase Orders</field>
+      <field name="res_model">purchases.purchase_order</field>
+      <field name="view_id" ref="purchases_po_tree"/>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="domain">[('state', 'in', ['sent', 'purchase'])]</field>
+      <field name="context">{'access_menu_code': 'purchase_order', 'default_entry_menu_code': 'purchase_order'}</field>
+    </record>
+
+    <record id="purchases_bill_action" model="ir.actions.act_window">
+      <field name="name">Vendor Bills</field>
+      <field name="res_model">purchases.bill</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="context">{'access_menu_code': 'vendor_bills'}</field>
+    </record>
+
+    <!-- Report Action -->
+    <record id="action_report_purchase_order" model="ir.actions.report">
+      <field name="name">Purchase Order</field>
+      <field name="model">purchases.purchase_order</field>
+      <field name="report_type">qweb-pdf</field>
+      <field name="report_name">purchases.report_purchase_order_template</field>
+      <field name="report_file">purchases.report_purchase_order_template</field>
+      <field name="print_report_name">'PO - %s' % (object.po_code)</field>
+      <field name="binding_model_id" ref="model_purchases_purchase_order"/>
+      <field name="binding_type">report</field>
+    </record>
+
+    <!-- Top menu item -->
+
+    <menuitem name="Purchases" id="purchases.menu_purchases_root" parent="general.menu_root" sequence="2"/>
+
+    <!-- Orders submenu -->
+    <menuitem name="Orders" id="purchases.orders_menu" parent="purchases.menu_purchases_root" sequence="1"/>
+    <menuitem name="Requests for Quotation" id="purchases.rfq_menu_act" parent="purchases.orders_menu" action="purchases_rfq_action" sequence="1"/>
+    <menuitem name="Purchase Orders" id="purchases.po_menu_act" parent="purchases.orders_menu" action="purchases_purchase_order_action" sequence="2"/>
+    <menuitem name="Vendors" id="purchases.vendors_menu_act" parent="purchases.orders_menu" action="purchases_vendor_action" sequence="3"/>
+    <menuitem name="Receipts" id="purchases.receipts_menu_act" parent="purchases.orders_menu" action="purchases_receipt_action" sequence="4"/>
+    <menuitem name="Vendor Bills" id="purchases.bills_menu_act" parent="purchases.orders_menu" action="purchases_bill_action" sequence="5"/>
+
+    <!-- Products — redirect ke sales.products_action -->
+    <menuitem name="Products" id="purchases.products_menu_act" parent="purchases.menu_purchases_root" action="sales.products_action" sequence="2"/>
+
+    <!-- Master Data under Configuration -->
+    <menuitem name="Purchase Matrix" id="purchases.purchase_approval_matrix_menu_act" parent="sales.approval_matrix_menu" action="purchases_approval_matrix_action" sequence="2"/>
+    <menuitem name="Purchase Approval" id="purchases.purchase_approval_menu_act" parent="sales.menu_approvals_root" action="purchases_purchase_approval_action" sequence="2"/>
+
+  </data>
+</odoo>

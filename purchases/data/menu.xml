@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <record id="purchases_menu" model="general.menu">
+            <field name="menu_id">purchases</field>
+            <field name="menu_name">Purchases</field>
+            <field name="is_parent">True</field>
+        </record>
+        <record id="purchases_orders_menu" model="general.menu">
+            <field name="menu_id">purchase_orders</field>
+            <field name="menu_name">Orders</field>
+            <field name="parent_menu">purchases</field>
+            <field name="is_parent">True</field>
+        </record>
+        <record id="purchases_rfq_menu" model="general.menu">
+            <field name="menu_id">rfq</field>
+            <field name="menu_name">Requests for Quotation</field>
+            <field name="parent_menu">purchase_orders</field>
+        </record>
+        <record id="purchases_po_menu" model="general.menu">
+            <field name="menu_id">purchase_order</field>
+            <field name="menu_name">Purchase Orders</field>
+            <field name="parent_menu">purchase_orders</field>
+        </record>
+        <record id="purchases_vendors_menu" model="general.menu">
+            <field name="menu_id">vendors</field>
+            <field name="menu_name">Vendors</field>
+            <field name="parent_menu">purchase_orders</field>
+        </record>
+        <record id="purchases_bills_menu" model="general.menu">
+            <field name="menu_id">vendor_bills</field>
+            <field name="menu_name">Vendor Bills</field>
+            <field name="parent_menu">purchase_orders</field>
+        </record>
+        <record id="purchases_receipts_menu" model="general.menu">
+            <field name="menu_id">purchase_receipts</field>
+            <field name="menu_name">Receipts</field>
+            <field name="parent_menu">purchase_orders</field>
+        </record>
+        <record id="purchases_products_menu" model="general.menu">
+            <field name="menu_id">purchase_products</field>
+            <field name="menu_name">Products</field>
+            <field name="parent_menu">purchases</field>
+        </record>
+        <record id="purchases_purchase_approval_matrix_menu" model="general.menu">
+            <field name="menu_id">purchase_approval_matrix</field>
+            <field name="menu_name">Purchase Matrix</field>
+        </record>
+        <record id="purchases_waiting_approval_menu" model="general.menu">
+            <field name="menu_id">purchase_approvals</field>
+            <field name="menu_name">Purchase Approval</field>
+            <field name="parent_menu">purchases</field>
+        </record>
+    </data>
+</odoo>

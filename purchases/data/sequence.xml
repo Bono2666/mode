@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="seq_purchases_vendor" model="ir.sequence">
+            <field name="name">Vendor Sequence</field>
+            <field name="code">purchases.vendor</field>
+            <field name="prefix">VND</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="seq_purchases_product" model="ir.sequence">
+            <field name="name">Purchase Product Sequence</field>
+            <field name="code">purchases.product</field>
+            <field name="prefix">PPROD</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="seq_purchases_purchase_order" model="ir.sequence">
+            <field name="name">Purchase Order Sequence</field>
+            <field name="code">purchases.purchase_order</field>
+            <field name="prefix">PO</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="seq_purchases_bill" model="ir.sequence">
+            <field name="name">Vendor Bill Sequence</field>
+            <field name="code">purchases.bill</field>
+            <field name="prefix">BILL</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="seq_purchases_receipt" model="ir.sequence">
+            <field name="name">Purchase Receipt Sequence</field>
+            <field name="code">purchases.receipt</field>
+            <field name="prefix">RCPT</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+        </record>
+    </data>
+</odoo>

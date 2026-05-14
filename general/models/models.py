@@ -217,6 +217,18 @@ class NavigationMixin(models.AbstractModel):
             'context': self.env.context,
         }
 
+    def action_back_kanban(self):
+        self.ensure_one()
+        return {
+            'name': self._description,
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'view_mode': 'kanban,form',
+            'views': [(False, 'kanban'), (False, 'form')],
+            'target': 'main',
+            'context': self.env.context,
+        }
+
     def action_edit(self):
         self.ensure_one()
         self.write({'is_edit': True})
@@ -288,7 +300,7 @@ class NavigationMixin(models.AbstractModel):
 class country(models.Model):
     _name = 'general.country'
     _inherit = ['navigation.mixin']
-    _description = 'Country'
+    _description = 'Countries'
     _rec_name = 'country_name'
     _menu_code = 'country'
 
@@ -324,7 +336,7 @@ class country(models.Model):
 class state(models.Model):
     _name = 'general.state'
     _inherit = ['navigation.mixin']
-    _description = 'State'
+    _description = 'States'
     _rec_name = 'state_name'
     _menu_code = 'state'
 
@@ -349,7 +361,7 @@ class state(models.Model):
 class city(models.Model):
     _name = 'general.city'
     _inherit = ['navigation.mixin']
-    _description = 'City'
+    _description = 'Cities'
     _rec_name = 'city_name'
     _menu_code = 'city'
 
@@ -374,7 +386,7 @@ class city(models.Model):
 class district(models.Model):
     _name = 'general.district'
     _inherit = ['navigation.mixin']
-    _description = 'District'
+    _description = 'Districts'
     _rec_name = 'district_name'
     _menu_code = 'district'
 
@@ -424,7 +436,7 @@ class position(models.Model):
 class department(models.Model):
     _name = 'general.department'
     _inherit = ['navigation.mixin']
-    _description = 'Department'
+    _description = 'Departments'
     _rec_name = 'department_name'
     _menu_code = 'department'
 
@@ -448,7 +460,7 @@ class department(models.Model):
 
 class menu(models.Model):
     _name = 'general.menu'
-    _description = 'Menu'
+    _description = 'Menus'
     _rec_name = 'menu_name'
 
     menu_id = fields.Char(string="Menu ID")
@@ -483,7 +495,7 @@ class custom_users(models.Model):
         'res.users', string="Related Users", readonly=True)
     image_1920 = fields.Image(string="Photo Profile",
                               related='user_id.image_1920', readonly=False)
-
+    avatar_128 = fields.Image(related='user_id.avatar_128', readonly=False)
     custom_login_date = fields.Datetime(
         related='user_id.login_date', string="Latest Authentication", readonly=True)
     menu_ids = fields.One2many(
@@ -511,30 +523,81 @@ class custom_users(models.Model):
         }
         new_user = self.env['res.users'].create(user_vals)
 
+        # Pastikan email partner user terisi dari login (login biasanya berupa email)
+        if new_user.partner_id and vals.get('login'):
+            new_user.partner_id.sudo().write({'email': vals.get('login')})
+
         # 2. Simpan referensi ID-nya ke model kustom ini
         vals['user_id'] = new_user.id
         return super(custom_users, self).create(vals)
 
-    @api.model
     def write(self, vals):
-        # Jika ada perubahan pada user_id, update juga res.users
-        if 'name' in vals or 'login' in vals or 'image_1920' in vals:
+        # Trigger fields that need to be synced to User and Partner
+        sync_fields = ['name', 'login', 'image_1920']
+
+        if any(field in vals for field in sync_fields):
             for record in self:
                 user_vals = {}
+                partner_vals = {}
+
                 if 'name' in vals:
                     user_vals['name'] = vals['name']
+                    partner_vals['name'] = vals['name']  # Partner sync
+
                 if 'login' in vals:
                     user_vals['login'] = vals['login']
+                    # Usually login is the email
+                    partner_vals['email'] = vals['login']
+
                 if 'image_1920' in vals:
-                    user_vals['image_1920'] = vals['image_1920']
-                if user_vals:
+                    img = vals['image_1920']
+                    user_vals.update({'image_1920': img, 'avatar_128': img})
+                    partner_vals.update(
+                        {'image_1920': img, 'avatar_128': img})  # Partner sync
+
+                # Update User
+                if user_vals and record.user_id:
                     record.user_id.sudo().write(user_vals)
+
+                    # Update Partner via the User's partner_id
+                    if partner_vals:
+                        record.user_id.partner_id.sudo().write(partner_vals)
+
         return super(custom_users, self).write(vals)
+
+    def copy(self, default=None):
+        default = dict(default or {})
+
+        copied_count = self.search_count(
+            [('login', '=like', "Copy of {}%".format(self.login))])
+
+        # Kalau tidak ada
+        if not copied_count:
+            # Copy of training odoo
+            new_login = "Copy of {}".format(self.login)
+            new_name = "Copy of {}".format(self.name)
+
+        # # Kalau ada
+        else:
+            # Copy of training odoo (jumlah ada berapa)
+            new_login = "Copy of {} ({})".format(self.login, copied_count)
+            new_name = "Copy of {} ({})".format(self.name, copied_count)
+
+        default['login'] = new_login
+        default['name'] = new_name
+        return super(custom_users, self).copy(default)
+
+    def unlink(self):
+        # Hapus user terkait di res.users saat menghapus record ini
+        for record in self:
+            if record.user_id:
+                record.user_id.sudo().unlink()
+        return super(custom_users, self).unlink()
 
 
 class auth(models.Model):
     _name = 'general.auth'
-    _description = 'Authentication'
+    _description = 'Authentications'
 
     custom_user_id = fields.Many2one(
         'general.custom_users', string='User', ondelete='cascade', index=True)
@@ -546,6 +609,12 @@ class auth(models.Model):
     can_create = fields.Boolean(default=False)
     can_update = fields.Boolean(default=False)
     can_delete = fields.Boolean(default=False)
+    can_submit = fields.Boolean(default=False)
+    can_send = fields.Boolean(default=False)
+    can_confirm = fields.Boolean(default=False)
+    can_invoicing = fields.Boolean(default=False)
+    can_receive = fields.Boolean(default=False)
+    can_billing = fields.Boolean(default=False)
 
     @api.model
     def create(self, vals):
@@ -559,7 +628,28 @@ class auth(models.Model):
             raise UserError(
                 _("This user already has access settings for the selected menu."))
 
-        return super(auth, self).create(vals)
+        record = super(auth, self).create(vals)
+        if not self.env.context.get('skip_menu_refresh'):
+            record._refresh_related_user_menu_access()
+        return record
+
+    def write(self, vals):
+        res = super(auth, self).write(vals)
+        if not self.env.context.get('skip_menu_refresh'):
+            self._refresh_related_user_menu_access()
+        return res
+
+    def unlink(self):
+        users = self.mapped('custom_user_id.user_id')
+        res = super(auth, self).unlink()
+        if users and not self.env.context.get('skip_menu_refresh'):
+            users._refresh_custom_menu_access()
+        return res
+
+    def _refresh_related_user_menu_access(self):
+        users = self.mapped('custom_user_id.user_id')
+        if users:
+            users._refresh_custom_menu_access()
 
 
 class ResUsers(models.Model):
@@ -573,75 +663,87 @@ class ResUsers(models.Model):
         store=True, help='Select menu items that need to '
                          'be hidden to this user.')
 
+    def _refresh_custom_menu_access(self):
+        general_menu_model = self.env['general.menu']
+        auth_model = self.env['general.auth'].sudo()
+        ir_ui_menu_model = self.env['ir.ui.menu'].sudo()
+        custom_user_model = self.env['general.custom_users'].sudo()
+
+        for user in self:
+            # Cari semua menu yang membatasi user ini
+            restricted_menus = ir_ui_menu_model.search([
+                ('restrict_user_ids', 'in', user.id)
+            ])
+
+            # Hapus relasi Many2many pada model ir.ui.menu
+            if restricted_menus:
+                restricted_menus.write({
+                    'restrict_user_ids': [(3, user.id)]
+                })
+
+            # Kosongkan field Many2many di sisi res.users (jika ada)
+            user.sudo().write({
+                'hide_menu_ids': [(5, 0, 0)]
+            })
+
+            # Hapus semua entri parent auto-generated, lalu hitung ulang
+            auth_model.with_context(skip_menu_refresh=True).search([
+                ('custom_user_id.user_id', '=', user.id),
+                ('is_parent', '=', True)
+            ]).unlink()
+
+            all_menus = general_menu_model.search([])
+            menu_obj = auth_model.search(
+                [('custom_user_id.user_id', '=', user.id)])
+            existing_menu_ids = [menu.menu_id.id for menu in menu_obj]
+
+            repeated = True
+            while repeated:
+                repeated = False
+                for menu in all_menus:
+                    if menu.id in existing_menu_ids:
+                        parent_menu_id = menu.parent_menu
+                        if parent_menu_id:
+                            parent_menu = general_menu_model.search(
+                                [('menu_id', '=', parent_menu_id)], limit=1)
+                            parent_menu_id = parent_menu.id if parent_menu else False
+                        if parent_menu_id and parent_menu_id not in existing_menu_ids:
+                            existing_parent = auth_model.search([
+                                ('custom_user_id.user_id', '=', user.id),
+                                ('menu_id', '=', parent_menu_id)
+                            ], limit=1)
+                            if not existing_parent:
+                                repeated = True
+                                auth_model.with_context(skip_menu_refresh=True).create({
+                                    'custom_user_id': custom_user_model.search(
+                                        [('user_id', '=', user.id)], limit=1).id,
+                                    'menu_id': parent_menu_id,
+                                    'is_parent': True,
+                                    'can_create': False,
+                                    'can_update': False,
+                                    'can_delete': False,
+                                })
+
+                menu_obj = auth_model.search(
+                    [('custom_user_id.user_id', '=', user.id)])
+                existing_menu_ids = [menu.menu_id.id for menu in menu_obj]
+
+            for menu in all_menus:
+                if menu.id not in existing_menu_ids:
+                    menu_records = ir_ui_menu_model.search(
+                        [('name', '=', menu.menu_name)])
+                    if menu_records:
+                        menu_records.write({
+                            'restrict_user_ids': [(4, user.id)]
+                        })
+
     @api.model
     def _update_last_login(self):
         """
         Metode ini dipanggil otomatis oleh Odoo setiap kali user berhasil login.
         """
         super(ResUsers, self)._update_last_login()
-
-        # Cari semua menu yang membatasi user ini
-        restricted_menus = self.env['ir.ui.menu'].sudo().search([
-            ('restrict_user_ids', 'in', self.id)
-        ])
-
-        # Hapus relasi Many2many pada model ir.ui.menu
-        restricted_menus.sudo().write({
-            'restrict_user_ids': [(3, self.id)]
-        })
-
-        # Kosongkan field Many2many di sisi res.users (jika ada)
-        self.sudo().write({
-            'hide_menu_ids': [(5, 0, 0)]
-        })
-
-        all_menus = self.env['general.menu'].search([])
-        menu_obj = self.env['general.auth'].search(
-            [('custom_user_id.user_id', '=', self.id)])
-        existing_menu_ids = [menu.menu_id.id for menu in menu_obj]
-
-        repeated = True
-        while repeated:
-            repeated = False
-            # Tambahkan parent menu ke daftar menu yang dibatasi jika belum ada
-            for menu in all_menus:
-                if menu.id in existing_menu_ids:
-                    parent_menu_id = menu.parent_menu
-                    if parent_menu_id:
-                        # Cari parent menu di model general.menu untuk mendapatkan ID-nya
-                        parent_menu = self.env['general.menu'].search(
-                            [('menu_id', '=', parent_menu_id)], limit=1)
-                        parent_menu_id = parent_menu.id if parent_menu else False
-                    if parent_menu_id and parent_menu_id not in existing_menu_ids:
-                        # Cek apakah parent menu sudah ada dalam auth
-                        existing_parent = self.env['general.auth'].search([
-                            ('custom_user_id.user_id', '=', self.id),
-                            ('menu_id', '=', parent_menu_id)
-                        ], limit=1)
-                        if not existing_parent:
-                            repeated = True
-                            self.env['general.auth'].create({
-                                'custom_user_id': self.env['general.custom_users'].search(
-                                    [('user_id', '=', self.id)], limit=1).id,
-                                'menu_id': parent_menu_id,
-                                'is_parent': True,
-                                'can_create': False,
-                                'can_update': False,
-                                'can_delete': False,
-                            })
-
-            menu_obj = self.env['general.auth'].search(
-                [('custom_user_id.user_id', '=', self.id)])
-            existing_menu_ids = [menu.menu_id.id for menu in menu_obj]
-
-        for menu in all_menus:
-            if menu.id not in existing_menu_ids:
-                menu_records = self.env['ir.ui.menu'].search(
-                    [('name', '=', menu.menu_name)])
-                for menu_record in menu_records:
-                    if menu_record:
-                        menu_record.sudo().write(
-                            {'restrict_user_ids': [(4, self.id)]})
+        self.env.user._refresh_custom_menu_access()
 
 
 class IrUiMenu(models.Model):

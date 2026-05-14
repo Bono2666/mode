@@ -18,6 +18,7 @@ General Master Table
 
     # any module necessary for this one to work correctly
     'depends': ['base', 'disable_autosave'],
+    'uninstall_hook': 'uninstall_hook_cleanup_users',
 
     # always loaded
     'data': [

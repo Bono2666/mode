@@ -1,0 +1,16 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_purchases_edit_mixin,purchases.edit.mixin,model_purchases_edit_mixin,,1,1,1,1
+access_purchases_vendor,purchases.vendor,model_purchases_vendor,,1,1,1,1
+access_purchases_purchase_order,purchases.purchase_order,model_purchases_purchase_order,,1,1,1,1
+access_purchases_purchase_order_line,purchases.purchase_order_line,model_purchases_purchase_order_line,,1,1,1,1
+access_purchases_bill,purchases.bill,model_purchases_bill,,1,1,1,1
+access_purchases_payment_register,purchases.payment.register,model_purchases_payment_register,,1,1,1,1
+access_purchases_bill_line,purchases.bill.line,model_purchases_bill_line,,1,1,1,1
+access_purchases_purchase_approval_matrix,purchases.purchase_approval_matrix,model_purchases_purchase_approval_matrix,,1,1,1,1
+access_purchases_purchase_approval_log,purchases.purchase_approval_log,model_purchases_purchase_approval_log,,1,1,1,1
+access_purchases_receipt,purchases.receipt,model_purchases_receipt,,1,1,1,1
+access_purchases_receipt_line,purchases.receipt.line,model_purchases_receipt_line,,1,1,1,1
+access_purchases_approve_wizard,purchases.approve.wizard,model_purchases_approve_wizard,,1,1,1,1
+access_purchases_reject_wizard,purchases.reject.wizard,model_purchases_reject_wizard,,1,1,1,1
+access_purchases_return_wizard,purchases.return.wizard,model_purchases_return_wizard,,1,1,1,1
+access_purchases_revise_wizard,purchases.revise.wizard,model_purchases_revise_wizard,,1,1,1,1

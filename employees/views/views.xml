@@ -35,7 +35,7 @@
             <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
             <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
             <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-            <span class="min-w-0 text-truncate">
+            <span class="min-w-0 text-truncate mt-1">
               <field name="model_description"/>
             </span>
             <style>
@@ -83,15 +83,9 @@
       </field>
     </record>
 
-
-    <!-- Top menu item -->
-
-    <menuitem name="Employees" id="employees.menu_root" sequence="50"/>
-
     <!-- menu categories -->
 
-    <menuitem name="Employees" id="employees.employees_menu" parent="employees.menu_root" action="employees.action_window" sequence="1"/>
-    <menuitem name="Employees" id="employees.menu_employees_root" parent="general.menu_root" sequence="2" action="employees.action_window"/>
+    <menuitem name="Employees" id="employees.menu_employees_root" parent="general.menu_root" sequence="3" action="employees.action_window"/>
     
   </data>
 </odoo>

@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-    <record id="employee_menu" model="general.menu">
-        <field name="menu_id">employee</field>
-        <field name="menu_name">Employee</field>
-    </record>
-    
+    <data noupdate="1">
+        <!-- Add you code here -->
+        <record id="employees_menu" model="general.menu">
+            <field name="menu_id">employees</field>
+            <field name="menu_name">Employees</field>
+        </record>
+    </data>
 </odoo>

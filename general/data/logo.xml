@@ -1,7 +1,28 @@
 <odoo>
-    <data noupdate="1">
-        <record id="base.main_company" model="res.company">
-            <field name="logo" type="base64" file="general/static/src/img/logo.png"/>
-        </record>
-    </data>
+    <!-- LANGKAH 1: Paksa noupdate menjadi False (0) agar record bisa diedit kembali -->
+    <function model="ir.model.data" name="write">
+        <function model="ir.model.data" name="search">
+            <value eval="[('module', '=', 'base'), ('name', '=', 'main_company')]"/>
+        </function>
+        <value eval="{'noupdate': False}"/>
+    </function>
+
+    <!-- LANGKAH 2: Update datanya -->
+    <record id="base.main_company" model="res.company">
+        <field name="logo" type="base64" file="general/static/src/img/logo.png"/>
+        <field name="name">PT Mina Abadi Mekanika</field>
+        <field name="street">Jl. H. Zainuddin No. 47 B, RT 05/RW 14, Gandaria Utara</field>
+        <field name="street2">Kec. Kebayoran Baru</field>
+        <field name="city">Jakarta Selatan</field>
+        <field name="zip">12140</field>
+        <field name="phone">+62 21 27932331</field>
+    </record>
+
+    <!-- LANGKAH 3: Kembalikan noupdate menjadi True (Opsional) -->
+    <function model="ir.model.data" name="write">
+        <function model="ir.model.data" name="search">
+            <value eval="[('module', '=', 'base'), ('name', '=', 'main_company')]"/>
+        </function>
+        <value eval="{'noupdate': True}"/>
+    </function>
 </odoo>

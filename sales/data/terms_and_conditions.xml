@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+        <data noupdate="1">
+            <!-- Add you code here -->
+            <record id="content" model="sales.terms_and_conditions">
+                <field name="content"></field>
+            </record>
+        </data>
+
+</odoo>

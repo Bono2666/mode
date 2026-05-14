@@ -66,7 +66,7 @@
           <button name="%(user_management.action_open_change_password)d" string="Change Password" type="action" class="btn-secondary" invisible="not id or is_edit" context="{'active_user_id': user_id}"/>
           <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
           <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <span class="min-w-0 text-truncate">
+          <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
           <style>
@@ -95,9 +95,15 @@
                   <field name="menu_ids" readonly="not is_edit and id">
                     <tree editable="bottom">
                         <field name="menu_id" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
-                        <field name="can_create"/>
-                        <field name="can_update"/>
-                        <field name="can_delete"/>
+                        <field name="can_create" string="Create"/>
+                        <field name="can_update" string="Update"/>
+                        <field name="can_delete" string="Delete"/>
+                        <field name="can_submit" string="Submit"/>
+                        <field name="can_send" string="Send"/>
+                        <field name="can_confirm" string="Confirm"/>
+                        <field name="can_invoicing" string="Invoicing"/>
+                        <field name="can_receive" string="Receive"/>
+                        <field name="can_billing" string="Billing"/>
                     </tree>
                   </field>
                 </page>

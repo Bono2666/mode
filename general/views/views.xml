@@ -33,7 +33,7 @@
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
           <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
           <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <span class="min-w-0 text-truncate">
+          <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
           <style>
@@ -88,7 +88,7 @@
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
           <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
           <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <span class="min-w-0 text-truncate">
+          <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
           <style>
@@ -143,7 +143,7 @@
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
           <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
           <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <span class="min-w-0 text-truncate">
+          <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
           <style>
@@ -198,7 +198,7 @@
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
           <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
           <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <span class="min-w-0 text-truncate">
+          <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
           <style>
@@ -253,7 +253,7 @@
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
           <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
           <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <span class="min-w-0 text-truncate">
+          <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
           <style>
@@ -521,18 +521,18 @@
     <!-- menu items -->
     <menuitem name="Home" id="general.menu_root" sequence="0" action="general.home_action"/>
     
-    <menuitem name="Master Data" id="general.menu_master_menu" parent="general.menu_root" sequence="3"/>
+    <menuitem name="Configuration" id="general.menu_master_menu" parent="general.menu_root" sequence="5"/>
 
     <!-- general menus -->
 
-    <menuitem name="Others" id="general.general_others_menu" parent="general.menu_master_menu" sequence="5"/>
+    <menuitem name="Others" id="general.general_others_menu" parent="general.menu_master_menu" sequence="7"/>
     
-    <menuitem name="Country" id="general.general_country_act" parent="general.general_others_menu" action="general.country_action" sequence="1"/>
-    <menuitem name="State" id="general.general_state_act" parent="general.general_others_menu" action="general.state_action" sequence="2"/>
-    <menuitem name="City" id="general.general_city_act" parent="general.general_others_menu" action="general.city_action" sequence="3"/>
-    <menuitem name="District" id="general.general_district_act" parent="general.general_others_menu" action="general.district_action" sequence="4"/>
-    <menuitem name="Position" id="general.general_position_act" parent="general.general_others_menu" action="general.position_action" sequence="5"/>
-    <menuitem name="Department" id="general.general_department_act" parent="general.general_others_menu" action="general.department_action" sequence="6"/>
+    <menuitem name="Countries" id="general.general_country_act" parent="general.general_others_menu" action="general.country_action" sequence="1"/>
+    <menuitem name="States" id="general.general_state_act" parent="general.general_others_menu" action="general.state_action" sequence="2"/>
+    <menuitem name="Cities" id="general.general_city_act" parent="general.general_others_menu" action="general.city_action" sequence="3"/>
+    <menuitem name="Districts" id="general.general_district_act" parent="general.general_others_menu" action="general.district_action" sequence="4"/>
+    <menuitem name="Positions" id="general.general_position_act" parent="general.general_others_menu" action="general.position_action" sequence="5"/>
+    <menuitem name="Departments" id="general.general_department_act" parent="general.general_others_menu" action="general.department_action" sequence="6"/>
     
   </data>
 </odoo>
