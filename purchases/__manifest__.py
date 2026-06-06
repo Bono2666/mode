@@ -22,9 +22,16 @@ From purchase orders to vendor bills
         'views/views.xml',
         'data/sequence.xml',
         'data/mail_template_po.xml',
+        'data/mail_template_approval.xml',
     ],
     'demo': [
         'demo/demo.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'purchases/static/src/xml/based_on_so_field.xml',
+            'purchases/static/src/js/based_on_so_field.js',
+        ],
+    },
     'license': 'LGPL-3'
 }

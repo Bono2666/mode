@@ -245,10 +245,10 @@ class purchase_order(models.Model):
     ], string="Approval Status", default='pending')
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('wait_approval', 'Waiting Approval'),
-        ('approved', 'Approved'),
         ('sent', 'RFQ'),
         ('purchase', 'Purchase Order'),
+        ('wait_approval', 'Waiting Approval'),
+        ('approved', 'Approved'),
         ('cancel', 'Cancelled'),
     ], string="Status", default='draft')
     bill_ids = fields.One2many(
@@ -433,16 +433,18 @@ class purchase_order(models.Model):
 
     @api.model
     def create(self, vals):
-        if not self.env.user.has_group('base.group_system'):
-            auth_model = self.env['general.auth'].sudo()
-            menu_code = self._get_purchase_order_access_menu_code(vals)
-            access = auth_model.search([
-                ('custom_user_id.user_id', '=', self.env.uid),
-                ('menu_id.menu_id', '=', menu_code)
-            ], limit=1)
-            if not access or not access.can_create:
-                raise UserError(
-                    _("You do not have access rights to create purchase orders."))
+        # RFQ/PO dibuat otomatis dari Sales (procurement) — jangan blokir dengan hak menu RFQ.
+        if not self.env.context.get('skip_purchase_order_create_auth_check'):
+            if not self.env.user.has_group('base.group_system'):
+                auth_model = self.env['general.auth'].sudo()
+                menu_code = self._get_purchase_order_access_menu_code(vals)
+                access = auth_model.search([
+                    ('custom_user_id.user_id', '=', self.env.uid),
+                    ('menu_id.menu_id', '=', menu_code)
+                ], limit=1)
+                if not access or not access.can_create:
+                    raise UserError(
+                        _("You do not have access rights to create purchase orders."))
 
         if not vals.get('entry_menu_code'):
             vals['entry_menu_code'] = self._get_purchase_order_access_menu_code(vals)
@@ -466,7 +468,6 @@ class purchase_order(models.Model):
             record.bill_count = len(record.bill_ids.filtered(
                 lambda b: b.state != 'cancel'))
 
-    @api.depends('state', 'bill_ids.state', 'receipt_status')
     @api.depends('state', 'is_sent', 'bill_ids.state', 'receipt_status')
     def _compute_bill_status(self):
         for record in self:
@@ -474,7 +475,7 @@ class purchase_order(models.Model):
                 lambda b: b.state != 'cancel')
             if active_bills.filtered(lambda b: b.state == 'posted'):
                 record.bill_status = 'billed'
-            elif record.state == 'purchase' and record.is_sent:
+            elif record.state in ['purchase', 'approved'] and record.is_sent:
                 record.bill_status = 'to_bill'
             else:
                 record.bill_status = 'no'
@@ -490,7 +491,7 @@ class purchase_order(models.Model):
         for record in self:
             active_receipts = record.receipt_ids.filtered(
                 lambda r: r.state == 'received')
-            if record.state not in ['purchase'] or not record.is_sent:
+            if record.state not in ['purchase', 'approved'] or not record.is_sent:
                 record.receipt_status = 'no'
                 continue
             total_qty = sum(record.order_line_ids.mapped('quantity'))
@@ -507,7 +508,7 @@ class purchase_order(models.Model):
         matrix_model = self.env['purchases.purchase_approval_matrix'].sudo()
         for record in self:
             threshold = matrix_model.search(
-                [('min_amount', '<', record.total_amount), ('min_amount', '>', 0)],
+                [('min_amount', '<', record.total_amount)],
                 order='sequence asc', limit=1)
             record.need_approval = bool(threshold)
 
@@ -547,12 +548,25 @@ class purchase_order(models.Model):
                     rec.user_can_reject = matrix_line.reject
 
     def _compute_submit_permissions(self):
+        self.user_can_submit = False
+        if self.env.user.has_group('base.group_system'):
+            for rec in self:
+                rec.user_can_submit = True
+            return
+
         current_custom_user = self.env['general.custom_users'].sudo().search([
             ('user_id', '=', self.env.uid)
         ], limit=1)
-        for rec in self:
-            rec.user_can_submit = bool(
-                current_custom_user and rec.buyer_id == current_custom_user)
+        submit_authorized = self.env['general.auth'].sudo().search([
+            ('menu_id.menu_id', '=', 'purchase_order'),
+            ('can_submit', '=', True),
+            ('custom_user_id', '=',
+             current_custom_user.id if current_custom_user else None)
+        ], limit=1)
+
+        if submit_authorized:
+            for rec in self:
+                rec.user_can_submit = True
 
     def _compute_confirm_order_permissions(self):
         self.user_can_confirm_order = False
@@ -710,8 +724,8 @@ class purchase_order(models.Model):
 
     def action_send_po_by_email(self):
         self.ensure_one()
-        if self.state != 'purchase':
-            raise UserError(_("Only confirmed Purchase Orders can be sent by email."))
+        if self.state not in ['purchase', 'approved']:
+            raise UserError(_("Only confirmed or approved Purchase Orders can be sent by email."))
 
         # Cek permission
         if not self.env.user.has_group('base.group_system'):
@@ -868,10 +882,12 @@ class purchase_order(models.Model):
         if not self.order_line_ids:
             raise UserError(
                 _("Please add at least one order line before confirming the order."))
-        if self.need_approval and self.state != 'approved':
-            raise UserError(
-                _("This purchase order requires approval before it can be confirmed."))
-        self.state = 'purchase'
+        self.write({
+            'state': 'purchase',
+            'entry_menu_code': 'purchase_order',
+        })
+        # Buat approval logs jika butuh approval (state tetap purchase)
+        self._check_approval_requirement()
 
     def action_submit_rfq(self):
         """Ubah status RFQ dari Draft menjadi Sent (RFQ Sent)."""
@@ -882,12 +898,20 @@ class purchase_order(models.Model):
             raise UserError(
                 _("Please add at least one order line before submitting."))
         self.state = 'sent'
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'view_mode': 'form',
+            'res_id': self.id,
+            'target': 'current',
+            'context': {**self.env.context},
+        }
 
     def action_cancel(self):
         self.ensure_one()
         self._check_cancel_order_access()
-        if self.state not in ['draft', 'purchase']:
-            raise UserError(_("Only draft or confirmed purchase orders can be cancelled."))
+        if self.state not in ['draft', 'sent', 'purchase', 'approved']:
+            raise UserError(_("Only draft, RFQ, confirmed, or approved purchase orders can be cancelled."))
         if self.state == 'purchase':
             # Cek permission delete untuk cancel dari state purchase
             if not self.env.user.has_group('base.group_system'):
@@ -912,18 +936,18 @@ class purchase_order(models.Model):
 
     def write(self, vals):
         res = super(purchase_order, self).write(vals)
-        tracked_fields = {'order_line_ids', 'total_amount', 'vendor_id'}
-        if tracked_fields.intersection(vals.keys()):
-            self._check_approval_requirement()
         return res
 
     def _check_approval_requirement(self):
+        """Dipanggil setelah PO di-confirm. Jika total_amount melebihi threshold matrix,
+        buat approval logs. State tetap purchase — user harus Submit for Approval secara manual."""
         matrix_model = self.env['purchases.purchase_approval_matrix'].sudo()
         for record in self:
             threshold = matrix_model.search(
-                [('min_amount', '<', record.total_amount), ('min_amount', '>', 0)],
+                [('min_amount', '<', record.total_amount)],
                 order='sequence asc', limit=1)
             if threshold:
+                # Hapus pending logs lama jika ada
                 existing_pending = record.approval_log_ids.filtered(
                     lambda log: log.state == 'pending')
                 if existing_pending:
@@ -970,25 +994,44 @@ class purchase_order(models.Model):
                     super(purchase_order, record).write({
                         'approval_log_ids': log_lines,
                         'approval_status': 'pending',
-                        'state': 'draft' if record.state not in ['purchase', 'cancel'] else record.state,
+                        # State tetap purchase — tidak otomatis ke wait_approval
                     })
-            else:
-                pending_logs = record.approval_log_ids.filtered(
-                    lambda log: log.state == 'pending')
-                if pending_logs:
-                    pending_logs.unlink()
-                if record.state == 'wait_approval':
-                    super(purchase_order, record).write({'state': 'draft'})
 
     def action_submit_for_approval(self):
         self.ensure_one()
-        if self.state != 'draft':
+        if self.state != 'purchase':
             raise UserError(
-                _("Only draft purchase orders can be submitted for approval."))
+                _("Only confirmed purchase orders can be submitted for approval."))
         if not self.need_approval:
             raise UserError(
                 _("This purchase order does not require approval."))
+        # Pastikan approval logs sudah terisi sebelum submit
+        pending_logs = self.approval_log_ids.filtered(lambda l: l.state == 'pending')
+        if not pending_logs:
+            self._check_approval_requirement()
         self.state = 'wait_approval'
+        self._send_approval_notification()
+
+    def _send_approval_notification(self):
+        """Kirim email notifikasi ke approver berikutnya yang pending."""
+        self.ensure_one()
+        template = self.env.ref(
+            'purchases.email_template_purchase_approval_request', raise_if_not_found=False)
+        if not template:
+            return
+        next_log = self.approval_log_ids.sudo().filtered(
+            lambda l: l.state == 'pending'
+        ).sorted('sequence')
+        if next_log:
+            log = next_log[0]
+            if log.email:
+                ctx = {
+                    'email_to': log.email,
+                    'approver_name': log.approver,
+                    'position': log.position,
+                }
+                template.with_context(ctx).send_mail(self.id, force_send=True)
+                log.sudo().write({'mail_sent': True})
 
     def action_approve(self):
         self.ensure_one()
@@ -1025,10 +1068,14 @@ class purchase_order(models.Model):
                 'action_date': fields.Datetime.now(),
             })
         if not self.approval_log_ids.sudo().filtered(lambda l: l.state == 'pending'):
+            # Semua approved — set state ke approved
             self.write({
                 'state': 'approved',
                 'approval_status': 'approved',
             })
+        else:
+            # Masih ada pending — kirim notifikasi ke approver berikutnya
+            self._send_approval_notification()
         return self.action_back_to_approvals()
 
     def action_revise(self):
@@ -1106,6 +1153,49 @@ class purchase_order(models.Model):
         })
         return self.action_back_to_approvals()
 
+    def _approval_log_vals_from_matrix(self, matrix, state='pending', extra_vals=None):
+        extra_vals = extra_vals or {}
+        vals = {
+            'purchase_order_id': self.id,
+            'user_id': matrix.name.user_id.id if matrix.name and matrix.name.user_id else None,
+            'approver': matrix.name.name if matrix.name else '',
+            'email': matrix.name.user_id.login if matrix.name and matrix.name.user_id else '',
+            'position': matrix.position.position_name if matrix.position else '',
+            'sequence': matrix.sequence,
+            'min_amount': matrix.min_amount,
+            'receive_return': matrix.receive_return,
+            'approve': matrix.approve,
+            'revise': matrix.revise,
+            'returned': matrix.returned,
+            'reject': matrix.reject,
+            'notify': matrix.notify,
+            'approved_as': matrix.approved_as,
+            'state': state,
+        }
+        vals.update(extra_vals)
+        return vals
+
+    def _rebuild_approval_logs_after_revise(self, reviser_sequence):
+        """Hapus semua log pending, lalu buat ulang dari matrix (sequence >= reviser)."""
+        self.ensure_one()
+        matrix_model = self.env['purchases.purchase_approval_matrix'].sudo()
+
+        self.approval_log_ids.filtered(lambda l: l.state == 'pending').unlink()
+
+        domain = [('sequence', '>=', reviser_sequence)]
+        max_seq_rec = matrix_model.search(
+            [('min_amount', '>', self.total_amount)], order='sequence asc', limit=1)
+        if max_seq_rec:
+            domain.append(('sequence', '<', max_seq_rec.sequence))
+
+        approvers = matrix_model.search(domain, order='sequence asc')
+        for approver in approvers:
+            self.approval_log_ids.create(
+                self._approval_log_vals_from_matrix(approver))
+
+        if approvers:
+            self._send_approval_notification()
+
     def action_revise_final(self):
         self.ensure_one()
         message = self.env.context.get('revise_message')
@@ -1116,27 +1206,13 @@ class purchase_order(models.Model):
             raise UserError(
                 _("You are not authorized to revise this document."))
         self.is_edit = False
-        self.approval_log_ids.sudo().create({
-            'purchase_order_id': self.id,
-            'user_id': self.env.uid,
-            'approver': current_log[0].approver,
-            'email': current_log[0].email,
-            'position': current_log[0].position,
-            'sequence': current_log[0].sequence,
-            'min_amount': current_log[0].min_amount,
-            'receive_return': current_log[0].receive_return,
-            'approve': current_log[0].approve,
-            'revise': current_log[0].revise,
-            'returned': current_log[0].returned,
-            'reject': current_log[0].reject,
-            'notify': current_log[0].notify,
-            'approved_as': current_log[0].approved_as,
+        reviser_sequence = current_log[0].sequence
+        current_log.write({
             'state': 'revised',
             'action_date': fields.Datetime.now(),
             'note': message,
         })
-        self.write({'state': 'draft', 'approval_status': 'pending'})
-        self.approval_log_ids.filtered(lambda l: l.state == 'pending').unlink()
+        self._rebuild_approval_logs_after_revise(reviser_sequence)
         return self.action_view_purchase_order(approval_view=True)
 
     def action_return_final(self):
@@ -1148,22 +1224,40 @@ class purchase_order(models.Model):
         if not current_log:
             raise UserError(
                 _("You are not authorized to return this document."))
+        returner_sequence = current_log[0].sequence
         current_log.write({
             'state': 'returned',
             'action_date': fields.Datetime.now(),
             'note': reason,
         })
         self.approval_log_ids.filtered(lambda l: l.state == 'pending').unlink()
-        self.write({
-            'state': 'draft',
-            'approval_status': 'pending',
-        })
-        self._check_approval_requirement()
-        return self.action_view_purchase_order(approval_view=True)
+
+        matrix_model = self.env['purchases.purchase_approval_matrix'].sudo()
+        return_matrix = matrix_model.search([
+            ('receive_return', '=', True),
+            ('sequence', '<', returner_sequence),
+        ], order='sequence asc', limit=1)
+
+        if return_matrix:
+            domain = [('sequence', '>=', return_matrix.sequence)]
+            max_seq_rec = matrix_model.search(
+                [('min_amount', '>', self.total_amount)], order='sequence asc', limit=1)
+            if max_seq_rec:
+                domain.append(('sequence', '<', max_seq_rec.sequence))
+            approvers = matrix_model.search(domain, order='sequence asc')
+            for approver in approvers:
+                self.approval_log_ids.create(
+                    self._approval_log_vals_from_matrix(approver))
+            self.write({'state': 'wait_approval', 'approval_status': 'pending'})
+            self._send_approval_notification()
+        else:
+            self.approval_log_ids.filtered(lambda l: l.state == 'pending').unlink()
+            self.write({'state': 'purchase', 'approval_status': 'pending'})
+        return self.action_back_to_approvals()
 
     def action_create_bill(self):
         self.ensure_one()
-        if self.state != 'purchase':
+        if self.state not in ['purchase', 'approved']:
             raise UserError(
                 _("Bill can only be created from a confirmed purchase order."))
         draft_bill = self.bill_ids.filtered(lambda b: b.state == 'draft')[:1]
@@ -1213,7 +1307,7 @@ class purchase_order(models.Model):
 
     def action_create_receipt(self):
         self.ensure_one()
-        if self.state != 'purchase':
+        if self.state not in ['purchase', 'approved']:
             raise UserError(
                 _("Receipt can only be created from a confirmed purchase order."))
         remaining_lines = self.order_line_ids.filtered(
@@ -1267,6 +1361,14 @@ class purchase_order(models.Model):
 
     def action_view_purchase_order(self, approval_view=False):
         self.ensure_one()
+        ctx = {
+            **self.env.context,
+            'is_approval_view': approval_view or self.env.context.get('is_approval_view'),
+            'create': False,
+        }
+        if self.entry_menu_code:
+            ctx['access_menu_code'] = self.entry_menu_code
+            ctx['default_entry_menu_code'] = self.entry_menu_code
         return {
             'type': 'ir.actions.act_window',
             'name': 'Purchase Order',
@@ -1274,11 +1376,7 @@ class purchase_order(models.Model):
             'view_mode': 'form',
             'res_id': self.id,
             'target': 'current',
-            'context': {
-                **self.env.context,
-                'is_approval_view': approval_view or self.env.context.get('is_approval_view'),
-                'create': False,
-            },
+            'context': ctx,
         }
 
     def action_back_to_rfq(self):
@@ -1291,7 +1389,7 @@ class purchase_order(models.Model):
             'view_mode': 'tree,form',
             'views': [(rfq_tree.id if rfq_tree else False, 'tree'), (False, 'form')],
             'target': 'main',
-            'domain': [('state', 'in', ['draft', 'wait_approval', 'approved', 'sent', 'cancel'])],
+            'domain': [('state', 'in', ['draft', 'sent', 'cancel'])],
             'context': {'default_state': 'draft', 'access_menu_code': 'rfq', 'default_entry_menu_code': 'rfq'},
         }
 
@@ -1305,7 +1403,7 @@ class purchase_order(models.Model):
             'view_mode': 'tree,form',
             'views': [(po_tree.id if po_tree else False, 'tree'), (False, 'form')],
             'target': 'main',
-            'domain': [('state', 'in', ['sent', 'purchase'])],
+            'domain': [('state', 'in', ['sent', 'purchase', 'wait_approval', 'approved', 'cancel'])],
             'context': {'access_menu_code': 'purchase_order', 'default_entry_menu_code': 'purchase_order'},
         }
 
@@ -1320,7 +1418,7 @@ class purchase_order(models.Model):
             'view_mode': 'tree,form',
             'views': [(rfq_tree.id if rfq_tree else False, 'tree'), (False, 'form')],
             'target': 'main',
-            'domain': [('state', 'in', ['draft', 'wait_approval', 'approved', 'sent', 'cancel'])],
+            'domain': [('state', 'in', ['draft', 'sent', 'cancel'])],
             'context': {'default_state': 'draft', 'access_menu_code': 'rfq', 'default_entry_menu_code': 'rfq'},
         }
 
@@ -1346,7 +1444,8 @@ class purchase_order_line(models.Model):
         ondelete='cascade', index=True)
     product_id = fields.Many2one(
         comodel_name='sales.products', string='Product',
-        ondelete='set null', index=True)
+        ondelete='set null', index=True,
+        domain=[('purchase_ok', '=', True)])
     description = fields.Char(string="Description")
     quantity = fields.Float(string="Quantity", default=1.0)
     product_unit = fields.Many2one(
@@ -1723,6 +1822,7 @@ class purchase_approval_matrix(models.Model):
     _name = 'purchases.purchase_approval_matrix'
     _inherit = ['purchases.edit.mixin']
     _description = 'Purchase Approval Matrix'
+    _order = 'sequence asc'
 
     name = fields.Many2one(
         comodel_name='general.custom_users', string='Approver', index=True)

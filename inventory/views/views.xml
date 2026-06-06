@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <record id="inventory_warehouse_tree" model="ir.ui.view">
+      <field name="name">inventory.warehouse.tree</field>
+      <field name="model">inventory.warehouse</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="code"/>
+          <field name="name"/>
+          <field name="active"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="inventory_warehouse_form" model="ir.ui.view">
+      <field name="name">inventory.warehouse.form</field>
+      <field name="model">inventory.warehouse</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Save" name="action_save" type="object" class="oe_highlight" invisible="id and not is_edit"/>
+            <button string="Cancel" special="cancel" invisible="not is_edit"/>
+            <button string="Delete" name="action_delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this warehouse?" invisible="not id or is_edit or not user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1"><field name="model_description"/></span>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <label for="name"/>
+              <h1><field name="name" readonly="id and not is_edit"/></h1>
+            </div>
+            <group>
+              <group>
+                <field name="code" readonly="1"/>
+                <field name="active" readonly="id and not is_edit"/>
+              </group>
+              <group>
+                <field name="address" readonly="id and not is_edit"/>
+              </group>
+            </group>
+            <notebook>
+              <page string="Locations">
+                <field name="location_ids" readonly="id and not is_edit">
+                  <tree editable="bottom">
+                    <field name="name"/>
+                    <field name="usage"/>
+                    <field name="active"/>
+                  </tree>
+                </field>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="inventory_location_tree" model="ir.ui.view">
+      <field name="name">inventory.location.tree</field>
+      <field name="model">inventory.location</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="complete_name"/>
+          <field name="warehouse_id"/>
+          <field name="usage"/>
+          <field name="active"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="inventory_location_form" model="ir.ui.view">
+      <field name="name">inventory.location.form</field>
+      <field name="model">inventory.location</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Save" name="action_save" type="object" class="oe_highlight" invisible="id and not is_edit"/>
+            <button string="Cancel" special="cancel" invisible="not is_edit"/>
+            <button string="Delete" name="action_delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this location?" invisible="not id or is_edit or not user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1"><field name="model_description"/></span>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <label for="name"/>
+              <h1><field name="name" readonly="id and not is_edit"/></h1>
+            </div>
+            <group>
+              <field name="complete_name" readonly="1"/>
+              <field name="warehouse_id" readonly="id and not is_edit"/>
+              <field name="usage" readonly="id and not is_edit"/>
+              <field name="active" readonly="id and not is_edit"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="inventory_stock_move_tree" model="ir.ui.view">
+      <field name="name">inventory.stock.move.tree</field>
+      <field name="model">inventory.stock_move</field>
+      <field name="arch" type="xml">
+        <tree create="0" delete="0">
+          <field name="date"/>
+          <field name="move_number"/>
+          <field name="product_id"/>
+          <field name="quantity"/>
+          <field name="product_unit"/>
+          <field name="move_type"/>
+          <field name="source_location_id"/>
+          <field name="destination_location_id"/>
+          <field name="origin"/>
+          <field name="state"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="inventory_stock_move_form" model="ir.ui.view">
+      <field name="name">inventory.stock.move.form</field>
+      <field name="model">inventory.stock_move</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Validate" name="action_done" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+            <button string="Cancel" name="action_cancel" type="object" invisible="state != 'draft' or not user_can_delete"/>
+            <button string="Source Document" name="action_open_origin" type="object" invisible="not origin_model or not origin_id"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <label for="move_number"/>
+              <h1><field name="move_number" readonly="1"/></h1>
+            </div>
+            <group>
+              <group>
+                <field name="date" readonly="state != 'draft'"/>
+                <field name="product_id" readonly="state != 'draft'"/>
+                <field name="quantity" readonly="state != 'draft'"/>
+                <field name="product_unit" readonly="1"/>
+              </group>
+              <group>
+                <field name="move_type" readonly="state != 'draft'"/>
+                <field name="source_location_id" readonly="state != 'draft'"/>
+                <field name="destination_location_id" readonly="state != 'draft'"/>
+                <field name="origin" readonly="1"/>
+              </group>
+            </group>
+            <field name="note" readonly="state != 'draft'"/>
+            <field name="origin_model" invisible="1"/>
+            <field name="origin_id" invisible="1"/>
+            <field name="origin_line_id" invisible="1"/>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="inventory_transfer_tree" model="ir.ui.view">
+      <field name="name">inventory.transfer.tree</field>
+      <field name="model">inventory.transfer</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="transfer_number"/>
+          <field name="scheduled_date"/>
+          <field name="operation_type"/>
+          <field name="source_location_id"/>
+          <field name="destination_location_id"/>
+          <field name="state"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="inventory_transfer_form" model="ir.ui.view">
+      <field name="name">inventory.transfer.form</field>
+      <field name="model">inventory.transfer</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Validate" name="action_validate" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or state != 'draft' or is_edit or not user_can_update"/>
+            <button string="Save" name="action_save" type="object" class="oe_highlight" invisible="id and not is_edit"/>
+            <button string="Cancel" name="action_cancel" type="object" invisible="state != 'draft' or not user_can_delete"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <label for="transfer_number"/>
+              <h1><field name="transfer_number" readonly="1"/></h1>
+            </div>
+            <group>
+              <group>
+                <field name="scheduled_date" readonly="id and not is_edit"/>
+                <field name="operation_type" readonly="id and not is_edit"/>
+                <field name="sales_order_id" readonly="1"/>
+              </group>
+              <group>
+                <field name="source_location_id" readonly="id and not is_edit"/>
+                <field name="destination_location_id" readonly="id and not is_edit"/>
+              </group>
+            </group>
+            <notebook>
+              <page string="Products">
+                <field name="line_ids" readonly="state != 'draft' or (id and not is_edit)">
+                  <tree editable="bottom">
+                    <field name="product_id" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="available_stock"/>
+                    <field name="quantity"/>
+                    <field name="product_unit"/>
+                  </tree>
+                </field>
+              </page>
+              <page string="Notes">
+                <field name="note" readonly="state != 'draft' or (id and not is_edit)"/>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="inventory_adjustment_tree" model="ir.ui.view">
+      <field name="name">inventory.adjustment.tree</field>
+      <field name="model">inventory.adjustment</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="adjustment_number"/>
+          <field name="adjustment_date"/>
+          <field name="location_id"/>
+          <field name="state"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="inventory_adjustment_form" model="ir.ui.view">
+      <field name="name">inventory.adjustment.form</field>
+      <field name="model">inventory.adjustment</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Validate" name="action_validate" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or state != 'draft' or is_edit or not user_can_update"/>
+            <button string="Save" name="action_save" type="object" class="oe_highlight" invisible="id and not is_edit"/>
+            <button string="Cancel" name="action_cancel" type="object" invisible="state != 'draft' or not user_can_delete"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <label for="adjustment_number"/>
+              <h1><field name="adjustment_number" readonly="1"/></h1>
+            </div>
+            <group>
+              <field name="adjustment_date" readonly="id and not is_edit"/>
+              <field name="location_id" readonly="id and not is_edit"/>
+            </group>
+            <notebook>
+              <page string="Products">
+                <field name="line_ids" readonly="state != 'draft' or (id and not is_edit)">
+                  <tree editable="bottom">
+                    <field name="product_id" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="current_qty"/>
+                    <field name="counted_qty"/>
+                    <field name="difference_qty"/>
+                    <field name="product_unit"/>
+                  </tree>
+                </field>
+              </page>
+              <page string="Notes">
+                <field name="note" readonly="state != 'draft' or (id and not is_edit)"/>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="sales_products_form_inventory" model="ir.ui.view">
+      <field name="name">sales.products.form.inventory</field>
+      <field name="model">sales.products</field>
+      <field name="inherit_id" ref="sales.products_view_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//notebook" position="inside">
+          <page string="Inventory" name="inventory">
+            <group>
+              <field name="stock" readonly="1"/>
+              <field name="qty_reserved_sale" readonly="1"/>
+            </group>
+            <button string="View Stock Moves" name="action_open_inventory_moves" type="object"/>
+            <field name="inventory_move_ids" readonly="1">
+              <tree>
+                <field name="date"/>
+                <field name="move_number"/>
+                <field name="quantity"/>
+                <field name="move_type"/>
+                <field name="origin"/>
+                <field name="state"/>
+              </tree>
+            </field>
+          </page>
+        </xpath>
+      </field>
+    </record>
+
+    <record id="sales_order_form_inventory_delivery" model="ir.ui.view">
+      <field name="name">sales.sales_order.form.inventory.delivery</field>
+      <field name="model">sales.sales_order</field>
+      <field name="inherit_id" ref="sales.quotation_view_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//field[@name='invoice_count']" position="after">
+          <field name="inventory_delivery_count" invisible="1"/>
+        </xpath>
+        <xpath expr="//button[@name='action_create_invoice_simple']" position="before">
+          <button name="action_create_inventory_delivery"
+                  type="object"
+                  string="Create Delivery"
+                  class="btn-primary"
+                  invisible="state != 'sale' or is_edit or not order_line_ids"/>
+          <button name="action_view_inventory_deliveries"
+                  type="object"
+                  string="Deliveries"
+                  class="btn-secondary"
+                  invisible="inventory_delivery_count == 0 or is_edit"/>
+        </xpath>
+      </field>
+    </record>
+
+    <record id="inventory_transfer_action" model="ir.actions.act_window">
+      <field name="name">Transfers</field>
+      <field name="res_model">inventory.transfer</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="inventory_adjustment_action" model="ir.actions.act_window">
+      <field name="name">Inventory Adjustments</field>
+      <field name="res_model">inventory.adjustment</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="inventory_stock_move_action" model="ir.actions.act_window">
+      <field name="name">Stock Moves</field>
+      <field name="res_model">inventory.stock_move</field>
+      <field name="view_mode">tree,form</field>
+      <field name="context">{'create': False}</field>
+    </record>
+
+    <record id="inventory_warehouse_action" model="ir.actions.act_window">
+      <field name="name">Warehouses</field>
+      <field name="res_model">inventory.warehouse</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="inventory_location_action" model="ir.actions.act_window">
+      <field name="name">Locations</field>
+      <field name="res_model">inventory.location</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem name="Inventory" id="inventory.menu_inventory_root" parent="general.menu_root" sequence="3"/>
+    <menuitem name="Operations" id="inventory.operations_menu" parent="inventory.menu_inventory_root" sequence="1"/>
+    <menuitem name="Transfers" id="inventory.transfers_menu_act" parent="inventory.operations_menu" action="inventory_transfer_action" sequence="1"/>
+    <menuitem name="Inventory Adjustments" id="inventory.adjustments_menu_act" parent="inventory.operations_menu" action="inventory_adjustment_action" sequence="2"/>
+    <menuitem name="Stock Moves" id="inventory.stock_moves_menu_act" parent="inventory.operations_menu" action="inventory_stock_move_action" sequence="3"/>
+    <menuitem name="Products" id="inventory.products_menu_act" parent="inventory.menu_inventory_root" action="sales.products_action" sequence="2"/>
+    <menuitem name="Configuration" id="inventory.configuration_menu" parent="inventory.menu_inventory_root" sequence="5"/>
+    <menuitem name="Warehouses" id="inventory.warehouses_menu_act" parent="inventory.configuration_menu" action="inventory_warehouse_action" sequence="1"/>
+    <menuitem name="Locations" id="inventory.locations_menu_act" parent="inventory.configuration_menu" action="inventory_location_action" sequence="2"/>
+  </data>
+</odoo>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="purchases.BasedOnSoField">
+        <span class="text-muted">Based On </span>
+        <t t-foreach="links" t-as="link" t-key="link.id">
+            <t t-if="!link_first"><span class="text-muted">, </span></t>
+            <a href="#" class="text-muted" t-on-click.prevent="(ev) => this.onClickSo(link.id, ev)">
+                <t t-esc="link.code"/>
+            </a>
+        </t>
+    </t>
+</templates>

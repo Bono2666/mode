@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <record id="inventory_menu" model="general.menu">
+            <field name="menu_id">inventory</field>
+            <field name="menu_name">Inventory</field>
+            <field name="is_parent">True</field>
+        </record>
+        <record id="inventory_operations_menu" model="general.menu">
+            <field name="menu_id">inventory_operations</field>
+            <field name="menu_name">Operations</field>
+            <field name="parent_menu">inventory</field>
+            <field name="is_parent">True</field>
+        </record>
+        <record id="inventory_transfers_menu" model="general.menu">
+            <field name="menu_id">inventory_transfers</field>
+            <field name="menu_name">Transfers</field>
+            <field name="parent_menu">inventory_operations</field>
+        </record>
+        <record id="inventory_adjustments_menu" model="general.menu">
+            <field name="menu_id">inventory_adjustments</field>
+            <field name="menu_name">Inventory Adjustments</field>
+            <field name="parent_menu">inventory_operations</field>
+        </record>
+        <record id="inventory_stock_moves_menu" model="general.menu">
+            <field name="menu_id">inventory_stock_moves</field>
+            <field name="menu_name">Stock Moves</field>
+            <field name="parent_menu">inventory_operations</field>
+        </record>
+        <record id="inventory_products_menu" model="general.menu">
+            <field name="menu_id">inventory_products</field>
+            <field name="menu_name">Products</field>
+            <field name="parent_menu">inventory</field>
+        </record>
+        <record id="inventory_configuration_menu" model="general.menu">
+            <field name="menu_id">inventory_configuration</field>
+            <field name="menu_name">Configuration</field>
+            <field name="parent_menu">inventory</field>
+            <field name="is_parent">True</field>
+        </record>
+        <record id="inventory_warehouses_menu" model="general.menu">
+            <field name="menu_id">inventory_warehouses</field>
+            <field name="menu_name">Warehouses</field>
+            <field name="parent_menu">inventory_configuration</field>
+        </record>
+        <record id="inventory_locations_menu" model="general.menu">
+            <field name="menu_id">inventory_locations</field>
+            <field name="menu_name">Locations</field>
+            <field name="parent_menu">inventory_configuration</field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <record id="email_template_purchase_approval_request" model="mail.template">
+            <field name="name">Purchase Order: Approval Request</field>
+            <field name="model_id" ref="purchases.model_purchases_purchase_order"/>
+            <field name="subject">Persetujuan Diperlukan: {{ object.po_code }} - {{ object.vendor_id.vendor_name }}</field>
+            <field name="email_from">{{ object.buyer_id.user_id.email or object.buyer_id.user_id.login or user.email or '' }}</field>
+            <field name="email_to">{{ ctx.get('email_to') or '' }}</field>
+            <field name="body_html" type="html">
+                <div style="margin: 0px; padding: 0px; font-family: 'Arial', sans-serif;">
+                    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+                        Halo <strong><t t-out="ctx.get('approver_name', '')"/></strong>,<br/><br/>
+                        Mohon tinjau permintaan persetujuan untuk Purchase Order berikut:
+                        <br/><br/>
+                        <strong>Nomor PO:</strong> <t t-out="object.po_code"/><br/>
+                        <strong>Vendor:</strong> <t t-out="object.vendor_id.vendor_name"/><br/>
+                        <strong>Total Nilai:</strong> Rp <t t-out="'{:,.0f}'.format(object.total_amount)"/><br/>
+                        <strong>Buyer:</strong> <t t-out="object.buyer_id.name or ''"/><br/>
+                        <br/>
+                        Total nilai Purchase Order melebihi batas minimum yang memerlukan otorisasi dari posisi Anda sebagai <em><t t-out="ctx.get('position', '')"/></em>.
+                        <br/><br/>
+                        Silakan klik tombol di bawah ini untuk melihat detail dan memberikan keputusan:
+                        <br/><br/>
+                        <center>
+                            <a t-attf-href="/web#action=purchases.purchases_purchase_approval_action&amp;id={{ object.id }}&amp;model=purchases.purchase_order&amp;view_type=form"
+                               style="background-color: #875A7B; padding: 10px 20px; text-decoration: none; color: #fff; border-radius: 5px; font-size: 14px;">
+                                Lihat Purchase Order
+                            </a>
+                        </center>
+                        <br/><br/>
+                        Terima kasih.
+                    </p>
+                </div>
+            </field>
+        </record>
+    </data>
+</odoo>

@@ -516,6 +516,12 @@ class product_unit(models.Model):
     is_edit = fields.Boolean(default=False)
 
 
+# SO states that reserve stock (booking) while the order is open.
+RESERVED_SO_STATES = (
+    'draft', 'sale_draft', 'wait_approval', 'approved', 'sent', 'sale',
+)
+
+
 class products(models.Model):
     _name = 'sales.products'
     _inherit = ['navigation.mixin']
@@ -525,6 +531,9 @@ class products(models.Model):
 
     product_id = fields.Char(string="Product ID")
     product_name = fields.Char(string="Product Name")
+    sales_ok = fields.Boolean(string="Sales", default=True)
+    purchase_ok = fields.Boolean(string="Purchase", default=True)
+    barcode = fields.Char(string="Barcode")
     product_type = fields.Many2one(
         comodel_name='sales.product_type', string='Product Type')
     product_category = fields.Many2one(
@@ -537,6 +546,12 @@ class products(models.Model):
     customer_tax = fields.Many2one(
         comodel_name='sales.taxes', string='Customer Tax', default=lambda self: self.env['sales.taxes'].search([('default_tax', '=', True)], limit=1))
     stock = fields.Integer(string='Stock', default=0)
+    sales_order_line_ids = fields.One2many(
+        'sales.sales_order_line', 'product_id', string='Sales Order Lines')
+    qty_reserved_sale = fields.Integer(
+        string='Booked (Open SO)', compute='_compute_qty_reserved_sale',
+        store=True,
+        help='Total quantity booked on open Sales Orders (not cancelled).')
     image = fields.Binary(string="Image")
     is_edit = fields.Boolean(default=False)
 
@@ -564,6 +579,24 @@ class products(models.Model):
                 record.tax_string = f"(= {formatted_price} Incl. Taxes)"
             else:
                 record.tax_string = ""
+
+    @api.depends('sales_order_line_ids.quantity', 'sales_order_line_ids.sales_order_id.state')
+    def _compute_qty_reserved_sale(self):
+        for product in self:
+            lines = product.sales_order_line_ids.filtered(
+                lambda l: l.sales_order_id
+                and l.sales_order_id.state in RESERVED_SO_STATES)
+            product.qty_reserved_sale = sum(lines.mapped('quantity'))
+
+    def action_back_kanban(self):
+        """Open the canonical Products action (kanban) so the Back button
+        behaves the same as the main Products menu.
+        """
+        self.ensure_one()
+        try:
+            return self.env.ref('sales.products_action').sudo().read()[0]
+        except Exception:
+            return super(products, self).action_back_kanban()
 
 
 class price_condition(models.Model):
@@ -965,6 +998,7 @@ class sales_order(models.Model):
 
         if 'order_line_ids' in vals:
             res._check_approval_requirement()
+        res._refresh_line_indent_flags()
 
         return res
 
@@ -1088,7 +1122,25 @@ class sales_order(models.Model):
 
     def action_cancel(self):
         self.ensure_one()
+        self._check_cancel_order_access()
         self.state = 'cancel'
+
+    def _check_cancel_order_access(self):
+        self.ensure_one()
+        if self.env.user.has_group('base.group_system'):
+            return
+        current_custom_user = self.env['general.custom_users'].sudo().search([
+            ('user_id', '=', self.env.uid)
+        ], limit=1)
+        cancel_authorized = self.env['general.auth'].sudo().search([
+            ('menu_id.menu_id', '=', 'sales_order'),
+            ('can_delete', '=', True),
+            ('custom_user_id', '=',
+             current_custom_user.id if current_custom_user else None)
+        ], limit=1)
+        if not cancel_authorized:
+            raise UserError(
+                _("You do not have access rights to cancel sales orders."))
 
     def action_open_discount_wizard(self):
         self.ensure_one()
@@ -1354,13 +1406,31 @@ class sales_order(models.Model):
         return res
 
     def write(self, vals):
-        # 1. Jalankan proses simpan standar
         res = super(sales_order, self).write(vals)
 
         if res and 'order_line_ids' in vals:
             self._check_approval_requirement()
+        if res and ('order_line_ids' in vals or 'state' in vals):
+            self._refresh_line_indent_flags()
 
         return res
+
+    def _refresh_line_indent_flags(self):
+        """Perbarui label Indent pada baris SO setelah create/update."""
+        for order in self.filtered(lambda o: o.state in RESERVED_SO_STATES):
+            for line in order.order_line_ids:
+                if not line.product_id:
+                    if line.info:
+                        line.info = ""
+                    continue
+                free = max(0, line.product_id.stock -
+                           line.product_id.qty_reserved_sale)
+                demand = sum(
+                    (l.quantity or 0) for l in order.order_line_ids
+                    if l.product_id == line.product_id)
+                new_info = "Indent" if demand > free else ""
+                if line.info != new_info:
+                    line.write({'info': new_info})
 
     def _check_approval_requirement(self):
         for record in self:
@@ -1994,7 +2064,8 @@ class sales_order_line(models.Model):
     sales_order_id = fields.Many2one(
         comodel_name='sales.sales_order', string='Sales Order', ondelete='cascade', index=True)
     product_id = fields.Many2one(
-        comodel_name='sales.products', string='Product', ondelete='set null', index=True)
+        comodel_name='sales.products', string='Product', ondelete='set null', index=True,
+        domain=[('sales_ok', '=', True)])
     quantity = fields.Integer(string="Quantity", default=1)
     product_unit = fields.Many2one(
         related='product_id.product_unit', string="UoM")
@@ -2012,17 +2083,35 @@ class sales_order_line(models.Model):
             record.sub_total = record.quantity * \
                 record.unit_price * (1 - record.discount / 100)
 
+    def _free_stock_after_reservations(self, product):
+        """Stok fisik dikurangi qty yang di-book di SO terbuka (belum cancel)."""
+        if not product:
+            return 0
+        return max(0, product.stock - product.qty_reserved_sale)
+
+    def _total_qty_this_order_for_product(self, product):
+        order = self.sales_order_id
+        if not order or not product:
+            return self.quantity or 0
+        return sum(
+            (l.quantity or 0) for l in order.order_line_ids
+            if l.product_id == product)
+
+    def _set_indent_from_availability(self):
+        """Indent jika total kebutuhan produk di SO ini melebihi stok bebas."""
+        if not self.product_id:
+            self.info = ""
+            return
+        free = self._free_stock_after_reservations(self.product_id)
+        demand = self._total_qty_this_order_for_product(self.product_id)
+        self.info = "Indent" if demand > free else ""
+
     @api.onchange('product_id')
     def _onchange_product_id_price_condition(self):
         if not self.product_id or not self.sales_order_id.customer_id:
             return
 
-        available_stock = self.product_id.stock if self.product_id else 1
-
-        if self.quantity > available_stock:
-            self.info = "Indent"
-        else:
-            self.info = ""
+        self._set_indent_from_availability()
 
         self.unit_price = self.product_id.base_price
 
@@ -2081,6 +2170,18 @@ class sales_order_line(models.Model):
                 # Berhenti di condition pertama yang paling cocok (paling baru)
                 break
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        lines = super().create(vals_list)
+        lines.mapped('sales_order_id')._refresh_line_indent_flags()
+        return lines
+
+    def write(self, vals):
+        res = super().write(vals)
+        if {'product_id', 'quantity'} & set(vals.keys()):
+            self.mapped('sales_order_id')._refresh_line_indent_flags()
+        return res
+
     @api.model
     def default_get(self, fields_list):
         res = super(sales_order_line, self).default_get(fields_list)
@@ -2089,14 +2190,11 @@ class sales_order_line(models.Model):
 
     @api.onchange('quantity')
     def _onchange_quantity(self):
-        available_stock = self.product_id.stock if self.product_id else 1
+        if not self.product_id or not self.sales_order_id or not self.sales_order_id.customer_id:
+            self._set_indent_from_availability()
+            return
 
-        if self.quantity > available_stock:
-            self.info = "Indent"
-        else:
-            self.info = ""
-
-        self.unit_price = self.product_id.base_price
+        self._set_indent_from_availability()
 
         now = fields.Datetime.now()
         customer = self.sales_order_id.customer_id

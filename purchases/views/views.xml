@@ -62,8 +62,8 @@
       <field name="name">purchases.approval.matrix.tree</field>
       <field name="model">purchases.purchase_approval_matrix</field>
       <field name="arch" type="xml">
-        <tree>
-          <field name="sequence"/>
+        <tree default_order="sequence">
+          <field name="sequence" widget="handle"/>
           <field name="name"/>
           <field name="position"/>
           <field name="min_amount"/>
@@ -112,6 +112,7 @@
       <field name="arch" type="xml">
         <tree>
           <field name="po_code"/>
+          <field name="based_on_so" string="Base On" optional="show"/>
           <field name="po_date"/>
           <field name="vendor_id"/>
           <field name="buyer_id" widget="many2one_avatar"/>
@@ -148,12 +149,11 @@
           <field name="total_amount" decoration-bf="1"/>
           <field name="state" widget="badge"
                  decoration-info="state == 'draft'"
+                 decoration-warning="state in ['sent', 'wait_approval']"
                  decoration-primary="state == 'approved'"
-                 decoration-warning="state == 'sent'"
                  decoration-success="state == 'purchase'"
                  decoration-danger="state == 'cancel'"/>
           <field name="current_approver_name" string="Wait Approver"
-                 column_invisible="not context.get('is_approval_view')"
                  invisible="state != 'wait_approval'"/>
           <field name="receipt_status" widget="badge"
                  decoration-info="receipt_status == 'to_receive'"
@@ -243,6 +243,39 @@
       </field>
     </record>
 
+    <record id="sales_products_vendor_form" model="ir.ui.view">
+      <field name="name">sales.products.form.vendor</field>
+      <field name="model">sales.products</field>
+      <field name="inherit_id" ref="sales.products_view_form"/>
+      <field name="arch" type="xml">
+        <field name="product_category" position="after">
+          <field name="vendor_id" options="{'no_open': True, 'no_create': True}"
+                 readonly="not is_edit and id"/>
+        </field>
+      </field>
+    </record>
+
+    <record id="sales_order_form_back_from_purchase" model="ir.ui.view">
+      <field name="name">sales.sales_order.form.back.from.purchase</field>
+      <field name="model">sales.sales_order</field>
+      <field name="inherit_id" ref="sales.quotation_view_form"/>
+      <field name="arch" type="xml">
+        <button name="action_back_to_quotations" position="before">
+          <button string="Back" name="action_back_to_purchase_order" type="object"
+                  invisible="is_edit or not id or not context.get('return_purchase_order_id')"/>
+        </button>
+        <button name="action_back_to_quotations" position="attributes">
+          <attribute name="invisible">is_edit or not id or context.get('is_approval_view') or state == 'sale' or is_quotation == False or context.get('return_purchase_order_id')</attribute>
+        </button>
+        <button name="action_back_to_approvals" position="attributes">
+          <attribute name="invisible">is_edit or not id or not context.get('is_approval_view') or state == 'sale' or context.get('return_purchase_order_id')</attribute>
+        </button>
+        <button name="action_back_to_sales" position="attributes">
+          <attribute name="invisible">is_edit or not id or (state not in ['sale', 'sale_draft', 'approved'] and is_quotation == False) or (state not in ['sale'] and is_quotation == True) or context.get('return_purchase_order_id')</attribute>
+        </button>
+      </field>
+    </record>
+
     <record id="purchases_product_form" model="ir.ui.view">
       <field name="name">purchases.product.form</field>
       <field name="model">sales.products</field>
@@ -251,7 +284,7 @@
           <header>
             <field name="id" invisible="1"/>
             <field name="is_edit" invisible="1"/>
-            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Back" name="action_back_kanban" type="object" invisible="is_edit or not id"/>
             <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit"/>
             <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
             <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
@@ -266,20 +299,34 @@
                 <field name="product_name" placeholder="e.g. Raw Material A"
                        readonly="not is_edit and id"/>
               </h1>
+              <div class="o_row">
+                <field name="sales_ok" readonly="not is_edit and id"/>
+                <label for="sales_ok"/>
+                <field name="purchase_ok" readonly="not is_edit and id"/>
+                <label for="purchase_ok"/>
+              </div>
             </div>
-            <group>
-              <group>
-                <field name="product_category" options="{'no_open': True, 'no_create': True}"
-                       readonly="not is_edit and id"/>
-                <field name="product_unit" options="{'no_open': True, 'no_create': True}"
-                       readonly="not is_edit and id"/>
-              </group>
-              <group>
-                <field name="base_price" readonly="not is_edit and id"/>
-                <field name="customer_tax" options="{'no_open': True, 'no_create': True}"
-                       readonly="not is_edit and id"/>
-              </group>
-            </group>
+            <notebook>
+              <page string="General Information" name="general_information">
+                <group>
+                  <group>
+                    <field name="barcode" readonly="not is_edit and id"/>
+                    <field name="product_category" options="{'no_open': True, 'no_create': True}"
+                           readonly="not is_edit and id"/>
+                    <field name="product_unit" options="{'no_open': True, 'no_create': True}"
+                           readonly="not is_edit and id"/>
+                    <field name="vendor_id" options="{'no_open': True, 'no_create': True}"
+                           readonly="not is_edit and id"/>
+                    <field name="stock" string="Quantiity On Hand" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="base_price" readonly="not is_edit and id"/>
+                    <field name="customer_tax" options="{'no_open': True, 'no_create': True}"
+                           readonly="not is_edit and id"/>
+                  </group>
+                </group>
+              </page>
+            </notebook>
           </sheet>
         </form>
       </field>
@@ -339,6 +386,8 @@
           <header>
             <field name="id" invisible="1"/>
             <field name="entry_menu_code" invisible="1"/>
+            <field name="sales_order_id" invisible="1"/>
+            <field name="sales_order_ids" invisible="1"/>
             <field name="is_edit" invisible="1"/>
             <field name="state" invisible="1"/>
             <field name="need_approval" invisible="1"/>
@@ -363,33 +412,33 @@
             <field name="receipt_status" invisible="1"/>
             <field name="receipt_count" invisible="1"/>
             <button string="Back" name="action_back_from_rfq" type="object"
-                    invisible="is_edit or not id or context.get('is_approval_view') or state not in ['draft', 'wait_approval', 'approved', 'sent', 'cancel'] or context.get('default_entry_menu_code') == 'purchase_order'"/>
+                    invisible="is_edit or not id or context.get('is_approval_view') or state not in ['draft', 'sent', 'cancel'] or context.get('default_entry_menu_code') == 'purchase_order'"/>
             <button string="Back" name="action_back_to_orders" type="object"
-                    invisible="is_edit or not id or context.get('is_approval_view') or state not in ['draft', 'wait_approval', 'approved', 'sent', 'cancel'] or context.get('default_entry_menu_code') != 'purchase_order'"/>
+                    invisible="is_edit or not id or context.get('is_approval_view') or state not in ['draft', 'sent', 'cancel'] or context.get('default_entry_menu_code') != 'purchase_order'"/>
             <button string="Back" name="action_back_to_approvals" type="object"
                     invisible="is_edit or not id or not context.get('is_approval_view')"/>
             <button string="Back" name="action_back_to_orders" type="object"
-                    invisible="is_edit or not id or state not in ['purchase']"/>
+                    invisible="is_edit or not id or state not in ['purchase', 'wait_approval', 'approved'] or context.get('is_approval_view')"/>
             <button string="Edit" name="action_edit" type="object"
-                    invisible="not id or is_edit or state not in ['draft', 'approved', 'purchase'] or (state == 'purchase' and (not user_can_update or receipt_status in ['received', 'partial']))"/>
+                    invisible="not id or is_edit or (entry_menu_code == 'rfq' and state != 'draft') or (entry_menu_code != 'rfq' and state not in ['draft', 'purchase']) or (state == 'purchase' and (not user_can_update or receipt_status in ['received', 'partial']))"/>
             <button string="Save" name="action_save" type="object"
                     invisible="id and not is_edit or context.get('is_approval_view')" class="oe_highlight"/>
             <button string="Save" name="action_save_revised" type="object"
                     invisible="id and not is_edit or not context.get('is_approval_view')" class="oe_highlight"/>
             <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
             <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-            <button string="Submit" name="action_submit_rfq" type="object"
+            <button string="Confirm To RFQ" name="action_submit_rfq" type="object"
                     class="btn-primary"
-                    invisible="state != 'draft' or is_edit or not id or need_approval"/>
-            <button string="Submit" name="action_submit_for_approval" type="object"
+                    invisible="state != 'draft' or is_edit or not id"/>
+            <button string="Submit for Approval" name="action_submit_for_approval" type="object"
                     class="btn-primary"
-                    invisible="state != 'draft' or not need_approval or not id or is_edit or not user_can_submit"/>
+                    invisible="state != 'purchase' or not need_approval or not id or is_edit or not user_can_submit or entry_menu_code == 'rfq'"/>
             <button string="Confirm Order" name="action_confirm_order" type="object"
                     class="btn-primary"
-                    invisible="not id or (state not in ['draft', 'approved', 'sent']) or is_edit or (need_approval and state != 'approved') or not user_can_confirm_order"/>
+                    invisible="not id or state not in ['sent'] or is_edit or not user_can_confirm_order"/>
             <button string="Send by Email" name="action_send_po_by_email" type="object"
                     class="oe_highlight"
-                    invisible="state != 'purchase' or is_edit or not user_can_send or receipt_status in ['received', 'partial']"/>
+                    invisible="state not in ['purchase', 'approved'] or is_edit or not user_can_send or receipt_status in ['received', 'partial'] or (need_approval and state != 'approved')"/>
             <button string="Approve" name="action_approve" type="object"
                     class="oe_highlight"
                     invisible="not id or is_edit or not user_can_approve or not context.get('is_approval_view')"/>
@@ -403,23 +452,23 @@
                     invisible="not id or is_edit or not user_can_reject or not context.get('is_approval_view')"/>
             <button string="Receive Products" name="action_create_receipt" type="object"
                     class="btn-primary"
-                    invisible="receipt_status not in ['to_receive', 'partial'] or is_edit or not is_sent or not user_can_receive"/>
+                    invisible="receipt_status not in ['to_receive', 'partial'] or is_edit or not is_sent or not user_can_receive or state in ['wait_approval']"/>
             <button string="Receipts" name="action_view_receipts" type="object"
                     class="btn-secondary"
                     invisible="receipt_count == 0"/>
             <button string="Create Bill" name="action_create_bill" type="object"
                     class="btn-primary"
-                    invisible="bill_status != 'to_bill' or is_edit or not user_can_billing"/>
+                    invisible="bill_status != 'to_bill' or is_edit or not user_can_billing or state in ['wait_approval']"/>
             <button string="Bills" name="action_view_bills" type="object"
                     class="btn-secondary"
                     invisible="bill_count == 0"/>
             <button string="Cancel Order" name="action_cancel" type="object"
                     confirm="Are you sure you want to cancel this order?"
-                    invisible="not id or state not in ['draft', 'purchase'] or is_edit or not user_can_cancel_order or receipt_status in ['received', 'partial'] or (state == 'purchase' and not user_can_delete)"/>
+                    invisible="not id or is_edit or not user_can_cancel_order or receipt_status in ['received', 'partial'] or (state != 'draft' and entry_menu_code == 'rfq') or (state not in ['purchase', 'approved'] and entry_menu_code != 'rfq') or (state in ['purchase', 'approved'] and not user_can_delete)"/>
             <button string="Reset to Draft" name="action_reset_to_draft" type="object"
                     invisible="state != 'cancel' or is_edit"/>
-            <field name="state" widget="statusbar" statusbar_visible="draft,purchase" invisible="need_approval"/>
-            <field name="state" widget="statusbar" statusbar_visible="draft,wait_approval,approved,purchase" invisible="not need_approval"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,sent,purchase" invisible="need_approval"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,sent,purchase,wait_approval,approved" invisible="not need_approval"/>
             <style>
               .o_control_panel { display: none !important; }
             </style>
@@ -427,6 +476,9 @@
           <sheet>
             <div class="oe_title">
               <h1><field name="po_code" readonly="1"/></h1>
+              <div invisible="not based_on_so_links" class="mb-0">
+                <field name="based_on_so_links" widget="purchase_based_on_so" nolabel="1"/>
+              </div>
             </div>
             <group>
               <group>
@@ -456,8 +508,8 @@
                     <field name="product_unit" options="{'no_open': True, 'no_create': True}"/>
                     <field name="unit_price"/>
                     <field name="taxes" options="{'no_open': True, 'no_create': True}"/>
-                    <field name="sub_total" readonly="1"/>
                     <field name="tax_amount" readonly="1"/>
+                    <field name="sub_total" readonly="1"/>
                   </tree>
                 </field>
                 <group class="oe_subtotal_footer" colspan="4">
@@ -819,7 +871,7 @@
       <field name="view_id" ref="purchases_rfq_tree"/>
       <field name="view_mode">tree,form</field>
       <field name="target">main</field>
-      <field name="domain">[('state', 'in', ['draft', 'wait_approval', 'approved', 'sent', 'cancel'])]</field>
+      <field name="domain">[('state', 'in', ['draft', 'sent', 'cancel'])]</field>
       <field name="context">{'default_state': 'draft', 'access_menu_code': 'rfq', 'default_entry_menu_code': 'rfq'}</field>
     </record>
 
@@ -829,7 +881,7 @@
       <field name="view_id" ref="purchases_po_tree"/>
       <field name="view_mode">tree,form</field>
       <field name="target">main</field>
-      <field name="domain">[('state', 'in', ['sent', 'purchase'])]</field>
+      <field name="domain">[('state', 'in', ['sent', 'purchase', 'wait_approval', 'approved', 'cancel'])]</field>
       <field name="context">{'access_menu_code': 'purchase_order', 'default_entry_menu_code': 'purchase_order'}</field>
     </record>
 

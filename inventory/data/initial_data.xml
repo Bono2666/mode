@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="inventory_warehouse_main" model="inventory.warehouse">
+            <field name="code">WH/0001</field>
+            <field name="name">Main Warehouse</field>
+        </record>
+        <record id="inventory_location_stock" model="inventory.location">
+            <field name="name">Stock</field>
+            <field name="warehouse_id" ref="inventory.inventory_warehouse_main"/>
+            <field name="usage">internal</field>
+        </record>
+        <record id="inventory_location_supplier" model="inventory.location">
+            <field name="name">Vendor Location</field>
+            <field name="usage">supplier</field>
+        </record>
+        <record id="inventory_location_customer" model="inventory.location">
+            <field name="name">Customer Location</field>
+            <field name="usage">customer</field>
+        </record>
+        <record id="inventory_location_inventory" model="inventory.location">
+            <field name="name">Inventory Adjustment</field>
+            <field name="usage">inventory</field>
+        </record>
+    </data>
+</odoo>
