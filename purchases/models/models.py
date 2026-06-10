@@ -192,6 +192,18 @@ class MailComposeMessagePurchase(models.TransientModel):
             merged = list(set(existing + partner_ids))
             self.partner_ids = [(6, 0, merged)]
 
+    def send_mail(self, auto_commit=False):
+        res = super().send_mail(auto_commit=auto_commit)
+        redirect_action = self.env.context.get('redirect_to_tree')
+        if redirect_action:
+            try:
+                action = self.env.ref(redirect_action).sudo().read()[0]
+                action['target'] = 'main'
+                return action
+            except Exception:
+                pass
+        return res
+
 
 # ─────────────────────────────────────────────
 #  PURCHASE ORDER
@@ -811,6 +823,7 @@ class purchase_order(models.Model):
             'default_email_from': email_from,
             'default_vendor_ids': [(6, 0, vendor_ids)],
             'default_partner_ids': [(6, 0, partner_ids)],
+            'redirect_to_tree': 'purchases.purchases_purchase_order_action',
             'show_email_in_wizard': True,
         }
 
@@ -1502,7 +1515,7 @@ class purchase_order_line(models.Model):
     def _onchange_product_id(self):
         if self.product_id:
             self.description = self.product_id.product_name
-            self.unit_price = self.product_id.base_price
+            self.unit_price = self.product_id.price
             self.taxes = self.env['sales.taxes'].search(
                 [('default_tax', '=', True)], limit=1)
 

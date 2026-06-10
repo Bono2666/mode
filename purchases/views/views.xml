@@ -317,6 +317,7 @@
                            readonly="not is_edit and id"/>
                     <field name="vendor_id" options="{'no_open': True, 'no_create': True}"
                            readonly="not is_edit and id"/>
+                    <field name="price" readonly="not is_edit and id"/>
                     <field name="stock" string="Quantiity On Hand" readonly="1"/>
                   </group>
                   <group>

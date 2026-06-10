@@ -33,3 +33,5 @@ access_sales_credit_note_wizard,sales.credit.note.wizard,model_sales_credit_note
 access_sales_payment,sales.payment,model_sales_payment,,1,1,1,1
 access_sales_payment_journal_item,sales.payment.journal.item,model_sales_payment_journal_item,,1,1,1,1
 access_sales_register_payment_wizard,sales.register.payment.wizard,model_sales_register_payment_wizard,,1,1,1,1
+access_sales_delivery,sales.delivery,model_sales_delivery,,1,1,1,1
+access_sales_delivery_line,sales.delivery.line,model_sales_delivery_line,,1,1,1,1

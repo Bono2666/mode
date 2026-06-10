@@ -13,6 +13,18 @@
             <field name="prefix">TRF/</field>
             <field name="padding">5</field>
         </record>
+        <record id="seq_inventory_transfer_in" model="ir.sequence">
+            <field name="name">Inventory Receipt Transfer</field>
+            <field name="code">inventory.transfer.in</field>
+            <field name="prefix">WH/IN/</field>
+            <field name="padding">5</field>
+        </record>
+        <record id="seq_inventory_transfer_out" model="ir.sequence">
+            <field name="name">Inventory Delivery Transfer</field>
+            <field name="code">inventory.transfer.out</field>
+            <field name="prefix">WH/OUT/</field>
+            <field name="padding">5</field>
+        </record>
         <record id="seq_inventory_adjustment" model="ir.sequence">
             <field name="name">Inventory Adjustment</field>
             <field name="code">inventory.adjustment</field>

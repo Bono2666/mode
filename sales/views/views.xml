@@ -1956,6 +1956,87 @@
     <menuitem id="product_unit_menu_act" name="Unit of Measures" parent="sales.product_menu" action="sales.product_unit_action" sequence="3"/>
     <menuitem name="Taxes" id="sales.taxes_menu_act"  parent="general.menu_master_menu" action="sales.taxes_action" sequence="4"/>
     <menuitem name="Sales Matrix" id="sales.approval_matrix_menu_act" parent="sales.approval_matrix_menu" action="sales.approval_matrix_action" sequence="1"/>
-    
+
+    <!-- ────────────────────────────
+         SALES DELIVERY
+         ──────────────────────────── -->
+
+    <record id="sales_delivery_tree_view" model="ir.ui.view">
+      <field name="name">sales.delivery.tree</field>
+      <field name="model">sales.delivery</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="delivery_number"/>
+          <field name="delivery_date"/>
+          <field name="sales_order_id"/>
+          <field name="customer_id"/>
+          <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="sales_delivery_form_view" model="ir.ui.view">
+      <field name="name">sales.delivery.form</field>
+      <field name="model">sales.delivery</field>
+      <field name="arch" type="xml">
+        <form string="Delivery Order">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="state" invisible="1"/>
+            <button string="Sales Order" name="action_open_sales_order" type="object"/>
+            <button string="Validate" name="action_done" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+            <button string="Cancel" name="action_cancel" type="object" invisible="state != 'draft'"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <label for="delivery_number"/>
+              <h1><field name="delivery_number" readonly="1"/></h1>
+            </div>
+            <group>
+              <group>
+                <field name="sales_order_id" readonly="1"/>
+                <field name="customer_id" readonly="1"/>
+                <field name="delivery_date" readonly="state != 'draft'"/>
+              </group>
+              <group>
+                <field name="done_date" readonly="1"/>
+              </group>
+            </group>
+            <notebook>
+              <page string="Delivery Lines">
+                <field name="line_ids" readonly="state != 'draft'">
+                  <tree editable="bottom">
+                    <field name="sales_order_line_id" column_invisible="1"/>
+                    <field name="product_id" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="description"/>
+                    <field name="ordered_qty"/>
+                    <field name="quantity"/>
+                    <field name="product_unit"/>
+                  </tree>
+                </field>
+              </page>
+              <page string="Notes">
+                <field name="note" readonly="state != 'draft'"/>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="sales_delivery_action" model="ir.actions.act_window">
+      <field name="name">Delivery Orders</field>
+      <field name="res_model">sales.delivery</field>
+      <field name="view_mode">tree,form</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create a new delivery order
+        </p>
+      </field>
+    </record>
+
+    <menuitem name="Delivery Orders" id="sales.delivery_orders_menu" parent="sales.orders_menu" action="sales_delivery_action" sequence="4"/>
+
   </data>
 </odoo>

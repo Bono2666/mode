@@ -16,6 +16,17 @@
             <field name="menu_id">inventory_transfers</field>
             <field name="menu_name">Transfers</field>
             <field name="parent_menu">inventory_operations</field>
+            <field name="is_parent">True</field>
+        </record>
+        <record id="inventory_receipts_menu" model="general.menu">
+            <field name="menu_id">inventory_receipts</field>
+            <field name="menu_name">Receipt</field>
+            <field name="parent_menu">inventory_operations</field>
+        </record>
+        <record id="inventory_deliveries_menu" model="general.menu">
+            <field name="menu_id">inventory_deliveries</field>
+            <field name="menu_name">Delivery</field>
+            <field name="parent_menu">inventory_operations</field>
         </record>
         <record id="inventory_adjustments_menu" model="general.menu">
             <field name="menu_id">inventory_adjustments</field>
@@ -26,11 +37,6 @@
             <field name="menu_id">inventory_stock_moves</field>
             <field name="menu_name">Stock Moves</field>
             <field name="parent_menu">inventory_operations</field>
-        </record>
-        <record id="inventory_products_menu" model="general.menu">
-            <field name="menu_id">inventory_products</field>
-            <field name="menu_name">Products</field>
-            <field name="parent_menu">inventory</field>
         </record>
         <record id="inventory_configuration_menu" model="general.menu">
             <field name="menu_id">inventory_configuration</field>

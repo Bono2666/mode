@@ -261,6 +261,18 @@ class MailComposeMessage(models.TransientModel):
             # Add them to the standard field so Odoo knows who to email
             self.partner_ids = [(6, 0, partner_ids)]
 
+    def send_mail(self, auto_commit=False):
+        res = super().send_mail(auto_commit=auto_commit)
+        redirect_action = self.env.context.get('redirect_to_tree')
+        if redirect_action:
+            try:
+                action = self.env.ref(redirect_action).sudo().read()[0]
+                action['target'] = 'main'
+                return action
+            except Exception:
+                pass
+        return res
+
 
 class customer(models.Model):
     _name = 'sales.customer'
@@ -541,6 +553,7 @@ class products(models.Model):
     product_unit = fields.Many2one(
         comodel_name='sales.product_unit', string='Product Unit')
     base_price = fields.Float(string="Sales Price", digits=(16, 0))
+    price = fields.Float(string="Price", digits=(16, 0))
     tax_string = fields.Char(
         compute='_compute_tax_string', string='Tax Description')
     customer_tax = fields.Many2one(
@@ -1055,6 +1068,7 @@ class sales_order(models.Model):
             'default_template_id': template.id if template else False,
             'default_composition_mode': 'comment',
             'mark_so_as_sent': True,
+            'redirect_to_tree': 'sales.quotation_action',
             # PRE-FILL: Use the 'default_' + field_name syntax
             'default_customer_ids': [(6, 0, target_customer.ids if target_customer else [])],
             # Also ensure show_email is passed for display_name logic
@@ -1840,7 +1854,7 @@ class sales_order(models.Model):
             ('user_id', '=', current_user_id)
         ], limit=1)
         submit_authorized = self.env['general.auth'].sudo().search([
-            ('menu_id', 'in', ['Quotations']),
+            ('menu_id.menu_id', 'in', ['quotation', 'sales_order']),
             ('can_submit', '=', True),
             ('custom_user_id', '=',
              current_custom_user.id if current_custom_user else None)
@@ -1857,7 +1871,7 @@ class sales_order(models.Model):
             ('user_id', '=', current_user_id)
         ], limit=1)
         send_authorized = self.env['general.auth'].sudo().search([
-            ('menu_id', 'in', ['Quotations']),
+            ('menu_id.menu_id', 'in', ['quotation', 'sales_order']),
             ('can_send', '=', True),
             ('custom_user_id', '=',
              current_custom_user.id if current_custom_user else None)
@@ -1874,7 +1888,7 @@ class sales_order(models.Model):
             ('user_id', '=', current_user_id)
         ], limit=1)
         confirm_authorized = self.env['general.auth'].sudo().search([
-            ('menu_id', 'in', ['Quotations']),
+            ('menu_id.menu_id', 'in', ['quotation', 'sales_order']),
             ('can_confirm', '=', True),
             ('custom_user_id', '=',
              current_custom_user.id if current_custom_user else None)
@@ -2108,12 +2122,17 @@ class sales_order_line(models.Model):
 
     @api.onchange('product_id')
     def _onchange_product_id_price_condition(self):
-        if not self.product_id or not self.sales_order_id.customer_id:
+        if not self.product_id:
             return
 
         self._set_indent_from_availability()
 
         self.unit_price = self.product_id.base_price
+
+        if not self.sales_order_id.customer_id:
+            self.discount = 0.0
+            self.base_discount = 0.0
+            return
 
         now = fields.Datetime.now()
         customer = self.sales_order_id.customer_id
@@ -2901,6 +2920,7 @@ class sales_invoice(models.Model):
             'default_attachment_ids': [(6, 0, attachment_ids)],
             'default_customer_ids': [(6, 0, [self.customer_id.id])] if self.customer_id else [],
             'default_email_from': email_from,
+            'redirect_to_tree': 'sales.sales_invoice_action',
             'show_email_in_wizard': True,
         }
 
@@ -3379,3 +3399,119 @@ class sales_register_payment_wizard(models.TransientModel):
         })
         payment.action_post()
         return payment.action_view_payment()
+
+
+# ─────────────────────────────────────────────
+#  SALES DELIVERY (mirroring purchases.receipt)
+# ─────────────────────────────────────────────
+
+class SalesDelivery(models.Model):
+    _name = 'sales.delivery'
+    _inherit = ['navigation.mixin']
+    _description = 'Sales Deliveries'
+    _rec_name = 'delivery_number'
+    _order = 'delivery_number desc, id desc'
+    _menu_code = 'sales_deliveries'
+
+    delivery_number = fields.Char(
+        string="Delivery Number", readonly=True, copy=False)
+    sales_order_id = fields.Many2one(
+        comodel_name='sales.sales_order', string='Sales Order',
+        ondelete='restrict', index=True, required=True)
+    customer_id = fields.Many2one(
+        comodel_name='sales.customer', string='Customer',
+        ondelete='restrict', index=True, required=True)
+    delivery_date = fields.Date(
+        string="Delivery Date", default=fields.Date.today, required=True)
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('done', 'Done'),
+        ('cancel', 'Cancelled'),
+    ], string="Status", default='draft')
+    done_date = fields.Datetime(
+        string="Done On", readonly=True, copy=False)
+    line_ids = fields.One2many(
+        'sales.delivery.line', 'delivery_id', string='Delivery Lines')
+    note = fields.Text(string="Notes")
+    is_edit = fields.Boolean(default=False)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('delivery_number'):
+                vals['delivery_number'] = self.env['ir.sequence'].next_by_code(
+                    'sales.delivery') or '/'
+        return super().create(vals_list)
+
+    def unlink(self):
+        if any(d.state == 'done' for d in self):
+            raise UserError(_("Done deliveries cannot be deleted."))
+        return super().unlink()
+
+    def action_done(self):
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_("Only draft deliveries can be validated."))
+        self.write({
+            'state': 'done',
+            'done_date': fields.Datetime.now(),
+        })
+
+    def action_cancel(self):
+        self.ensure_one()
+        if self.state == 'done':
+            raise UserError(_("Done deliveries cannot be cancelled."))
+        self.state = 'cancel'
+
+    def action_view_delivery(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Delivery'),
+            'res_model': 'sales.delivery',
+            'view_mode': 'form',
+            'res_id': self.id,
+            'target': 'current',
+        }
+
+    def action_open_sales_order(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Sales Order'),
+            'res_model': 'sales.sales_order',
+            'view_mode': 'form',
+            'res_id': self.sales_order_id.id,
+            'target': 'current',
+        }
+
+
+class SalesDeliveryLine(models.Model):
+    _name = 'sales.delivery.line'
+    _description = 'Sales Delivery Line'
+    _order = 'id'
+
+    delivery_id = fields.Many2one(
+        comodel_name='sales.delivery', string='Delivery',
+        ondelete='cascade', index=True, required=True)
+    sales_order_line_id = fields.Many2one(
+        comodel_name='sales.sales_order_line', string='SO Line',
+        ondelete='set null', index=True)
+    product_id = fields.Many2one(
+        comodel_name='sales.products', string='Product',
+        ondelete='set null', index=True)
+    description = fields.Char(string="Description", required=True)
+    ordered_qty = fields.Float(
+        string="Ordered Qty", digits=(16, 2), readonly=True)
+    quantity = fields.Float(string="Delivered Qty", digits=(16, 2), default=0.0)
+    product_unit = fields.Many2one(
+        related='product_id.product_unit', string="UoM")
+
+    @api.onchange('sales_order_line_id')
+    def _onchange_sales_order_line_id(self):
+        if self.sales_order_line_id:
+            self.product_id = self.sales_order_line_id.product_id
+            if self.sales_order_line_id.product_id:
+                self.description = self.sales_order_line_id.product_id.product_name
+            self.ordered_qty = self.sales_order_line_id.quantity
+            self.quantity = self.sales_order_line_id.qty_to_deliver

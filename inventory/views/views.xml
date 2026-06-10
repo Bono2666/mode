@@ -17,17 +17,28 @@
       <field name="name">inventory.warehouse.form</field>
       <field name="model">inventory.warehouse</field>
       <field name="arch" type="xml">
-        <form>
+        <form string="">
           <header>
             <field name="id" invisible="1"/>
             <field name="is_edit" invisible="1"/>
             <field name="user_can_update" invisible="1"/>
             <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
             <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-            <button string="Save" name="action_save" type="object" class="oe_highlight" invisible="id and not is_edit"/>
-            <button string="Cancel" special="cancel" invisible="not is_edit"/>
-            <button string="Delete" name="action_delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this warehouse?" invisible="not id or is_edit or not user_can_delete"/>
-            <span class="min-w-0 text-truncate mt-1"><field name="model_description"/></span>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" name="action_cancel_edit" type="object" invisible="not is_edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this warehouse?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
           </header>
           <sheet>
             <div class="oe_title">
@@ -76,17 +87,28 @@
       <field name="name">inventory.location.form</field>
       <field name="model">inventory.location</field>
       <field name="arch" type="xml">
-        <form>
+        <form string="">
           <header>
             <field name="id" invisible="1"/>
             <field name="is_edit" invisible="1"/>
             <field name="user_can_update" invisible="1"/>
             <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
             <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-            <button string="Save" name="action_save" type="object" class="oe_highlight" invisible="id and not is_edit"/>
-            <button string="Cancel" special="cancel" invisible="not is_edit"/>
-            <button string="Delete" name="action_delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this location?" invisible="not id or is_edit or not user_can_delete"/>
-            <span class="min-w-0 text-truncate mt-1"><field name="model_description"/></span>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" name="action_cancel_edit" type="object" invisible="not is_edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this location?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
           </header>
           <sheet>
             <div class="oe_title">
@@ -118,7 +140,7 @@
           <field name="source_location_id"/>
           <field name="destination_location_id"/>
           <field name="origin"/>
-          <field name="state"/>
+          <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
         </tree>
       </field>
     </record>
@@ -127,15 +149,24 @@
       <field name="name">inventory.stock.move.form</field>
       <field name="model">inventory.stock_move</field>
       <field name="arch" type="xml">
-        <form>
+        <form string="">
           <header>
             <field name="id" invisible="1"/>
             <field name="is_edit" invisible="1"/>
             <field name="user_can_update" invisible="1"/>
             <field name="user_can_delete" invisible="1"/>
-            <button string="Validate" name="action_done" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+            <field name="user_can_confirm" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="not id"/>
+            <button string="Validate" name="action_done" type="object" class="oe_highlight" invisible="state != 'draft' or not user_can_confirm"/>
             <button string="Cancel" name="action_cancel" type="object" invisible="state != 'draft' or not user_can_delete"/>
-            <button string="Source Document" name="action_open_origin" type="object" invisible="not origin_model or not origin_id"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
             <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
           </header>
           <sheet>
@@ -176,7 +207,8 @@
           <field name="operation_type"/>
           <field name="source_location_id"/>
           <field name="destination_location_id"/>
-          <field name="state"/>
+          <field name="source_document"/>
+          <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
         </tree>
       </field>
     </record>
@@ -185,16 +217,32 @@
       <field name="name">inventory.transfer.form</field>
       <field name="model">inventory.transfer</field>
       <field name="arch" type="xml">
-        <form>
+        <form string="">
           <header>
             <field name="id" invisible="1"/>
             <field name="is_edit" invisible="1"/>
             <field name="user_can_update" invisible="1"/>
             <field name="user_can_delete" invisible="1"/>
-            <button string="Validate" name="action_validate" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+            <field name="user_can_confirm" invisible="1"/>
+            <field name="can_validate" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
             <button string="Edit" name="action_edit" type="object" invisible="not id or state != 'draft' or is_edit or not user_can_update"/>
-            <button string="Save" name="action_save" type="object" class="oe_highlight" invisible="id and not is_edit"/>
-            <button string="Cancel" name="action_cancel" type="object" invisible="state != 'draft' or not user_can_delete"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or state != 'draft' or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" name="action_cancel_edit" type="object" invisible="not is_edit"/>
+            <button string="Validate" name="action_validate" type="object" class="oe_highlight" invisible="state != 'draft' or is_edit or not user_can_confirm or not can_validate"/>
+            <button string="Validate" class="oe_highlight opacity-50 pe-none" invisible="state != 'draft' or is_edit or not user_can_confirm or can_validate"/>
+            <button string="Cancel" name="action_cancel" type="object" class="oe_highlight" confirm="Are you sure you want to cancel this transfer?" invisible="state != 'draft' or is_edit or not user_can_delete"/>
+            <button string="Cancel" class="oe_highlight opacity-50 pe-none" invisible="state != 'draft' or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
             <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
           </header>
           <sheet>
@@ -206,7 +254,9 @@
               <group>
                 <field name="scheduled_date" readonly="id and not is_edit"/>
                 <field name="operation_type" readonly="id and not is_edit"/>
-                <field name="sales_order_id" readonly="1"/>
+                <field name="source_document" readonly="1"/>
+                <field name="sales_order_id" invisible="1"/>
+                <field name="purchase_order_id" invisible="1"/>
               </group>
               <group>
                 <field name="source_location_id" readonly="id and not is_edit"/>
@@ -217,6 +267,8 @@
               <page string="Products">
                 <field name="line_ids" readonly="state != 'draft' or (id and not is_edit)">
                   <tree editable="bottom">
+                    <field name="purchase_order_line_id" column_invisible="1"/>
+                    <field name="sales_order_line_id" column_invisible="1"/>
                     <field name="product_id" options="{'no_open': True, 'no_create': True}"/>
                     <field name="available_stock"/>
                     <field name="quantity"/>
@@ -241,7 +293,7 @@
           <field name="adjustment_number"/>
           <field name="adjustment_date"/>
           <field name="location_id"/>
-          <field name="state"/>
+          <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
         </tree>
       </field>
     </record>
@@ -250,16 +302,35 @@
       <field name="name">inventory.adjustment.form</field>
       <field name="model">inventory.adjustment</field>
       <field name="arch" type="xml">
-        <form>
+        <form string="">
           <header>
             <field name="id" invisible="1"/>
             <field name="is_edit" invisible="1"/>
             <field name="user_can_update" invisible="1"/>
             <field name="user_can_delete" invisible="1"/>
-            <button string="Validate" name="action_validate" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+            <field name="user_can_confirm" invisible="1"/>
+            <field name="can_validate" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
             <button string="Edit" name="action_edit" type="object" invisible="not id or state != 'draft' or is_edit or not user_can_update"/>
-            <button string="Save" name="action_save" type="object" class="oe_highlight" invisible="id and not is_edit"/>
-            <button string="Cancel" name="action_cancel" type="object" invisible="state != 'draft' or not user_can_delete"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or state != 'draft' or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" name="action_cancel_edit" type="object" invisible="not is_edit"/>
+            <button string="Validate" name="action_validate" type="object" class="oe_highlight" invisible="state != 'draft' or is_edit or not user_can_confirm or not can_validate"/>
+            <button string="Validate" class="oe_highlight opacity-50 pe-none" invisible="state != 'draft' or is_edit or not user_can_confirm or can_validate"/>
+            <field name="all_products_added" invisible="1"/>
+            <button string="Add Product" name="action_add_product" type="object" class="oe_highlight" invisible="not id or state != 'draft' or is_edit or all_products_added"/>
+            <button string="Add Product" class="oe_highlight opacity-50 pe-none" invisible="not id or state != 'draft' or is_edit or not all_products_added"/>
+            <button string="Cancel Adjustment" name="action_cancel" type="object" class="oe_highlight" confirm="Are you sure you want to cancel this adjustment?" invisible="state != 'draft' or is_edit or not user_can_delete"/>
+            <button string="Cancel Adjustment" class="oe_highlight opacity-50 pe-none" invisible="state != 'draft' or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
             <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
           </header>
           <sheet>
@@ -271,15 +342,17 @@
               <field name="adjustment_date" readonly="id and not is_edit"/>
               <field name="location_id" readonly="id and not is_edit"/>
             </group>
-            <notebook>
+            <notebook invisible="not id">
               <page string="Products">
-                <field name="line_ids" readonly="state != 'draft' or (id and not is_edit)">
-                  <tree editable="bottom">
-                    <field name="product_id" options="{'no_open': True, 'no_create': True}"/>
+                <field name="line_ids" readonly="1">
+                  <tree>
+                    <field name="product_id"/>
                     <field name="current_qty"/>
                     <field name="counted_qty"/>
                     <field name="difference_qty"/>
                     <field name="product_unit"/>
+                    <button name="action_open_wizard" type="object" string="Update" icon="fa-pencil"/>
+                    <button name="action_delete_line" type="object" string="Delete" icon="fa-trash" confirm="Are you sure you want to delete this product?"/>
                   </tree>
                 </field>
               </page>
@@ -288,6 +361,33 @@
               </page>
             </notebook>
           </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="adjustment_line_wizard_form" model="ir.ui.view">
+      <field name="name">inventory.adjustment.line.wizard.form</field>
+      <field name="model">inventory.adjustment.line.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Product Detail">
+          <field name="adjustment_id" invisible="1"/>
+          <field name="line_id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <group>
+            <field name="product_id" readonly="not is_edit or line_id"/>
+            <field name="current_qty" readonly="1"/>
+            <field name="counted_qty" readonly="not is_edit and line_id"/>
+          </group>
+          <footer>
+            <button string="Edit" name="action_edit" type="object"
+                class="oe_highlight" invisible="is_edit or not line_id"/>
+            <button string="Save" name="action_save" type="object"
+                class="oe_highlight" invisible="not is_edit"/>
+            <button string="Close" name="action_close" type="object"
+                class="oe_highlight" invisible="is_edit"/>
+            <button string="Close" special="cancel" class="oe_highlight"
+                invisible="not is_edit"/>
+          </footer>
         </form>
       </field>
     </record>
@@ -326,26 +426,38 @@
       <field name="arch" type="xml">
         <xpath expr="//field[@name='invoice_count']" position="after">
           <field name="inventory_delivery_count" invisible="1"/>
+          <field name="delivery_count" invisible="1"/>
+          <field name="delivery_status" invisible="1"/>
         </xpath>
-        <xpath expr="//button[@name='action_create_invoice_simple']" position="before">
-          <button name="action_create_inventory_delivery"
-                  type="object"
-                  string="Create Delivery"
-                  class="btn-primary"
-                  invisible="state != 'sale' or is_edit or not order_line_ids"/>
-          <button name="action_view_inventory_deliveries"
-                  type="object"
-                  string="Deliveries"
-                  class="btn-secondary"
-                  invisible="inventory_delivery_count == 0 or is_edit"/>
+        <xpath expr="//page[@name='custom_invoices']" position="after">
+          <page string="Deliveries" name="deliveries" invisible="delivery_count == 0">
+            <field name="delivery_ids" readonly="1">
+              <tree create="0" delete="0" edit="0" no_open="1">
+                <field name="delivery_number"/>
+                <field name="delivery_date"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+                <button name="action_view_delivery" string="Open" type="object" icon="fa-external-link"/>
+              </tree>
+            </field>
+          </page>
         </xpath>
       </field>
     </record>
 
-    <record id="inventory_transfer_action" model="ir.actions.act_window">
-      <field name="name">Transfers</field>
+    <record id="inventory_receipt_action" model="ir.actions.act_window">
+      <field name="name">Receipt</field>
       <field name="res_model">inventory.transfer</field>
       <field name="view_mode">tree,form</field>
+      <field name="domain">[('operation_type', '=', 'incoming')]</field>
+      <field name="context">{'default_operation_type': 'incoming'}</field>
+    </record>
+
+    <record id="inventory_delivery_action" model="ir.actions.act_window">
+      <field name="name">Delivery</field>
+      <field name="res_model">inventory.transfer</field>
+      <field name="view_mode">tree,form</field>
+      <field name="domain">[('operation_type', '=', 'outgoing')]</field>
+      <field name="context">{'default_operation_type': 'outgoing'}</field>
     </record>
 
     <record id="inventory_adjustment_action" model="ir.actions.act_window">
@@ -375,12 +487,13 @@
 
     <menuitem name="Inventory" id="inventory.menu_inventory_root" parent="general.menu_root" sequence="3"/>
     <menuitem name="Operations" id="inventory.operations_menu" parent="inventory.menu_inventory_root" sequence="1"/>
-    <menuitem name="Transfers" id="inventory.transfers_menu_act" parent="inventory.operations_menu" action="inventory_transfer_action" sequence="1"/>
-    <menuitem name="Inventory Adjustments" id="inventory.adjustments_menu_act" parent="inventory.operations_menu" action="inventory_adjustment_action" sequence="2"/>
-    <menuitem name="Stock Moves" id="inventory.stock_moves_menu_act" parent="inventory.operations_menu" action="inventory_stock_move_action" sequence="3"/>
+    <menuitem name="Receipt" id="inventory.receipts_menu_act" parent="inventory.operations_menu" action="inventory_receipt_action" sequence="1"/>
+    <menuitem name="Delivery" id="inventory.deliveries_menu_act" parent="inventory.operations_menu" action="inventory_delivery_action" sequence="2"/>
+    <menuitem name="Inventory Adjustments" id="inventory.adjustments_menu_act" parent="inventory.operations_menu" action="inventory_adjustment_action" sequence="3"/>
+    <menuitem name="Stock Moves" id="inventory.stock_moves_menu_act" parent="inventory.operations_menu" action="inventory_stock_move_action" sequence="4"/>
     <menuitem name="Products" id="inventory.products_menu_act" parent="inventory.menu_inventory_root" action="sales.products_action" sequence="2"/>
-    <menuitem name="Configuration" id="inventory.configuration_menu" parent="inventory.menu_inventory_root" sequence="5"/>
-    <menuitem name="Warehouses" id="inventory.warehouses_menu_act" parent="inventory.configuration_menu" action="inventory_warehouse_action" sequence="1"/>
-    <menuitem name="Locations" id="inventory.locations_menu_act" parent="inventory.configuration_menu" action="inventory_location_action" sequence="2"/>
+    <menuitem name="Inventory" id="inventory.config_menu" parent="general.menu_master_menu" sequence="1"/>
+    <menuitem name="Warehouses" id="inventory.warehouses_menu_act" parent="inventory.config_menu" action="inventory_warehouse_action" sequence="1"/>
+    <menuitem name="Locations" id="inventory.locations_menu_act" parent="inventory.config_menu" action="inventory_location_action" sequence="2"/>
   </data>
 </odoo>

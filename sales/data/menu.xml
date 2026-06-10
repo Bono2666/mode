@@ -79,7 +79,7 @@
             <record id="products_menu" model="general.menu">
                 <field name="menu_id">products</field>
                 <field name="menu_name">Products</field>
-                <field name="parent_menu">sales</field>
+                <field name="parent_menu">master_data</field>
             </record>
             <record id="sales_menu" model="general.menu">
                 <field name="menu_id">sales</field>

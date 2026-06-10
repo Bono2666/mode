@@ -242,7 +242,7 @@ class SalesOrderProcurement(models.Model):
             'product_id': product.id,
             'description': product.product_name,
             'quantity': float(quantity),
-            'unit_price': product.base_price,
+            'unit_price': product.price,
             'taxes': default_tax.id if default_tax else False,
         }
 

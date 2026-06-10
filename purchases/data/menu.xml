@@ -37,11 +37,6 @@
             <field name="menu_name">Receipts</field>
             <field name="parent_menu">purchase_orders</field>
         </record>
-        <record id="purchases_products_menu" model="general.menu">
-            <field name="menu_id">purchase_products</field>
-            <field name="menu_name">Products</field>
-            <field name="parent_menu">purchases</field>
-        </record>
         <record id="purchases_purchase_approval_matrix_menu" model="general.menu">
             <field name="menu_id">purchase_approval_matrix</field>
             <field name="menu_name">Purchase Matrix</field>

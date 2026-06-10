@@ -6,3 +6,4 @@ access_inventory_transfer,inventory.transfer,model_inventory_transfer,,1,1,1,1
 access_inventory_transfer_line,inventory.transfer.line,model_inventory_transfer_line,,1,1,1,1
 access_inventory_adjustment,inventory.adjustment,model_inventory_adjustment,,1,1,1,1
 access_inventory_adjustment_line,inventory.adjustment.line,model_inventory_adjustment_line,,1,1,1,1
+access_inventory_adjustment_line_wizard,inventory.adjustment.line.wizard,model_inventory_adjustment_line_wizard,,1,1,1,1
