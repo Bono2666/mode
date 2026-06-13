@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Account Types for Chart of Accounts classification -->
+        <record id="account_type_receivable" model="accounting.account.type">
+            <field name="code">receivable</field>
+            <field name="name">Receivable</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="account_type_payable" model="accounting.account.type">
+            <field name="code">payable</field>
+            <field name="name">Payable</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="account_type_bank" model="accounting.account.type">
+            <field name="code">bank</field>
+            <field name="name">Bank</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="account_type_cash" model="accounting.account.type">
+            <field name="code">cash</field>
+            <field name="name">Cash</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="account_type_current_asset" model="accounting.account.type">
+            <field name="code">current_asset</field>
+            <field name="name">Current Asset</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="account_type_fixed_asset" model="accounting.account.type">
+            <field name="code">fixed_asset</field>
+            <field name="name">Fixed Asset</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="account_type_prepayment" model="accounting.account.type">
+            <field name="code">prepayment</field>
+            <field name="name">Prepayment</field>
+            <field name="sequence">70</field>
+        </record>
+        <record id="account_type_liability" model="accounting.account.type">
+            <field name="code">liability</field>
+            <field name="name">Liability</field>
+            <field name="sequence">80</field>
+        </record>
+        <record id="account_type_equity" model="accounting.account.type">
+            <field name="code">equity</field>
+            <field name="name">Equity</field>
+            <field name="sequence">90</field>
+        </record>
+        <record id="account_type_income" model="accounting.account.type">
+            <field name="code">income</field>
+            <field name="name">Income</field>
+            <field name="sequence">100</field>
+        </record>
+        <record id="account_type_expense" model="accounting.account.type">
+            <field name="code">expense</field>
+            <field name="name">Expense</field>
+            <field name="sequence">110</field>
+        </record>
+        <record id="account_type_tax" model="accounting.account.type">
+            <field name="code">tax</field>
+            <field name="name">Tax</field>
+            <field name="sequence">120</field>
+        </record>
+        <record id="account_type_other" model="accounting.account.type">
+            <field name="code">other</field>
+            <field name="name">Other</field>
+            <field name="sequence">130</field>
+        </record>
+    </data>
+</odoo>

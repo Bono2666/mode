@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Chart of Accounts — Standard Indonesian/Company Accounts -->
+        <!-- Asset Accounts (1xxxxx) -->
+        <record id="account_100000" model="accounting.account">
+            <field name="code">100000</field>
+            <field name="name">Cash / Bank</field>
+            <field name="type_id" ref="account_type_bank"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_110000" model="accounting.account">
+            <field name="code">110000</field>
+            <field name="name">Accounts Receivable</field>
+            <field name="type_id" ref="account_type_receivable"/>
+            <field name="reconcile" eval="True"/>
+        </record>
+        <record id="account_120000" model="accounting.account">
+            <field name="code">120000</field>
+            <field name="name">Inventory</field>
+            <field name="type_id" ref="account_type_current_asset"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_130000" model="accounting.account">
+            <field name="code">130000</field>
+            <field name="name">Prepayments</field>
+            <field name="type_id" ref="account_type_prepayment"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_140000" model="accounting.account">
+            <field name="code">140000</field>
+            <field name="name">Fixed Assets</field>
+            <field name="type_id" ref="account_type_fixed_asset"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_141000" model="accounting.account">
+            <field name="code">141000</field>
+            <field name="name">Accumulated Depreciation</field>
+            <field name="type_id" ref="account_type_fixed_asset"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+
+        <!-- Liability Accounts (2xxxxx) -->
+        <record id="account_210000" model="accounting.account">
+            <field name="code">210000</field>
+            <field name="name">Tax Payable</field>
+            <field name="type_id" ref="account_type_tax"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_220000" model="accounting.account">
+            <field name="code">220000</field>
+            <field name="name">Accounts Payable</field>
+            <field name="type_id" ref="account_type_payable"/>
+            <field name="reconcile" eval="True"/>
+        </record>
+
+        <!-- Equity Accounts (3xxxxx) -->
+        <record id="account_300000" model="accounting.account">
+            <field name="code">300000</field>
+            <field name="name">Equity</field>
+            <field name="type_id" ref="account_type_equity"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_310000" model="accounting.account">
+            <field name="code">310000</field>
+            <field name="name">Retained Earnings</field>
+            <field name="type_id" ref="account_type_equity"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+
+        <!-- Income Accounts (4xxxxx) -->
+        <record id="account_400000" model="accounting.account">
+            <field name="code">400000</field>
+            <field name="name">Sales Revenue</field>
+            <field name="type_id" ref="account_type_income"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_410000" model="accounting.account">
+            <field name="code">410000</field>
+            <field name="name">Service Revenue</field>
+            <field name="type_id" ref="account_type_income"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+
+        <!-- Expense Accounts (5xxxxx) -->
+        <record id="account_500000" model="accounting.account">
+            <field name="code">500000</field>
+            <field name="name">Cost of Goods Sold</field>
+            <field name="type_id" ref="account_type_expense"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_510000" model="accounting.account">
+            <field name="code">510000</field>
+            <field name="name">Operating Expenses</field>
+            <field name="type_id" ref="account_type_expense"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+    </data>
+</odoo>

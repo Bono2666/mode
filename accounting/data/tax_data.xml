@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tax data is handled via _inherit on sales.taxes in the model.
+         This file exists as a placeholder for future tax configuration data.
+         The actual tax-to-account linking is done in the AccountingTax model
+         which adds tax_account_id to sales.taxes. -->
+    <data noupdate="1">
+    </data>
+</odoo>

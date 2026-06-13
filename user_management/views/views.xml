@@ -151,7 +151,7 @@
 -->
     <!-- menu categories -->
 
-    <menuitem name="Users" id="user_management.custom_user_menu" parent="general.menu_master_menu" sequence="4" action="user_management.custom_users_action"/>
+    <menuitem name="Users" id="user_management.custom_user_menu" parent="general.menu_master_menu" sequence="6" action="user_management.custom_users_action"/>
     
     <!-- actions -->
 <!--

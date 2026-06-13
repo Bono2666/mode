@@ -1,0 +1,895 @@
+<odoo>
+  <data>
+
+    <!-- ================================================================= -->
+    <!-- ACCOUNT TYPE VIEWS                                                 -->
+    <!-- ================================================================= -->
+
+    <record model="ir.ui.view" id="accounting_account_type_tree">
+      <field name="name">Account Type</field>
+      <field name="model">accounting.account.type</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="code"/>
+          <field name="name"/>
+          <field name="sequence"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="accounting_account_type_form" model="ir.ui.view">
+      <field name="name">accounting.account.type.form</field>
+      <field name="model">accounting.account.type</field>
+      <field name="arch" type="xml">
+      <form string="Account Type" create="false">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate mt-1">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1>
+              <div class="d-flex">
+                <field name="name" placeholder="e.g. Receivable" readonly="not is_edit and id"/>
+              </div>
+            </h1>
+          </div>
+          <group>
+            <group>
+              <field name="code" readonly="not is_edit and id"/>
+            </group>
+            <group>
+              <field name="sequence" readonly="not is_edit and id"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="accounting_account_type_search">
+      <field name="name">Account Type Search</field>
+      <field name="model">accounting.account.type</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="name"/>
+          <field name="code"/>
+        </search>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- CHART OF ACCOUNTS VIEWS                                            -->
+    <!-- ================================================================= -->
+
+    <record model="ir.ui.view" id="accounting_account_tree">
+      <field name="name">Chart of Accounts</field>
+      <field name="model">accounting.account</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="code"/>
+          <field name="name"/>
+          <field name="type_id"/>
+          <field name="reconcile"/>
+          <field name="active"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="accounting_account_form" model="ir.ui.view">
+      <field name="name">accounting.account.form</field>
+      <field name="model">accounting.account</field>
+      <field name="arch" type="xml">
+      <form string="Account" create="false">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate mt-1">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <field name="code"/>
+            <h1>
+              <div class="d-flex">
+                <field name="name" placeholder="e.g. Accounts Receivable" readonly="not is_edit and id"/>
+              </div>
+            </h1>
+          </div>
+          <group>
+            <group>
+              <field name="type_id" readonly="not is_edit and id"/>
+              <field name="parent_id" readonly="not is_edit and id"/>
+            </group>
+            <group>
+              <field name="reconcile" readonly="not is_edit and id"/>
+              <field name="active" readonly="not is_edit and id"/>
+              <field name="currency_id" readonly="not is_edit and id"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="accounting_account_search">
+      <field name="name">Account Search</field>
+      <field name="model">accounting.account</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="code"/>
+          <field name="name"/>
+          <field name="type_id"/>
+          <filter string="Active" name="active" domain="[('active','=',True)]"/>
+          <filter string="Reconcilable" name="reconcile" domain="[('reconcile','=',True)]"/>
+        </search>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- JOURNAL VIEWS                                                     -->
+    <!-- ================================================================= -->
+
+    <record model="ir.ui.view" id="accounting_journal_tree">
+      <field name="name">Journal</field>
+      <field name="model">accounting.journal</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="code"/>
+          <field name="name"/>
+          <field name="type"/>
+          <field name="default_debit_account_id"/>
+          <field name="default_credit_account_id"/>
+          <field name="active"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="accounting_journal_form" model="ir.ui.view">
+      <field name="name">accounting.journal.form</field>
+      <field name="model">accounting.journal</field>
+      <field name="arch" type="xml">
+      <form string="Journal" create="false">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <span class="min-w-0 text-truncate mt-1">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1>
+              <div class="d-flex">
+                <field name="name" placeholder="e.g. Sales Journal" readonly="not is_edit and id"/>
+              </div>
+            </h1>
+          </div>
+          <group>
+            <group>
+              <field name="code" readonly="not is_edit and id"/>
+              <field name="type" readonly="not is_edit and id"/>
+              <field name="active" readonly="not is_edit and id"/>
+            </group>
+            <group>
+              <field name="default_debit_account_id" readonly="not is_edit and id"/>
+              <field name="default_credit_account_id" readonly="not is_edit and id"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="accounting_journal_search">
+      <field name="name">Journal Search</field>
+      <field name="model">accounting.journal</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="name"/>
+          <field name="code"/>
+          <field name="type"/>
+          <filter string="Active" name="active" domain="[('active','=',True)]"/>
+        </search>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- FISCAL YEAR VIEWS                                                 -->
+    <!-- ================================================================= -->
+
+    <record model="ir.ui.view" id="accounting_fiscal_year_tree">
+      <field name="name">Fiscal Year</field>
+      <field name="model">accounting.fiscal.year</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="date_from"/>
+          <field name="date_to"/>
+          <field name="state" widget="badge" decoration-success="state == 'open'" decoration-danger="state == 'closed'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="accounting_fiscal_year_form" model="ir.ui.view">
+      <field name="name">accounting.fiscal.year.form</field>
+      <field name="model">accounting.fiscal.year</field>
+      <field name="arch" type="xml">
+      <form string="Fiscal Year" create="false">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <field name="state" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <button string="Close Year" name="action_close_year" type="object" class="btn-warning" invisible="state != 'open'"/>
+          <button string="Open Year" name="action_open_year" type="object" class="btn-primary" invisible="state != 'closed'"/>
+          <span class="min-w-0 text-truncate mt-1">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1>
+              <div class="d-flex">
+                <field name="name" placeholder="e.g. Fiscal Year 2026" readonly="not is_edit and id"/>
+              </div>
+            </h1>
+          </div>
+          <group>
+            <group>
+              <field name="date_from" readonly="not is_edit and id"/>
+            </group>
+            <group>
+              <field name="date_to" readonly="not is_edit and id"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="accounting_fiscal_year_search">
+      <field name="name">Fiscal Year Search</field>
+      <field name="model">accounting.fiscal.year</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="name"/>
+          <field name="date_from"/>
+          <filter string="Open" name="open" domain="[('state','=','open')]"/>
+          <filter string="Closed" name="closed" domain="[('state','=','closed')]"/>
+        </search>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- PERIOD VIEWS                                                      -->
+    <!-- ================================================================= -->
+
+    <record model="ir.ui.view" id="accounting_period_tree">
+      <field name="name">Period</field>
+      <field name="model">accounting.period</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="fiscal_year_id"/>
+          <field name="date_from"/>
+          <field name="date_to"/>
+          <field name="state" widget="badge" decoration-success="state == 'open'" decoration-danger="state == 'closed'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="accounting_period_form" model="ir.ui.view">
+      <field name="name">accounting.period.form</field>
+      <field name="model">accounting.period</field>
+      <field name="arch" type="xml">
+      <form string="Period" create="false">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <field name="state" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <button string="Close Period" name="action_close_period" type="object" class="btn-warning" invisible="state != 'open'"/>
+          <button string="Open Period" name="action_open_period" type="object" class="btn-primary" invisible="state != 'closed'"/>
+          <span class="min-w-0 text-truncate mt-1">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1>
+              <div class="d-flex">
+                <field name="name" placeholder="e.g. January 2026" readonly="not is_edit and id"/>
+              </div>
+            </h1>
+          </div>
+          <group>
+            <group>
+              <field name="fiscal_year_id" readonly="not is_edit and id"/>
+              <field name="date_from" readonly="not is_edit and id"/>
+            </group>
+            <group>
+              <field name="date_to" readonly="not is_edit and id"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="accounting_period_search">
+      <field name="name">Period Search</field>
+      <field name="model">accounting.period</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="name"/>
+          <field name="fiscal_year_id"/>
+          <field name="date_from"/>
+          <filter string="Open" name="open" domain="[('state','=','open')]"/>
+          <filter string="Closed" name="closed" domain="[('state','=','closed')]"/>
+        </search>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- JOURNAL ENTRY (MOVE) VIEWS                                        -->
+    <!-- ================================================================= -->
+
+    <record model="ir.ui.view" id="accounting_move_tree">
+      <field name="name">Journal Entry</field>
+      <field name="model">accounting.move</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="date"/>
+          <field name="journal_id"/>
+          <field name="ref"/>
+          <field name="total_debit" sum="Total Debit"/>
+          <field name="total_credit" sum="Total Credit"/>
+          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state == 'draft'" decoration-danger="state == 'cancel'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="accounting_move_form" model="ir.ui.view">
+      <field name="name">accounting.move.form</field>
+      <field name="model">accounting.move</field>
+      <field name="arch" type="xml">
+      <form string="Journal Entry" create="false">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="state" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this journal entry?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="state != 'draft' or is_edit"/>
+          <button string="Cancel Entry" name="action_cancel" type="object" class="btn-warning" invisible="state != 'posted'"/>
+          <button string="Reset to Draft" name="action_reset_to_draft" type="object" class="btn-secondary" invisible="state != 'cancel'"/>
+          <span class="min-w-0 text-truncate mt-1">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <field name="name" readonly="1"/>
+            <field name="ref" placeholder="e.g. January Rent" readonly="state != 'draft'"/>
+          </div>
+          <group>
+            <group>
+              <field name="journal_id" readonly="state != 'draft'"/>
+              <field name="date" readonly="state != 'draft'"/>
+            </group>
+            <group>
+              <field name="state" readonly="1"/>
+              <field name="posted_date" readonly="1"/>
+            </group>
+          </group>
+          <notebook>
+            <page string="Journal Items">
+              <field name="line_ids" readonly="state != 'draft'">
+                <tree editable="bottom">
+                  <field name="sequence" widget="handle"/>
+                  <field name="account_id" options="{'no_create': True}" required="1"/>
+                  <field name="partner_id" options="{'no_create': True}"/>
+                  <field name="name"/>
+                  <field name="debit" sum="Total Debit"/>
+                  <field name="credit" sum="Total Credit"/>
+                  <field name="date_maturity"/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+          <group class="oe_subtotal_footer">
+            <group>
+              <field name="total_debit" widget="monetary"/>
+              <field name="total_credit" widget="monetary"/>
+              <field name="is_balanced" widget="boolean_toggle" readonly="1"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="accounting_move_search">
+      <field name="name">Journal Entry Search</field>
+      <field name="model">accounting.move</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="name"/>
+          <field name="ref"/>
+          <field name="journal_id"/>
+          <field name="date"/>
+          <filter string="Draft" name="draft" domain="[('state','=','draft')]"/>
+          <filter string="Posted" name="posted" domain="[('state','=','posted')]"/>
+          <filter string="Cancelled" name="cancelled" domain="[('state','=','cancel')]"/>
+          <separator/>
+          <filter string="Today" name="today" date="date"/>
+          <separator/>
+          <filter string="This Month" name="this_month" date="date" default_period="this_month"/>
+        </search>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- BANK STATEMENT VIEWS                                              -->
+    <!-- ================================================================= -->
+
+    <record model="ir.ui.view" id="accounting_bank_statement_tree">
+      <field name="name">Bank Statement</field>
+      <field name="model">accounting.bank.statement</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="date"/>
+          <field name="journal_id"/>
+          <field name="balance_start"/>
+          <field name="balance_end"/>
+          <field name="state" widget="badge" decoration-success="state == 'closed'" decoration-warning="state == 'open'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="accounting_bank_statement_form" model="ir.ui.view">
+      <field name="name">accounting.bank.statement.form</field>
+      <field name="model">accounting.bank.statement</field>
+      <field name="arch" type="xml">
+      <form string="Bank Statement" create="false">
+        <header>
+          <field name="id" invisible="1"/>
+          <field name="is_edit" invisible="1"/>
+          <field name="user_can_update" invisible="1"/>
+          <field name="user_can_delete" invisible="1"/>
+          <field name="state" invisible="1"/>
+          <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+          <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this bank statement?" invisible="not id or is_edit or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <button string="Close" name="action_close_statement" type="object" class="btn-primary" invisible="state != 'open'"/>
+          <button string="Reopen" name="action_open_statement" type="object" class="btn-secondary" invisible="state != 'closed'"/>
+          <span class="min-w-0 text-truncate mt-1">
+            <field name="model_description"/>
+          </span>
+          <style>
+            .o_control_panel {
+              display: none !important;
+            }
+          </style>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <field name="name" readonly="1"/>
+          </div>
+          <group>
+            <group>
+              <field name="journal_id" readonly="state != 'open'"/>
+              <field name="date" readonly="state != 'open'"/>
+            </group>
+            <group>
+              <field name="balance_start" readonly="state != 'open'"/>
+              <field name="balance_end" readonly="1"/>
+            </group>
+          </group>
+          <notebook>
+            <page string="Statement Lines">
+              <field name="line_ids" readonly="state == 'closed'">
+                <tree editable="bottom">
+                  <field name="date"/>
+                  <field name="ref"/>
+                  <field name="partner_id" options="{'no_create': True}"/>
+                  <field name="amount" sum="Total"/>
+                  <field name="state" widget="badge"/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="accounting_bank_statement_search">
+      <field name="name">Bank Statement Search</field>
+      <field name="model">accounting.bank.statement</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="name"/>
+          <field name="journal_id"/>
+          <field name="date"/>
+          <filter string="Open" name="open" domain="[('state','=','open')]"/>
+          <filter string="Closed" name="closed" domain="[('state','=','closed')]"/>
+        </search>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- REPORT WIZARD VIEWS                                               -->
+    <!-- ================================================================= -->
+
+    <record id="view_accounting_trial_balance_wizard_form" model="ir.ui.view">
+      <field name="name">Trial Balance Wizard</field>
+      <field name="model">accounting.trial.balance.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Trial Balance">
+          <group>
+            <group>
+              <field name="date_from"/>
+              <field name="date_to"/>
+            </group>
+            <group>
+              <field name="target_move"/>
+            </group>
+          </group>
+          <footer>
+            <button string="Generate" name="action_generate" type="object" class="btn-primary"/>
+            <button string="Cancel" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_accounting_general_ledger_wizard_form" model="ir.ui.view">
+      <field name="name">General Ledger Wizard</field>
+      <field name="model">accounting.general.ledger.wizard</field>
+      <field name="arch" type="xml">
+        <form string="General Ledger">
+          <group>
+            <group>
+              <field name="date_from"/>
+              <field name="date_to"/>
+            </group>
+            <group>
+              <field name="target_move"/>
+              <field name="account_ids" widget="many2many_tags"/>
+            </group>
+          </group>
+          <footer>
+            <button string="Generate" name="action_generate" type="object" class="btn-primary"/>
+            <button string="Cancel" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_accounting_aged_receivable_wizard_form" model="ir.ui.view">
+      <field name="name">Aged Receivable Wizard</field>
+      <field name="model">accounting.aged.receivable.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Aged Receivable">
+          <group>
+            <group>
+              <field name="date_as_of"/>
+            </group>
+            <group>
+              <field name="period_length"/>
+            </group>
+          </group>
+          <footer>
+            <button string="Generate" name="action_generate" type="object" class="btn-primary"/>
+            <button string="Cancel" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- REPORT VIEWS                                                      -->
+    <!-- ================================================================= -->
+
+    <record model="ir.ui.view" id="view_accounting_trial_balance_report_tree">
+      <field name="name">Trial Balance Report</field>
+      <field name="model">accounting.trial.balance.report</field>
+      <field name="arch" type="xml">
+        <tree create="false" delete="false" edit="false">
+          <field name="account_code"/>
+          <field name="account_name"/>
+          <field name="type_name"/>
+          <field name="total_debit" sum="Total Debit"/>
+          <field name="total_credit" sum="Total Credit"/>
+          <field name="balance" sum="Net Balance"/>
+        </tree>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="view_accounting_general_ledger_report_tree">
+      <field name="name">General Ledger Report</field>
+      <field name="model">accounting.general.ledger.report</field>
+      <field name="arch" type="xml">
+        <tree create="false" delete="false" edit="false">
+          <field name="move_date"/>
+          <field name="move_name"/>
+          <field name="journal_name"/>
+          <field name="account_code"/>
+          <field name="account_name"/>
+          <field name="line_name"/>
+          <field name="partner_name"/>
+          <field name="debit" sum="Total Debit"/>
+          <field name="credit" sum="Total Credit"/>
+          <field name="ref"/>
+        </tree>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="view_accounting_aged_receivable_report_tree">
+      <field name="name">Aged Receivable Report</field>
+      <field name="model">accounting.aged.receivable.report</field>
+      <field name="arch" type="xml">
+        <tree create="false" delete="false" edit="false">
+          <field name="partner_name"/>
+          <field name="total" sum="Total"/>
+          <field name="age_0_30" sum="0–30 Days"/>
+          <field name="age_31_60" sum="31–60 Days"/>
+          <field name="age_61_90" sum="61–90 Days"/>
+          <field name="age_90_plus" sum="90+ Days"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- ACTIONS                                                           -->
+    <!-- ================================================================= -->
+
+    <record model="ir.actions.act_window" id="action_account_types">
+      <field name="name">Account Types</field>
+      <field name="res_model">accounting.account.type</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_chart_of_accounts">
+      <field name="name">Chart of Accounts</field>
+      <field name="res_model">accounting.account</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_accounting_journals">
+      <field name="name">Journals</field>
+      <field name="res_model">accounting.journal</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_fiscal_years">
+      <field name="name">Fiscal Years</field>
+      <field name="res_model">accounting.fiscal.year</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_periods">
+      <field name="name">Periods</field>
+      <field name="res_model">accounting.period</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_accounting_moves">
+      <field name="name">Journal Entries</field>
+      <field name="res_model">accounting.move</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_bank_statements">
+      <field name="name">Bank Statements</field>
+      <field name="res_model">accounting.bank.statement</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <!-- Report actions -->
+    <record model="ir.actions.act_window" id="action_trial_balance_wizard">
+      <field name="name">Trial Balance</field>
+      <field name="res_model">accounting.trial.balance.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_general_ledger_wizard">
+      <field name="name">General Ledger</field>
+      <field name="res_model">accounting.general.ledger.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_aged_receivable_wizard">
+      <field name="name">Aged Receivable</field>
+      <field name="res_model">accounting.aged.receivable.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- MENU ITEMS                                                        -->
+    <!-- ================================================================= -->
+
+    <!-- Top-level Accounting menu -->
+    <menuitem name="Accounting" id="accounting_root_menu" parent="general.menu_root" sequence="4"/>
+
+    <!-- Transactions submenu -->
+    <menuitem name="Transactions" id="menu_accounting_transactions_parent" parent="accounting_root_menu" sequence="1"/>
+    <menuitem name="Journal Entries" id="menu_journal_entries_act" parent="menu_accounting_transactions_parent" action="action_accounting_moves" sequence="1"/>
+
+    <!-- Banking submenu -->
+    <menuitem name="Banking" id="menu_accounting_banking_parent" parent="accounting_root_menu" sequence="2"/>
+    <menuitem name="Bank Statements" id="menu_bank_statements_act" parent="menu_accounting_banking_parent" action="action_bank_statements" sequence="1"/>
+
+    <!-- Reports submenu -->
+    <menuitem name="Reporting" id="menu_accounting_reports_parent" parent="accounting_root_menu" sequence="3"/>
+    <menuitem name="Trial Balance" id="menu_trial_balance_act" parent="menu_accounting_reports_parent" action="action_trial_balance_wizard" sequence="1"/>
+    <menuitem name="General Ledger" id="menu_general_ledger_act" parent="menu_accounting_reports_parent" action="action_general_ledger_wizard" sequence="2"/>
+    <menuitem name="Aged Receivable" id="menu_aged_receivable_act" parent="menu_accounting_reports_parent" action="action_aged_receivable_wizard" sequence="3"/>
+
+    <!-- Accounting config under main Configuration -->
+    <menuitem name="Accounting" id="menu_accounting_config_parent" parent="general.menu_master_menu" sequence="4"/>
+    <menuitem name="Chart of Accounts" id="menu_chart_of_accounts_act" parent="menu_accounting_config_parent" action="action_chart_of_accounts" sequence="1"/>
+    <menuitem name="Account Types" id="menu_account_types_act" parent="menu_accounting_config_parent" action="action_account_types" sequence="2"/>
+    <menuitem name="Journals" id="menu_journals_act" parent="menu_accounting_config_parent" action="action_accounting_journals" sequence="3"/>
+    <menuitem name="Fiscal Years" id="menu_fiscal_years_act" parent="menu_accounting_config_parent" action="action_fiscal_years" sequence="4"/>
+    <menuitem name="Periods" id="menu_periods_act" parent="menu_accounting_config_parent" action="action_periods" sequence="5"/>
+
+    <!-- ================================================================= -->
+    <!-- VIEW INHERITANCE: Smart Buttons on existing forms                  -->
+    <!-- ================================================================= -->
+
+    <!-- Add Accounting Entry button to Sales Invoice form -->
+    <record id="view_sales_invoice_accounting_inherit" model="ir.ui.view">
+      <field name="name">sales.invoice.accounting.inherit</field>
+      <field name="model">sales.invoice</field>
+      <field name="inherit_id" ref="sales.sales_invoice_form_view"/>
+      <field name="arch" type="xml">
+        <xpath expr="//header" position="inside">
+          <field name="accounting_move_id" invisible="1"/>
+          <field name="accounting_move_count" invisible="1"/>
+          <button string="Journal Entry" name="action_view_accounting_move" type="object"
+                  class="btn-secondary" invisible="not accounting_move_id"/>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- Add Accounting Entry button to Sales Payment form -->
+    <record id="view_sales_payment_accounting_inherit" model="ir.ui.view">
+      <field name="name">sales.payment.accounting.inherit</field>
+      <field name="model">sales.payment</field>
+      <field name="inherit_id" ref="sales.sales_payment_form_view"/>
+      <field name="arch" type="xml">
+        <xpath expr="//header" position="inside">
+          <field name="accounting_move_id" invisible="1"/>
+          <button string="Journal Entry" name="action_view_accounting_move" type="object"
+                  class="btn-secondary" invisible="not accounting_move_id"/>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- Add Accounting Entry button to Purchase Bill form -->
+    <record id="view_purchases_bill_accounting_inherit" model="ir.ui.view">
+      <field name="name">purchases.bill.accounting.inherit</field>
+      <field name="model">purchases.bill</field>
+      <field name="inherit_id" ref="purchases.purchases_bill_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//header" position="inside">
+          <field name="accounting_move_id" invisible="1"/>
+          <field name="accounting_move_count" invisible="1"/>
+          <button string="Journal Entry" name="action_view_accounting_move" type="object"
+                  class="btn-secondary" invisible="not accounting_move_id"/>
+        </xpath>
+      </field>
+    </record>
+
+  </data>
+</odoo>

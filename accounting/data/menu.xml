@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Top-level Accounting menu -->
+        <record id="menu_accounting_root" model="general.menu">
+            <field name="menu_id">accounting</field>
+            <field name="menu_name">Accounting</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <!-- Configuration submenu -->
+        <record id="menu_accounting_config" model="general.menu">
+            <field name="menu_id">accounting_config</field>
+            <field name="menu_name">Accounting</field>
+            <field name="parent_menu">master_data</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <record id="menu_chart_of_accounts" model="general.menu">
+            <field name="menu_id">chart_of_accounts</field>
+            <field name="menu_name">Chart of Accounts</field>
+            <field name="parent_menu">accounting_config</field>
+        </record>
+
+        <record id="menu_account_types" model="general.menu">
+            <field name="menu_id">account_types</field>
+            <field name="menu_name">Account Types</field>
+            <field name="parent_menu">accounting_config</field>
+        </record>
+
+        <record id="menu_accounting_journals" model="general.menu">
+            <field name="menu_id">accounting_journals</field>
+            <field name="menu_name">Journals</field>
+            <field name="parent_menu">accounting_config</field>
+        </record>
+
+        <record id="menu_fiscal_years" model="general.menu">
+            <field name="menu_id">fiscal_years</field>
+            <field name="menu_name">Fiscal Years</field>
+            <field name="parent_menu">accounting_config</field>
+        </record>
+
+        <record id="menu_periods" model="general.menu">
+            <field name="menu_id">periods</field>
+            <field name="menu_name">Periods</field>
+            <field name="parent_menu">accounting_config</field>
+        </record>
+
+        <!-- Transactions submenu -->
+        <record id="menu_accounting_transactions" model="general.menu">
+            <field name="menu_id">accounting_transactions</field>
+            <field name="menu_name">Transactions</field>
+            <field name="parent_menu">accounting</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <record id="menu_accounting_moves" model="general.menu">
+            <field name="menu_id">accounting_moves</field>
+            <field name="menu_name">Journal Entries</field>
+            <field name="parent_menu">accounting_transactions</field>
+        </record>
+
+        <!-- Banking submenu -->
+        <record id="menu_accounting_banking" model="general.menu">
+            <field name="menu_id">accounting_banking</field>
+            <field name="menu_name">Banking</field>
+            <field name="parent_menu">accounting</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <record id="menu_bank_statements" model="general.menu">
+            <field name="menu_id">bank_statements</field>
+            <field name="menu_name">Bank Statements</field>
+            <field name="parent_menu">accounting_banking</field>
+        </record>
+
+        <!-- Reports submenu -->
+        <record id="menu_accounting_reports" model="general.menu">
+            <field name="menu_id">accounting_reports</field>
+            <field name="menu_name">Reporting</field>
+            <field name="parent_menu">accounting</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <record id="menu_trial_balance" model="general.menu">
+            <field name="menu_id">trial_balance</field>
+            <field name="menu_name">Trial Balance</field>
+            <field name="parent_menu">accounting_reports</field>
+        </record>
+
+        <record id="menu_general_ledger" model="general.menu">
+            <field name="menu_id">general_ledger</field>
+            <field name="menu_name">General Ledger</field>
+            <field name="parent_menu">accounting_reports</field>
+        </record>
+
+        <record id="menu_aged_receivable" model="general.menu">
+            <field name="menu_id">aged_receivable</field>
+            <field name="menu_name">Aged Receivable</field>
+            <field name="parent_menu">accounting_reports</field>
+        </record>
+    </data>
+</odoo>

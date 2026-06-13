@@ -85,7 +85,7 @@
 
     <!-- menu categories -->
 
-    <menuitem name="Employees" id="employees.menu_employees_root" parent="general.menu_root" sequence="3" action="employees.action_window"/>
+    <menuitem name="Employees" id="employees.menu_employees_root" parent="general.menu_root" sequence="6" action="employees.action_window"/>
     
   </data>
 </odoo>

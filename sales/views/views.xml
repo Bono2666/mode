@@ -1928,16 +1928,16 @@
     <!-- Top menu item -->
 
     <menuitem name="Sales" id="sales.menu_sales_root" parent="general.menu_root" sequence="1"/>
-    <menuitem name="Approvals" id="sales.menu_approvals_root" parent="general.menu_root" sequence="4"/>
+    <menuitem name="Approvals" id="sales.menu_approvals_root" parent="general.menu_root" sequence="5"/>
 
     <!-- menu categories -->
     
     <menuitem name="Order" id="sales.orders_menu" parent="sales.menu_sales_root" sequence="0"/>
     <menuitem name="Customer" id="sales.customer_menu" parent="general.menu_master_menu" sequence="1"/>
-    <menuitem name="Invoicing" id="sales.invoicing_menu" parent="general.menu_master_menu" sequence="2"/>
-    <menuitem name="Product" id="sales.product_menu" parent="general.menu_master_menu" sequence="3"/>
-    <menuitem name="Price Conditions" id="sales.price_condition_menu" parent="general.menu_master_menu" action="sales.price_condition_action" sequence="5"/>
-    <menuitem name="Approval" id="sales.approval_matrix_menu" parent="general.menu_master_menu" sequence="6"/>
+    <menuitem name="Invoicing" id="sales.invoicing_menu" parent="general.menu_master_menu" sequence="3"/>
+    <menuitem name="Product" id="sales.product_menu" parent="general.menu_master_menu" sequence="5"/>
+    <menuitem name="Price Conditions" id="sales.price_condition_menu" parent="general.menu_master_menu" action="sales.price_condition_action" sequence="8"/>
+    <menuitem name="Approval" id="sales.approval_matrix_menu" parent="general.menu_master_menu" sequence="9"/>
     <menuitem name="Sales Approval" id="sales.sales_approvals_menu" parent="sales.menu_approvals_root" action="sales.sales_approval_action" sequence="1"/>
 
     <!-- actions opening views on models -->
@@ -1954,7 +1954,7 @@
     <menuitem id="product_type_menu_act" name="Product Types" parent="sales.product_menu" action="sales.product_type_action" sequence="1"/>
     <menuitem id="product_category_menu_act" name="Product Categories" parent="sales.product_menu" action="sales.product_category_action" sequence="2"/>
     <menuitem id="product_unit_menu_act" name="Unit of Measures" parent="sales.product_menu" action="sales.product_unit_action" sequence="3"/>
-    <menuitem name="Taxes" id="sales.taxes_menu_act"  parent="general.menu_master_menu" action="sales.taxes_action" sequence="4"/>
+    <menuitem name="Taxes" id="sales.taxes_menu_act"  parent="general.menu_master_menu" action="sales.taxes_action" sequence="7"/>
     <menuitem name="Sales Matrix" id="sales.approval_matrix_menu_act" parent="sales.approval_matrix_menu" action="sales.approval_matrix_action" sequence="1"/>
 
     <!-- ────────────────────────────

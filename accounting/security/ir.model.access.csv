@@ -1,0 +1,16 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_accounting_account_type,accounting.account.type,model_accounting_account_type,,1,1,1,1
+access_accounting_account,accounting.account,model_accounting_account,,1,1,1,1
+access_accounting_journal,accounting.journal,model_accounting_journal,,1,1,1,1
+access_accounting_fiscal_year,accounting.fiscal.year,model_accounting_fiscal_year,,1,1,1,1
+access_accounting_period,accounting.period,model_accounting_period,,1,1,1,1
+access_accounting_move,accounting.move,model_accounting_move,,1,1,1,1
+access_accounting_move_line,accounting.move.line,model_accounting_move_line,,1,1,1,1
+access_accounting_bank_statement,accounting.bank.statement,model_accounting_bank_statement,,1,1,1,1
+access_accounting_bank_statement_line,accounting.bank.statement.line,model_accounting_bank_statement_line,,1,1,1,1
+access_accounting_trial_balance_wizard,accounting.trial.balance.wizard,model_accounting_trial_balance_wizard,,1,1,1,1
+access_accounting_general_ledger_wizard,accounting.general.ledger.wizard,model_accounting_general_ledger_wizard,,1,1,1,1
+access_accounting_aged_receivable_wizard,accounting.aged.receivable.wizard,model_accounting_aged_receivable_wizard,,1,1,1,1
+access_accounting_trial_balance_report,accounting.trial.balance.report,model_accounting_trial_balance_report,,1,0,0,0
+access_accounting_aged_receivable_report,accounting.aged.receivable.report,model_accounting_aged_receivable_report,,1,0,0,0
+access_accounting_general_ledger_report,accounting.general.ledger.report,model_accounting_general_ledger_report,,1,0,0,0
