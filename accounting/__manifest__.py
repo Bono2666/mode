@@ -12,6 +12,7 @@ Sales Payments, and Vendor Bills.
     'category': 'Accounting',
     'version': '0.1',
     'depends': ['base', 'general', 'disable_autosave', 'sales', 'purchases'],
+    'post_init_hook': 'post_init_hook',
     'data': [
         'security/ir.model.access.csv',
         'data/account_type.xml',

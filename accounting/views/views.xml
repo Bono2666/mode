@@ -88,6 +88,7 @@
           <field name="code"/>
           <field name="name"/>
           <field name="type_id"/>
+          <field name="currency_id"/>
           <field name="reconcile"/>
           <field name="active"/>
         </tree>
@@ -470,6 +471,7 @@
               <field name="date" readonly="state != 'draft'"/>
             </group>
             <group>
+              <field name="currency_id" readonly="state != 'draft'"/>
               <field name="state" readonly="1"/>
               <field name="posted_date" readonly="1"/>
             </group>
@@ -479,20 +481,21 @@
               <field name="line_ids" readonly="state != 'draft'">
                 <tree editable="bottom">
                   <field name="sequence" widget="handle"/>
-                  <field name="account_id" options="{'no_create': True}" required="1"/>
-                  <field name="partner_id" options="{'no_create': True}"/>
+                  <field name="account_id" options="{'no_open': True, 'no_create': True}" required="1"/>
+                  <field name="partner_id" options="{'no_open': True, 'no_create': True}"/>
                   <field name="name"/>
-                  <field name="debit" sum="Total Debit"/>
-                  <field name="credit" sum="Total Credit"/>
+                  <field name="debit" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Debit"/>
+                  <field name="credit" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Credit"/>
                   <field name="date_maturity"/>
+                  <field name="currency_id" invisible="1"/>
                 </tree>
               </field>
             </page>
           </notebook>
           <group class="oe_subtotal_footer">
             <group>
-              <field name="total_debit" widget="monetary"/>
-              <field name="total_credit" widget="monetary"/>
+              <field name="total_debit" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+              <field name="total_credit" widget="monetary" options="{'currency_field': 'currency_id'}"/>
               <field name="is_balanced" widget="boolean_toggle" readonly="1"/>
             </group>
           </group>
@@ -580,8 +583,9 @@
               <field name="date" readonly="state != 'open'"/>
             </group>
             <group>
-              <field name="balance_start" readonly="state != 'open'"/>
-              <field name="balance_end" readonly="1"/>
+              <field name="currency_id" readonly="state != 'open'"/>
+              <field name="balance_start" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="state != 'open'"/>
+              <field name="balance_end" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
             </group>
           </group>
           <notebook>
@@ -591,8 +595,9 @@
                   <field name="date"/>
                   <field name="ref"/>
                   <field name="partner_id" options="{'no_create': True}"/>
-                  <field name="amount" sum="Total"/>
+                  <field name="amount" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                   <field name="state" widget="badge"/>
+                  <field name="currency_id" invisible="1"/>
                 </tree>
               </field>
             </page>

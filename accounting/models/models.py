@@ -41,7 +41,9 @@ class accounting_account(models.Model):
         help="Allow reconciliation of this account (AR/AP)")
     currency_id = fields.Many2one(
         comodel_name='res.currency', string='Currency',
-        default=lambda self: self.env.company.currency_id)
+        default=lambda self: self.env['res.currency'].search(
+            [('name', '=', 'IDR')], limit=1)
+        or self.env.company.currency_id)
     active = fields.Boolean(string='Active', default=True)
     parent_id = fields.Many2one(
         comodel_name='accounting.account', string='Parent Account',
@@ -58,6 +60,19 @@ class accounting_account(models.Model):
                 vals['code'] = self.env['ir.sequence'].next_by_code(
                     'accounting.account') or '/'
         return super(accounting_account, self).create(vals_list)
+
+    @api.model
+    def name_search(self, name='', args=None, operator='ilike', limit=100):
+        """Search accounts by both code and name."""
+        if not args:
+            args = []
+        if name:
+            domain = ['|', ('code', operator, name),
+                      ('name', operator, name)]
+            accounts = self.search(domain + args, limit=limit)
+            return accounts.name_get()
+        return super(accounting_account, self).name_search(
+            name=name, args=args, operator=operator, limit=limit)
 
     def name_get(self):
         result = []
@@ -192,6 +207,11 @@ class accounting_move(models.Model):
     journal_id = fields.Many2one(
         comodel_name='accounting.journal', string='Journal',
         ondelete='restrict', index=True, required=True)
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', string='Currency',
+        default=lambda self: self.env['res.currency'].search(
+            [('name', '=', 'IDR')], limit=1)
+        or self.env.company.currency_id)
     state = fields.Selection([
         ('draft', 'Draft'),
         ('posted', 'Posted'),
@@ -215,15 +235,8 @@ class accounting_move(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get('name'):
-                journal = None
-                journal_id = vals.get('journal_id')
-                if journal_id:
-                    journal = self.env['accounting.journal'].browse(journal_id)
-                if journal and journal.sequence_id:
-                    vals['name'] = journal.sequence_id.next_by_id()
-                else:
-                    vals['name'] = self.env['ir.sequence'].next_by_code(
-                        'accounting.move') or '/'
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'accounting.move') or '/'
         return super(accounting_move, self).create(vals_list)
 
     @api.depends('line_ids.debit', 'line_ids.credit')
@@ -307,10 +320,16 @@ class accounting_move_line(models.Model):
     move_id = fields.Many2one(
         comodel_name='accounting.move', string='Journal Entry',
         ondelete='cascade', index=True, required=True)
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', related='move_id.currency_id',
+        string='Currency', store=True)
     sequence = fields.Integer(string='Sequence', default=10)
     account_id = fields.Many2one(
         comodel_name='accounting.account', string='Account',
         ondelete='restrict', index=True, required=True)
+    account_name = fields.Char(
+        string='Account Name', related='account_id.name',
+        store=True, readonly=True)
     partner_id = fields.Many2one(
         comodel_name='res.partner', string='Partner',
         ondelete='set null', index=True)
@@ -357,6 +376,11 @@ class accounting_bank_statement(models.Model):
         comodel_name='accounting.journal', string='Journal',
         ondelete='restrict', index=True, required=True,
         domain=[('type', 'in', ['bank', 'cash'])])
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', string='Currency',
+        default=lambda self: self.env['res.currency'].search(
+            [('name', '=', 'IDR')], limit=1)
+        or self.env.company.currency_id)
     date = fields.Date(
         string='Date', default=fields.Date.today, required=True)
     balance_start = fields.Float(
@@ -404,6 +428,9 @@ class accounting_bank_statement_line(models.Model):
     statement_id = fields.Many2one(
         comodel_name='accounting.bank.statement', string='Statement',
         ondelete='cascade', index=True, required=True)
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', related='statement_id.currency_id',
+        string='Currency', store=True)
     date = fields.Date(string='Date', default=fields.Date.today)
     ref = fields.Char(string='Reference')
     partner_id = fields.Many2one(

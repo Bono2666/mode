@@ -9,7 +9,7 @@
 
     <!-- LANGKAH 2: Update datanya -->
     <record id="base.main_company" model="res.company">
-        <field name="logo" type="base64" file="general/static/src/img/logo.png"/>
+        <!-- <field name="logo" type="base64" file="general/static/src/img/logo.png"/> -->
         <field name="name">PT Mina Abadi Mekanika</field>
         <field name="street">Jl. H. Zainuddin No. 47 B, RT 05/RW 14, Gandaria Utara</field>
         <field name="street2">Kec. Kebayoran Baru</field>

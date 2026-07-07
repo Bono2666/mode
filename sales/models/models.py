@@ -553,6 +553,11 @@ class products(models.Model):
     product_unit = fields.Many2one(
         comodel_name='sales.product_unit', string='Product Unit')
     base_price = fields.Float(string="Sales Price", digits=(16, 0))
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', string='Currency',
+        default=lambda self: self.env['res.currency'].search(
+            [('name', '=', 'IDR')], limit=1)
+        or self.env.company.currency_id)
     price = fields.Float(string="Price", digits=(16, 0))
     tax_string = fields.Char(
         compute='_compute_tax_string', string='Tax Description')
@@ -3226,7 +3231,11 @@ class sales_payment(models.Model):
         ('posted', 'Posted'),
         ('cancel', 'Cancelled'),
     ], string="Status", default='draft', readonly=True)
-    currency = fields.Char(string="Currency", default='IDR')
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', string='Currency',
+        default=lambda self: self.env['res.currency'].search(
+            [('name', '=', 'IDR')], limit=1)
+        or self.env.company.currency_id)
     journal_item_ids = fields.One2many(
         'sales.payment.journal.item', 'payment_id', string='Journal Items')
 
@@ -3360,7 +3369,11 @@ class sales_register_payment_wizard(models.TransientModel):
     amount = fields.Float(string="Amount", digits=(16, 0), required=True)
     amount_due = fields.Float(
         string="Amount Due", digits=(16, 0), readonly=True)
-    currency = fields.Char(string="Currency", default='IDR', readonly=True)
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', string='Currency',
+        default=lambda self: self.env['res.currency'].search(
+            [('name', '=', 'IDR')], limit=1)
+        or self.env.company.currency_id)
 
     @api.model
     def default_get(self, fields_list):
@@ -3395,7 +3408,7 @@ class sales_register_payment_wizard(models.TransientModel):
             'payment_method': self.payment_method,
             'memo': self.memo,
             'amount': self.amount,
-            'currency': self.currency,
+            'currency_id': self.currency_id.id,
         })
         payment.action_post()
         return payment.action_view_payment()

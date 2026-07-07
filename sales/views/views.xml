@@ -105,6 +105,7 @@
                   </div>
                   <div name="product_lst_price" class="mt-1">
                       Price: <field name="base_price" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}"/>
+                      <field name="currency_id" invisible="1"/>
                   </div>
                   <div>
                       <field name="product_category"/>
@@ -560,6 +561,7 @@
                         <label for="base_price"/>
                         <div name="pricing" class="o_row">
                           <field name="base_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="not is_edit and id"/>
+                          <field name="currency_id" class="oe_inline" readonly="not is_edit and id"/>
                           <field name="tax_string" class="ms-2" readonly="1"/>
                         </div>
                         <field name="customer_tax" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
@@ -1385,7 +1387,7 @@
                 <field name="memo"/>
               </group>
               <group string="Amount">
-                <field name="currency" readonly="1"/>
+                <field name="currency_id"/>
                 <field name="amount_due" readonly="1" string="Amount Due"/>
                 <field name="amount" required="1"/>
               </group>
@@ -1454,7 +1456,7 @@
                 <field name="memo" readonly="state != 'draft'"/>
               </group>
               <group string="Amount">
-                <field name="currency" readonly="1"/>
+                <field name="currency_id"/>
                 <field name="amount" readonly="state != 'draft'"/>
               </group>
             </group>
