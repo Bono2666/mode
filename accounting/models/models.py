@@ -1134,6 +1134,109 @@ class purchases_bill_accounting(models.Model):
         }
 
 
+class purchases_payment_register_accounting(models.TransientModel):
+    _inherit = 'purchases.payment.register'
+
+    def _get_cash_bank_account(self):
+        """Return the cash/bank account used to pay vendor bills."""
+        account = self.env['accounting.account'].search(
+            [('code', '=', '100000')], limit=1)
+        if not account:
+            account = self.env['accounting.account'].search(
+                [('type_id.code', 'in', ['bank', 'cash'])], limit=1)
+        if not account:
+            raise UserError(_(
+                'No Cash/Bank account found. '
+                'Please configure Chart of Accounts.'
+            ))
+        return account
+
+    def _get_payable_account(self):
+        """Return the AP account used by vendor bill payments."""
+        account = self.env['accounting.account'].search(
+            [('code', '=', '220000')], limit=1)
+        if not account:
+            account = self.env['accounting.account'].search(
+                [('type_id.code', '=', 'payable')], limit=1)
+        if not account:
+            raise UserError(_(
+                'No Payable account found. '
+                'Please configure Chart of Accounts.'
+            ))
+        return account
+
+    def _get_payment_journal(self):
+        """Return an appropriate journal for vendor bill payment."""
+        journal = self.env['accounting.journal'].search(
+            [('type', '=', 'bank')], limit=1)
+        if not journal:
+            journal = self.env['accounting.journal'].search(
+                [('type', '=', 'cash')], limit=1)
+        if not journal:
+            journal = self.env['accounting.journal'].search(
+                [('type', '=', 'general')], limit=1)
+        if not journal:
+            raise UserError(_(
+                'No journal found. Please configure Bank, Cash, or General journal.'
+            ))
+        return journal
+
+    def _create_accounting_move(self):
+        """Create accounting journal entries for vendor bill payment.
+        Dr Accounts Payable, Cr Cash/Bank.
+        """
+        self.ensure_one()
+        bill = self.bill_id
+        journal = self._get_payment_journal()
+        payable_account = self._get_payable_account()
+        cash_bank_account = self._get_cash_bank_account()
+        partner = (
+            bill.vendor_id.partner_id
+            if bill.vendor_id and bill.vendor_id.partner_id
+            else False
+        )
+        label = self.memo or bill.bill_number
+
+        move = self.env['accounting.move'].create({
+            'ref': 'Vendor Payment: %s' % (bill.bill_number or ''),
+            'date': self.payment_date or fields.Date.today(),
+            'journal_id': journal.id,
+            'state': 'draft',
+            'line_ids': [
+                (0, 0, {
+                    'sequence': 1,
+                    'account_id': payable_account.id,
+                    'partner_id': partner.id if partner else False,
+                    'name': 'Vendor Payment: %s' % label,
+                    'debit': self.amount,
+                    'credit': 0.0,
+                    'date_maturity': self.payment_date,
+                }),
+                (0, 0, {
+                    'sequence': 2,
+                    'account_id': cash_bank_account.id,
+                    'partner_id': partner.id if partner else False,
+                    'name': 'Vendor Payment: %s' % label,
+                    'debit': 0.0,
+                    'credit': self.amount,
+                }),
+            ],
+        })
+        if move.is_balanced:
+            try:
+                move.action_post()
+            except UserError:
+                pass
+        return move
+
+    def action_confirm_payment(self):
+        result = super(purchases_payment_register_accounting,
+                       self).action_confirm_payment()
+        for wizard in self:
+            wizard._create_accounting_move()
+        return result
+
+
 # =============================================================================
 # GROUP E: WIZARD MODELS
 # =============================================================================

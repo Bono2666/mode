@@ -1958,7 +1958,12 @@ class receipt(models.Model):
                     ('menu_id.menu_id', '=', 'purchase_order'),
                     ('can_receive', '=', True),
                 ], limit=1)
-                if not receive_access:
+                inventory_receipt_access = auth_model.search([
+                    ('custom_user_id.user_id', '=', self.env.uid),
+                    ('menu_id.menu_id', '=', 'inventory_receipts'),
+                    ('can_confirm', '=', True),
+                ], limit=1)
+                if not receive_access and not inventory_receipt_access:
                     raise UserError(
                         _("You do not have access rights to receive products."))
             else:

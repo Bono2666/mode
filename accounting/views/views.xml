@@ -841,7 +841,7 @@
     <menuitem name="Aged Receivable" id="menu_aged_receivable_act" parent="menu_accounting_reports_parent" action="action_aged_receivable_wizard" sequence="3"/>
 
     <!-- Accounting config under main Configuration -->
-    <menuitem name="Accounting" id="menu_accounting_config_parent" parent="general.menu_master_menu" sequence="4"/>
+    <menuitem name="Accounting Configuration" id="menu_accounting_config_parent" parent="general.menu_master_menu" sequence="4"/>
     <menuitem name="Chart of Accounts" id="menu_chart_of_accounts_act" parent="menu_accounting_config_parent" action="action_chart_of_accounts" sequence="1"/>
     <menuitem name="Account Types" id="menu_account_types_act" parent="menu_accounting_config_parent" action="action_account_types" sequence="2"/>
     <menuitem name="Journals" id="menu_journals_act" parent="menu_accounting_config_parent" action="action_accounting_journals" sequence="3"/>

@@ -386,12 +386,13 @@ class Transfer(models.Model):
                 and any(line.quantity > 0 for line in record.line_ids)
             )
 
-    @api.model
     def _get_transfer_menu_code(self):
         """Resolve the correct menu code for access checks based on operation_type.
         Receipt and Delivery are filtered views of the same model but have
         separate menu entries in general.menu."""
         operation_type = self.env.context.get('default_operation_type')
+        if not operation_type and len(self) == 1:
+            operation_type = self.operation_type
         if operation_type == 'incoming':
             return 'inventory_receipts'
         elif operation_type == 'outgoing':
@@ -521,7 +522,9 @@ class Transfer(models.Model):
                 })
                 move.with_context(skip_inventory_access=True).action_done()
                 if transfer.operation_type == 'incoming' and line.purchase_order_line_id:
-                    line.purchase_order_line_id.write({
+                    line.purchase_order_line_id.with_context(
+                        skip_auto_inventory_receipt_transfer=True
+                    ).write({
                         'qty_received': line.purchase_order_line_id.qty_received + line.quantity
                     })
                 if transfer.operation_type == 'outgoing' and line.sales_order_line_id:

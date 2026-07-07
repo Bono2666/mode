@@ -11,7 +11,7 @@
         <!-- Configuration submenu -->
         <record id="menu_accounting_config" model="general.menu">
             <field name="menu_id">accounting_config</field>
-            <field name="menu_name">Accounting</field>
+            <field name="menu_name">Accounting Configuration</field>
             <field name="parent_menu">master_data</field>
             <field name="is_parent" eval="True"/>
         </record>

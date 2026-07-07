@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a collection of **Odoo 15.0** custom modules by Bonoworx that together form a complete ERP system covering Sales, Purchases, Inventory, Employee management, and a custom RBAC (Role-Based Access Control) system. Each directory is an independent Odoo module.
+This is a collection of **Odoo 17.0** custom modules by Bonoworx that together form a complete ERP system covering Sales, Purchases, Inventory, Employee management, and a custom RBAC (Role-Based Access Control) system. Each directory is an independent Odoo module.
 
 ## Module Dependency Order
 
@@ -16,6 +16,7 @@ employees         ←─  base, general, disable_autosave
 sales             ←─  base, general, employees, disable_autosave, mail
 purchases         ←─  base, general, sales, employees, disable_autosave, mail
 inventory         ←─  base, general, sales, purchases, disable_autosave
+accounting        ←─  base, general, disable_autosave, sales, purchases
 ```
 
 When making cross-module changes, respect this dependency chain. `general` is the foundation that all other modules depend on.
@@ -60,6 +61,7 @@ The entire application uses a custom permission layer built on top of Odoo's nat
 **Flow:** Quotations → (approval) → Sales Orders → Invoices + Deliveries
 
 Key models:
+
 - `sales.customer` — Customers synced to `res.partner`. Has ship-to addresses, payment terms, price conditions. Deletion cascades to partner.
 - `sales.products` — Products with stock tracking, sales/purchase flags, customer tax, reserved quantity computed from open SOs.
 - `sales.sales_order` — Dual role: Quotations (state: draft→wait_approval→approved→sent→sale) and Sales Orders (state: sale_draft→wait_approval→approved→sale). Uses `is_quotation` boolean to distinguish. Inherits `mail.thread` for activity tracking.
@@ -80,6 +82,7 @@ Key models:
 **Flow:** RFQs → (optional approval) → Purchase Orders → Bills + Receipts
 
 Key models:
+
 - `purchases.vendor` — Vendors synced to `res.partner` with `is_company=True` and `supplier_rank=1`.
 - `purchases.purchase_order` — Dual role: RFQs (state: draft→sent) and Purchase Orders (state: draft→purchase→wait_approval→approved). Uses `entry_menu_code` to track which menu the record was created from (`'rfq'` vs `'purchase_order'`). The `get_views()` method handles different permission checks for RFQ vs PO views. Inherits `mail.thread`.
 - `purchases.purchase_order_line` — Lines with tax, received quantity tracking, and `qty_to_receive` computed field. `init()` drops a stale FK constraint (migration cleanup).
@@ -93,6 +96,7 @@ Key models:
 ### Inventory Module (`inventory`)
 
 Key models:
+
 - `inventory.warehouse` — Physical warehouses with locations.
 - `inventory.location` — Stock locations with types (internal, supplier, customer, inventory adjustment, transit).
 - `inventory.stock_move` — Individual stock movements. `action_done()` applies stock changes to `sales.products.stock`. Tracks origin document/model for traceability.
@@ -120,16 +124,21 @@ Stub module — its model file is entirely commented out. The `security/ir.model
 ## Key Patterns
 
 ### Edit/Save Pattern
+
 Most models use an `is_edit` Boolean field + `action_edit()`/`action_save()` methods. Views conditionally render editable fields based on `is_edit`. `action_edit` sets it to True; `action_save` sets it to False and reloads the form.
 
 ### Sequence-Generated IDs
+
 All master/transaction records use `ir.sequence` for auto-generated codes (e.g., `sales.sales_code`, `purchases.po_code`, `inventory.move_number`). Sequences are defined in each module's `data/sequence.xml`.
 
 ### Partner Synchronization
+
 Both `sales.customer` and `purchases.vendor` create and sync records to `res.partner`. Changes to name, email, phone, address, image are propagated to the linked partner. Deletion cascades.
 
 ### Wizard Confirmation Pattern
+
 Approval actions (approve, reject, return, revise) follow an identical pattern: the model's `action_<name>()` method validates state and opens a `TransientModel` wizard; the wizard's `action_<name>_confirm()` calls back to the model's `action_<name>_final()` with context-carried data.
 
 ### Context-Based Permission Bypass
+
 System-generated records (inventory transfers created from SO/PO, receipt stock moves) use context keys like `skip_inventory_access`, `skip_auto_inventory_receipt_transfer`, `skip_purchase_order_create_auth_check` to bypass permission checks that would otherwise block automated operations.
