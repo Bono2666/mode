@@ -45,5 +45,64 @@
             <field name="padding">4</field>
             <field name="number_increment">1</field>
         </record>
+
+        <!-- Petty Cash Expense Sequence -->
+        <record id="seq_petty_cash_expense" model="ir.sequence">
+            <field name="name">Petty Cash Expense Sequence</field>
+            <field name="code">accounting.petty.cash.expense</field>
+            <field name="prefix">PCE</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+
+        <!-- Petty Cash Top Up Sequence -->
+        <record id="seq_petty_cash_topup" model="ir.sequence">
+            <field name="name">Petty Cash Top Up Sequence</field>
+            <field name="code">accounting.petty.cash.topup</field>
+            <field name="prefix">PCT</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+
+        <!-- Petty Cash Transfer Sequence -->
+        <record id="seq_petty_cash_transfer" model="ir.sequence">
+            <field name="name">Petty Cash Transfer Sequence</field>
+            <field name="code">accounting.petty.cash.transfer</field>
+            <field name="prefix">PCTR</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+
+        <!-- Petty Cash Settlement Sequence -->
+        <record id="seq_petty_cash_settlement" model="ir.sequence">
+            <field name="name">Petty Cash Settlement Sequence</field>
+            <field name="code">accounting.petty.cash.settlement</field>
+            <field name="prefix">PCS</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+
+        <!-- Default Petty Cash Fund -->
+        <record id="fund_main_office" model="accounting.petty.cash">
+            <field name="code">MAIN</field>
+            <field name="name">Main Office Cash</field>
+            <field name="journal_id" ref="journal_cash"/>
+            <field name="default_cash_account_id" ref="account_100500"/>
+            <field name="default_expense_account_id" ref="account_510000"/>
+        </record>
+
+        <!-- Default Expense Categories -->
+        <record id="category_office_supplies" model="accounting.petty.cash.category">
+            <field name="name">Office Supplies</field>
+            <field name="expense_account_id" ref="account_510000"/>
+        </record>
+        <record id="category_transportation" model="accounting.petty.cash.category">
+            <field name="name">Transportation</field>
+            <field name="expense_account_id" ref="account_510000"/>
+        </record>
+        <record id="category_meals" model="accounting.petty.cash.category">
+            <field name="name">Meals &amp; Entertainment</field>
+            <field name="expense_account_id" ref="account_510000"/>
+        </record>
     </data>
 </odoo>

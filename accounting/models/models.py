@@ -2301,3 +2301,836 @@ class sales_invoice_commission(models.Model):
             'domain': [('invoice_id', '=', self.id)],
             'target': 'current',
         }
+
+
+# =============================================================================
+# GROUP F: PETTY CASH MODELS
+# =============================================================================
+
+class accounting_petty_cash(models.Model):
+    """Petty Cash Fund — master data for each cash fund."""
+    _name = 'accounting.petty.cash'
+    _inherit = ['navigation.mixin']
+    _description = 'Petty Cash Fund'
+    _rec_name = 'name'
+    _order = 'code, id'
+    _menu_code = 'petty_cash_funds'
+
+    code = fields.Char(string='Code', required=True)
+    name = fields.Char(string='Name', required=True)
+    responsible_employee_id = fields.Many2one(
+        comodel_name='general.custom_users', string='Responsible Employee',
+        ondelete='set null', index=True)
+    journal_id = fields.Many2one(
+        comodel_name='accounting.journal', string='Journal',
+        ondelete='restrict', index=True, required=True,
+        domain=[('type', 'in', ['cash', 'bank', 'general'])])
+    default_expense_account_id = fields.Many2one(
+        comodel_name='accounting.account', string='Default Expense Account',
+        ondelete='set null', index=True,
+        domain=[('type_id.code', '=', 'expense')],
+        help='Fallback expense account when category has none.')
+    default_cash_account_id = fields.Many2one(
+        comodel_name='accounting.account', string='Petty Cash Account',
+        ondelete='restrict', index=True, required=True,
+        domain=[('type_id.code', 'in', ['cash', 'bank'])],
+        help='GL account that tracks this fund balance.')
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', string='Currency',
+        default=lambda self: self.env['res.currency'].search(
+            [('name', '=', 'IDR')], limit=1)
+        or self.env.company.currency_id)
+    current_balance = fields.Float(
+        string='Current Balance', compute='_compute_current_balance',
+        digits=(16, 0),
+        help='Actual GL balance of the cash account (posted entries only).')
+    active = fields.Boolean(string='Active', default=True)
+    is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    def _compute_current_balance(self):
+        """Query GL for posted balance of default_cash_account_id."""
+        for fund in self:
+            if not fund.default_cash_account_id:
+                fund.current_balance = 0.0
+                continue
+            self.env.cr.execute("""
+                SELECT COALESCE(SUM(ml.debit), 0.0)
+                     - COALESCE(SUM(ml.credit), 0.0)
+                FROM accounting_move_line ml
+                JOIN accounting_move m ON m.id = ml.move_id
+                WHERE ml.account_id = %s AND m.state = 'posted'
+            """, (fund.default_cash_account_id.id,))
+            result = self.env.cr.fetchone()
+            fund.current_balance = result[0] if result else 0.0
+
+    def action_refresh_balance(self):
+        self._compute_current_balance()
+
+    def action_view_expenses(self):
+        self.ensure_one()
+        return {
+            'name': _('Cash Expenses'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.petty.cash.expense',
+            'view_mode': 'tree,form',
+            'domain': [('fund_id', '=', self.id)],
+            'target': 'current',
+        }
+
+    def action_view_topups(self):
+        self.ensure_one()
+        return {
+            'name': _('Top Ups'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.petty.cash.topup',
+            'view_mode': 'tree,form',
+            'domain': [('fund_id', '=', self.id)],
+            'target': 'current',
+        }
+
+    def action_view_transfers(self):
+        self.ensure_one()
+        return {
+            'name': _('Transfers'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.petty.cash.transfer',
+            'view_mode': 'tree,form',
+            'domain': ['|',
+                       ('source_fund_id', '=', self.id),
+                       ('target_fund_id', '=', self.id)],
+            'target': 'current',
+        }
+
+    def action_view_settlements(self):
+        self.ensure_one()
+        return {
+            'name': _('Settlements'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.petty.cash.settlement',
+            'view_mode': 'tree,form',
+            'domain': [('fund_id', '=', self.id)],
+            'target': 'current',
+        }
+
+
+class accounting_petty_cash_category(models.Model):
+    """Expense category for petty cash expenses."""
+    _name = 'accounting.petty.cash.category'
+    _inherit = ['navigation.mixin']
+    _description = 'Petty Cash Expense Category'
+    _rec_name = 'name'
+    _order = 'name, id'
+    _menu_code = 'pc_categories'
+
+    name = fields.Char(string='Name', required=True)
+    expense_account_id = fields.Many2one(
+        comodel_name='accounting.account', string='Expense Account',
+        ondelete='restrict', index=True, required=True,
+        domain=[('type_id.code', '=', 'expense')],
+        help='GL expense account for this category.')
+    tax_id = fields.Many2one(
+        comodel_name='sales.taxes', string='Default Tax',
+        ondelete='set null',
+        help='Optional default tax for expenses in this category.')
+    active = fields.Boolean(string='Active', default=True)
+    is_edit = fields.Boolean(string='Is Edit', default=False)
+
+
+class accounting_petty_cash_expense(models.Model):
+    """Cash expense or reimbursement paid from petty cash."""
+    _name = 'accounting.petty.cash.expense'
+    _inherit = ['navigation.mixin']
+    _description = 'Petty Cash Expense'
+    _rec_name = 'name'
+    _order = 'date desc, id desc'
+    _menu_code = 'pc_expenses'
+
+    name = fields.Char(string='Reference', readonly=True, copy=False)
+    fund_id = fields.Many2one(
+        comodel_name='accounting.petty.cash', string='Petty Cash Fund',
+        ondelete='restrict', index=True, required=True)
+    date = fields.Date(
+        string='Date', default=fields.Date.today, required=True)
+    type = fields.Selection([
+        ('expense', 'Direct Expense'),
+        ('reimbursement', 'Reimbursement'),
+    ], string='Type', default='expense', required=True)
+    employee_id = fields.Many2one(
+        comodel_name='general.custom_users', string='Employee',
+        ondelete='set null', index=True,
+        help='Employee who made the expense or requests reimbursement.')
+    description = fields.Char(
+        string='Description', required=True,
+        help='Summary of the expense.')
+    line_ids = fields.One2many(
+        comodel_name='accounting.petty.cash.expense.line',
+        inverse_name='expense_id', string='Expense Lines', copy=True)
+    total_amount = fields.Float(
+        string='Total Amount', compute='_compute_total_amount',
+        store=True, digits=(16, 0))
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('approved', 'Approved'),
+        ('posted', 'Posted'),
+        ('cancelled', 'Cancelled'),
+    ], string='Status', default='draft', required=True, tracking=True)
+    move_id = fields.Many2one(
+        comodel_name='accounting.move', string='Journal Entry',
+        readonly=True, copy=False)
+    is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('name'):
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'accounting.petty.cash.expense') or '/'
+        return super(accounting_petty_cash_expense, self).create(vals_list)
+
+    @api.depends('line_ids.amount')
+    def _compute_total_amount(self):
+        for record in self:
+            record.total_amount = sum(
+                record.line_ids.mapped('amount') or [0.0])
+
+    def action_submit(self):
+        for record in self:
+            if record.state != 'draft':
+                raise UserError(_(
+                    'Only draft expenses can be submitted.'
+                ))
+            if not record.line_ids:
+                raise UserError(_(
+                    'Please add at least one expense line before submitting.'
+                ))
+            record.state = 'submitted'
+
+    def action_approve(self):
+        for record in self:
+            if record.state != 'submitted':
+                raise UserError(_(
+                    'Only submitted expenses can be approved.'
+                ))
+            record.state = 'approved'
+
+    def action_reject(self):
+        for record in self:
+            if record.state != 'submitted':
+                raise UserError(_(
+                    'Only submitted expenses can be rejected.'
+                ))
+            record.state = 'draft'
+
+    def action_post(self):
+        for record in self:
+            if record.state not in ('approved',):
+                raise UserError(_(
+                    'Only approved expenses can be posted.'
+                ))
+            record._create_accounting_move()
+            record.state = 'posted'
+
+    def action_cancel(self):
+        for record in self:
+            if record.state == 'draft':
+                record.state = 'cancelled'
+            elif record.state == 'posted':
+                if record.move_id and record.move_id.state == 'posted':
+                    record.move_id.action_cancel()
+                record.state = 'cancelled'
+            elif record.state in ('submitted', 'approved'):
+                record.state = 'cancelled'
+            else:
+                raise UserError(_(
+                    'Cannot cancel a %(state)s expense.',
+                    state=record.state,
+                ))
+
+    def action_reset_to_draft(self):
+        for record in self:
+            if record.state != 'cancelled':
+                raise UserError(_(
+                    'Only cancelled expenses can be reset to draft.'
+                ))
+            record.state = 'draft'
+
+    def action_view_move(self):
+        self.ensure_one()
+        if not self.move_id:
+            return
+        return {
+            'name': _('Journal Entry'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.move',
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'res_id': self.move_id.id,
+            'target': 'current',
+        }
+
+    def _get_expense_journal(self, fund):
+        """Resolve journal for expense entries."""
+        if fund and fund.journal_id:
+            return fund.journal_id
+        journal = self.env['accounting.journal'].search(
+            [('type', '=', 'cash')], limit=1)
+        if not journal:
+            journal = self.env['accounting.journal'].search(
+                [('type', '=', 'general')], limit=1)
+        if not journal:
+            raise UserError(_(
+                'No cash or general journal found. Please configure one.'
+            ))
+        return journal
+
+    def _get_expense_account(self, category, fund):
+        """Resolve expense account: category → fund default → code 510000 → expense type."""
+        if category and category.expense_account_id:
+            return category.expense_account_id
+        if fund and fund.default_expense_account_id:
+            return fund.default_expense_account_id
+        account = self.env['accounting.account'].search(
+            [('code', '=', '510000')], limit=1)
+        if not account:
+            account = self.env['accounting.account'].search(
+                [('type_id.code', '=', 'expense')], limit=1)
+        if not account:
+            raise UserError(_(
+                'No expense account found. Please configure Chart of Accounts.'
+            ))
+        return account
+
+    def _create_accounting_move(self):
+        self.ensure_one()
+        journal = self._get_expense_journal(self.fund_id)
+        cash_account = self.fund_id.default_cash_account_id
+        if not cash_account:
+            raise UserError(_(
+                'The petty cash fund "%(fund)s" has no cash account '
+                'configured.', fund=self.fund_id.name,
+            ))
+
+        lines = []
+        seq = 1
+        # One debit line per expense line
+        for eline in self.line_ids:
+            expense_account = self._get_expense_account(
+                eline.category_id, self.fund_id)
+            line_name = (
+                eline.description or eline.category_id.name or 'Expense')
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': expense_account.id,
+                'name': '%s: %s' % (self.name, line_name),
+                'debit': eline.amount,
+                'credit': 0.0,
+            }))
+            seq += 1
+
+        # One credit line for total from petty cash
+        lines.append((0, 0, {
+            'sequence': seq,
+            'account_id': cash_account.id,
+            'name': 'Petty Cash: %s' % self.name,
+            'debit': 0.0,
+            'credit': self.total_amount,
+        }))
+
+        type_label = 'Reimbursement' if self.type == 'reimbursement' else 'Expense'
+        move = self.env['accounting.move'].create({
+            'ref': 'Petty Cash %s: %s - %s' % (
+                type_label, self.name,
+                self.employee_id.name if self.employee_id else ''),
+            'date': self.date or fields.Date.today(),
+            'journal_id': journal.id,
+            'line_ids': lines,
+        })
+        if move.is_balanced:
+            move.action_post()
+        self.move_id = move.id
+
+    def unlink(self):
+        for record in self:
+            if record.state == 'posted':
+                raise UserError(_(
+                    'Cannot delete a posted expense. Cancel it first.'
+                ))
+        return super(accounting_petty_cash_expense, self).unlink()
+
+
+class accounting_petty_cash_expense_line(models.Model):
+    """Line item within a petty cash expense."""
+    _name = 'accounting.petty.cash.expense.line'
+    _description = 'Petty Cash Expense Line'
+    _order = 'sequence, id'
+
+    expense_id = fields.Many2one(
+        comodel_name='accounting.petty.cash.expense', string='Expense',
+        ondelete='cascade', index=True, required=True)
+    sequence = fields.Integer(string='Sequence', default=10)
+    category_id = fields.Many2one(
+        comodel_name='accounting.petty.cash.category', string='Category',
+        ondelete='restrict', index=True, required=True)
+    description = fields.Char(string='Description')
+    amount = fields.Float(
+        string='Amount', required=True, digits=(16, 0))
+    currency_id = fields.Many2one(
+        comodel_name='res.currency', string='Currency',
+        related='expense_id.fund_id.currency_id', store=False)
+
+
+class accounting_petty_cash_topup(models.Model):
+    """Top Up — transfer from bank to petty cash."""
+    _name = 'accounting.petty.cash.topup'
+    _inherit = ['navigation.mixin']
+    _description = 'Petty Cash Top Up'
+    _rec_name = 'name'
+    _order = 'date desc, id desc'
+    _menu_code = 'pc_topups'
+
+    name = fields.Char(string='Reference', readonly=True, copy=False)
+    fund_id = fields.Many2one(
+        comodel_name='accounting.petty.cash', string='Petty Cash Fund',
+        ondelete='restrict', index=True, required=True)
+    date = fields.Date(
+        string='Date', default=fields.Date.today, required=True)
+    source_account_id = fields.Many2one(
+        comodel_name='accounting.account', string='Source Account',
+        ondelete='restrict', index=True, required=True,
+        domain=[('type_id.code', 'in', ['bank', 'cash'])],
+        help='Bank or cash account the money comes from.')
+    amount = fields.Float(
+        string='Amount', required=True, digits=(16, 0))
+    reference = fields.Char(string='Reference')
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('approved', 'Approved'),
+        ('posted', 'Posted'),
+        ('cancelled', 'Cancelled'),
+    ], string='Status', default='draft', required=True)
+    move_id = fields.Many2one(
+        comodel_name='accounting.move', string='Journal Entry',
+        readonly=True, copy=False)
+    is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('name'):
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'accounting.petty.cash.topup') or '/'
+        return super(accounting_petty_cash_topup, self).create(vals_list)
+
+    def action_approve(self):
+        for record in self:
+            if record.state != 'draft':
+                raise UserError(_(
+                    'Only draft top ups can be approved.'
+                ))
+            record.state = 'approved'
+
+    def action_post(self):
+        for record in self:
+            if record.state not in ('approved',):
+                raise UserError(_(
+                    'Only approved top ups can be posted.'
+                ))
+            record._create_accounting_move()
+            record.state = 'posted'
+
+    def action_cancel(self):
+        for record in self:
+            if record.state == 'draft':
+                record.state = 'cancelled'
+            elif record.state == 'posted':
+                if record.move_id and record.move_id.state == 'posted':
+                    record.move_id.action_cancel()
+                record.state = 'cancelled'
+            elif record.state == 'approved':
+                record.state = 'cancelled'
+            else:
+                raise UserError(_(
+                    'Cannot cancel a %(state)s top up.', state=record.state,
+                ))
+
+    def action_view_move(self):
+        self.ensure_one()
+        if not self.move_id:
+            return
+        return {
+            'name': _('Journal Entry'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.move',
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'res_id': self.move_id.id,
+            'target': 'current',
+        }
+
+    def _create_accounting_move(self):
+        self.ensure_one()
+        if not self.fund_id.journal_id:
+            journal = self.env['accounting.journal'].search(
+                [('type', '=', 'cash')], limit=1)
+            if not journal:
+                journal = self.env['accounting.journal'].search(
+                    [('type', '=', 'general')], limit=1)
+            if not journal:
+                raise UserError(_(
+                    'No cash or general journal found.'
+                ))
+        else:
+            journal = self.fund_id.journal_id
+
+        cash_account = self.fund_id.default_cash_account_id
+        if not cash_account:
+            raise UserError(_(
+                'The petty cash fund "%(fund)s" has no cash account '
+                'configured.', fund=self.fund_id.name,
+            ))
+
+        lines = [
+            (0, 0, {
+                'account_id': cash_account.id,
+                'name': 'Top Up: %s' % self.name,
+                'debit': self.amount,
+                'credit': 0.0,
+            }),
+            (0, 0, {
+                'account_id': self.source_account_id.id,
+                'name': 'Top Up: %s' % self.name,
+                'debit': 0.0,
+                'credit': self.amount,
+            }),
+        ]
+
+        move = self.env['accounting.move'].create({
+            'ref': 'Petty Cash Top Up: %s (%s)' % (
+                self.name, self.fund_id.name),
+            'date': self.date or fields.Date.today(),
+            'journal_id': journal.id,
+            'line_ids': lines,
+        })
+        if move.is_balanced:
+            move.action_post()
+        self.move_id = move.id
+
+    def unlink(self):
+        for record in self:
+            if record.state == 'posted':
+                raise UserError(_(
+                    'Cannot delete a posted top up. Cancel it first.'
+                ))
+        return super(accounting_petty_cash_topup, self).unlink()
+
+
+class accounting_petty_cash_transfer(models.Model):
+    """Transfer between two petty cash funds."""
+    _name = 'accounting.petty.cash.transfer'
+    _inherit = ['navigation.mixin']
+    _description = 'Petty Cash Transfer'
+    _rec_name = 'name'
+    _order = 'date desc, id desc'
+    _menu_code = 'pc_transfers'
+
+    name = fields.Char(string='Reference', readonly=True, copy=False)
+    date = fields.Date(
+        string='Date', default=fields.Date.today, required=True)
+    source_fund_id = fields.Many2one(
+        comodel_name='accounting.petty.cash', string='Source Fund',
+        ondelete='restrict', index=True, required=True)
+    target_fund_id = fields.Many2one(
+        comodel_name='accounting.petty.cash', string='Target Fund',
+        ondelete='restrict', index=True, required=True)
+    amount = fields.Float(
+        string='Amount', required=True, digits=(16, 0))
+    reference = fields.Char(string='Reference')
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('posted', 'Posted'),
+        ('cancelled', 'Cancelled'),
+    ], string='Status', default='draft', required=True)
+    move_id = fields.Many2one(
+        comodel_name='accounting.move', string='Journal Entry',
+        readonly=True, copy=False)
+    is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('name'):
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'accounting.petty.cash.transfer') or '/'
+        return super(accounting_petty_cash_transfer, self).create(vals_list)
+
+    @api.constrains('source_fund_id', 'target_fund_id')
+    def _check_different_funds(self):
+        for record in self:
+            if (record.source_fund_id and record.target_fund_id and
+                    record.source_fund_id == record.target_fund_id):
+                raise UserError(_(
+                    'Source and target funds must be different.'
+                ))
+
+    def action_post(self):
+        for record in self:
+            if record.state != 'draft':
+                raise UserError(_(
+                    'Only draft transfers can be posted.'
+                ))
+            record._create_accounting_move()
+            record.state = 'posted'
+
+    def action_cancel(self):
+        for record in self:
+            if record.state == 'draft':
+                record.state = 'cancelled'
+            elif record.state == 'posted':
+                if record.move_id and record.move_id.state == 'posted':
+                    record.move_id.action_cancel()
+                record.state = 'cancelled'
+            else:
+                raise UserError(_(
+                    'Cannot cancel a %(state)s transfer.',
+                    state=record.state,
+                ))
+
+    def action_view_move(self):
+        self.ensure_one()
+        if not self.move_id:
+            return
+        return {
+            'name': _('Journal Entry'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.move',
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'res_id': self.move_id.id,
+            'target': 'current',
+        }
+
+    def _create_accounting_move(self):
+        self.ensure_one()
+        # Use source fund's journal, fall back to general
+        journal = self.source_fund_id.journal_id
+        if not journal:
+            journal = self.env['accounting.journal'].search(
+                [('type', '=', 'general')], limit=1)
+        if not journal:
+            raise UserError(_('No journal found.'))
+
+        source_cash = self.source_fund_id.default_cash_account_id
+        target_cash = self.target_fund_id.default_cash_account_id
+        if not source_cash:
+            raise UserError(_(
+                'Source fund "%(fund)s" has no cash account configured.',
+                fund=self.source_fund_id.name,
+            ))
+        if not target_cash:
+            raise UserError(_(
+                'Target fund "%(fund)s" has no cash account configured.',
+                fund=self.target_fund_id.name,
+            ))
+
+        lines = [
+            (0, 0, {
+                'account_id': target_cash.id,
+                'name': 'Transfer In: %s → %s (%s)' % (
+                    self.source_fund_id.name,
+                    self.target_fund_id.name,
+                    self.name,
+                ),
+                'debit': self.amount,
+                'credit': 0.0,
+            }),
+            (0, 0, {
+                'account_id': source_cash.id,
+                'name': 'Transfer Out: %s → %s (%s)' % (
+                    self.source_fund_id.name,
+                    self.target_fund_id.name,
+                    self.name,
+                ),
+                'debit': 0.0,
+                'credit': self.amount,
+            }),
+        ]
+
+        move = self.env['accounting.move'].create({
+            'ref': 'Petty Cash Transfer: %s → %s (%s)' % (
+                self.source_fund_id.name,
+                self.target_fund_id.name,
+                self.name,
+            ),
+            'date': self.date or fields.Date.today(),
+            'journal_id': journal.id,
+            'line_ids': lines,
+        })
+        if move.is_balanced:
+            move.action_post()
+        self.move_id = move.id
+
+    def unlink(self):
+        for record in self:
+            if record.state == 'posted':
+                raise UserError(_(
+                    'Cannot delete a posted transfer. Cancel it first.'
+                ))
+        return super(accounting_petty_cash_transfer, self).unlink()
+
+
+class accounting_petty_cash_settlement(models.Model):
+    """Settlement — employee returns remaining advance to petty cash."""
+    _name = 'accounting.petty.cash.settlement'
+    _inherit = ['navigation.mixin']
+    _description = 'Petty Cash Settlement'
+    _rec_name = 'name'
+    _order = 'date desc, id desc'
+    _menu_code = 'pc_settlements'
+
+    name = fields.Char(string='Reference', readonly=True, copy=False)
+    fund_id = fields.Many2one(
+        comodel_name='accounting.petty.cash', string='Petty Cash Fund',
+        ondelete='restrict', index=True, required=True)
+    date = fields.Date(
+        string='Date', default=fields.Date.today, required=True)
+    employee_id = fields.Many2one(
+        comodel_name='general.custom_users', string='Employee',
+        ondelete='restrict', index=True, required=True,
+        help='Employee returning the advance.')
+    advance_account_id = fields.Many2one(
+        comodel_name='accounting.account', string='Employee Advance Account',
+        ondelete='restrict', index=True, required=True,
+        domain=[('type_id.code', 'in', ['current_asset', 'receivable'])],
+        help='The advance/AR account to credit on settlement.')
+    amount = fields.Float(
+        string='Amount', required=True, digits=(16, 0),
+        help='Amount being returned to petty cash.')
+    reference = fields.Char(string='Reference')
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('verified', 'Verified'),
+        ('posted', 'Posted'),
+        ('cancelled', 'Cancelled'),
+    ], string='Status', default='draft', required=True)
+    move_id = fields.Many2one(
+        comodel_name='accounting.move', string='Journal Entry',
+        readonly=True, copy=False)
+    is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('name'):
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'accounting.petty.cash.settlement') or '/'
+        return super(accounting_petty_cash_settlement, self).create(vals_list)
+
+    def action_verify(self):
+        for record in self:
+            if record.state != 'draft':
+                raise UserError(_(
+                    'Only draft settlements can be verified.'
+                ))
+            record.state = 'verified'
+
+    def action_post(self):
+        for record in self:
+            if record.state not in ('verified',):
+                raise UserError(_(
+                    'Only verified settlements can be posted.'
+                ))
+            record._create_accounting_move()
+            record.state = 'posted'
+
+    def action_cancel(self):
+        for record in self:
+            if record.state == 'draft':
+                record.state = 'cancelled'
+            elif record.state == 'posted':
+                if record.move_id and record.move_id.state == 'posted':
+                    record.move_id.action_cancel()
+                record.state = 'cancelled'
+            elif record.state == 'verified':
+                record.state = 'cancelled'
+            else:
+                raise UserError(_(
+                    'Cannot cancel a %(state)s settlement.',
+                    state=record.state,
+                ))
+
+    def action_view_move(self):
+        self.ensure_one()
+        if not self.move_id:
+            return
+        return {
+            'name': _('Journal Entry'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.move',
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'res_id': self.move_id.id,
+            'target': 'current',
+        }
+
+    def _create_accounting_move(self):
+        self.ensure_one()
+        if not self.fund_id.journal_id:
+            journal = self.env['accounting.journal'].search(
+                [('type', '=', 'cash')], limit=1)
+            if not journal:
+                journal = self.env['accounting.journal'].search(
+                    [('type', '=', 'general')], limit=1)
+            if not journal:
+                raise UserError(_('No journal found.'))
+        else:
+            journal = self.fund_id.journal_id
+
+        cash_account = self.fund_id.default_cash_account_id
+        if not cash_account:
+            raise UserError(_(
+                'The petty cash fund "%(fund)s" has no cash account '
+                'configured.', fund=self.fund_id.name,
+            ))
+
+        lines = [
+            (0, 0, {
+                'account_id': cash_account.id,
+                'name': 'Settlement: %s - %s' % (
+                    self.name,
+                    self.employee_id.name if self.employee_id else '',
+                ),
+                'debit': self.amount,
+                'credit': 0.0,
+            }),
+            (0, 0, {
+                'account_id': self.advance_account_id.id,
+                'name': 'Settlement: %s - %s' % (
+                    self.name,
+                    self.employee_id.name if self.employee_id else '',
+                ),
+                'debit': 0.0,
+                'credit': self.amount,
+            }),
+        ]
+
+        move = self.env['accounting.move'].create({
+            'ref': 'Petty Cash Settlement: %s - %s' % (
+                self.name,
+                self.employee_id.name if self.employee_id else '',
+            ),
+            'date': self.date or fields.Date.today(),
+            'journal_id': journal.id,
+            'line_ids': lines,
+        })
+        if move.is_balanced:
+            move.action_post()
+        self.move_id = move.id
+
+    def unlink(self):
+        for record in self:
+            if record.state == 'posted':
+                raise UserError(_(
+                    'Cannot delete a posted settlement. Cancel it first.'
+                ))
+        return super(accounting_petty_cash_settlement, self).unlink()

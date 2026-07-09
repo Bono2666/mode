@@ -230,3 +230,15 @@ Model's `action_<name>()` validates state → opens `TransientModel` wizard → 
 
 ### Create/Write State Detection Pattern
 For auto-created records (delivery, receipt) that bypass action methods, use `create()` + `write()` to detect state transitions. Check `vals.get('state')` in write and check initial state in create. This handles both manual and programmatic paths.
+
+### Many2one Dropdown Defaults (no_open / no_create)
+All Many2one dropdown fields globally default to `no_open=True` and `no_create=True`. This is enforced by a JS patch in `general/static/src/js/many2one_defaults.js` that overrides `Many2OneField.prototype.setup()`.
+
+**Effect:** Users cannot open related records (external link button) or create new records ("Create and Edit...") from any dropdown field.
+
+**Opt-out per field** — explicitly set the option to `False` in the view XML:
+```xml
+<field name="partner_id" options="{'no_open': False, 'no_create': False}"/>
+```
+
+**When writing new views:** Do NOT add `options="{'no_open': True, 'no_create': True}"` on individual `<field>` tags — it's redundant noise. The global default already covers it. Only add `options` when you need to opt a specific field back in (set to `False`).

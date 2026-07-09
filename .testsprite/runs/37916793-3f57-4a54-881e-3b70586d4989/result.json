@@ -1,0 +1,18 @@
+{
+  "testId": "b3648ad5-8497-4145-8ca3-258b87ee5d46",
+  "status": "blocked",
+  "startedAt": "2026-07-09T14:06:20.218Z",
+  "finishedAt": "2026-07-09T14:19:18.822Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/64b824c8-b021-70fa-6cea-f70bdceb052e/1783606758535649//tmp/00ae7710-e59a-47df-a029-e9826f77b6c3/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_063b9337c868c2fb",
+  "runIdIfAvailable": "37916793-3f57-4a54-881e-3b70586d4989",
+  "codeVersion": "v1",
+  "targetUrl": "http://72.62.121.211:8069/",
+  "targetUrlSource": "run",
+  "failedStepIndex": 28,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED: Clicked button \"Save & Close\""
+}

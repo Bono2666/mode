@@ -37,7 +37,7 @@ General Master Table
 
     'assets': {
         'web.assets_backend': [
-            'general/static/src/js/navbar.xml',
+            'general/static/src/js/many2one_defaults.js',
         ],
     },
 

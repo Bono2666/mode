@@ -101,5 +101,19 @@
             <field name="type_id" ref="account_type_expense"/>
             <field name="reconcile" eval="False"/>
         </record>
+
+        <!-- Petty Cash & Employee Advances -->
+        <record id="account_100500" model="accounting.account">
+            <field name="code">100500</field>
+            <field name="name">Petty Cash - General</field>
+            <field name="type_id" ref="account_type_cash"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_120000" model="accounting.account">
+            <field name="code">120000</field>
+            <field name="name">Employee Advances</field>
+            <field name="type_id" ref="account_type_current_asset"/>
+            <field name="reconcile" eval="False"/>
+        </record>
     </data>
 </odoo>

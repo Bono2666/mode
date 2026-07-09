@@ -4,6 +4,32 @@ from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from odoo.http import request
 
+import lxml.etree as etree
+
+import ast
+
+
+def _inject_m2o_no_open_create(doc, model_name, env):
+    """Inject no_open=True and no_create=True into all Many2one <field> nodes."""
+    Model = env.get(model_name)
+    if Model is None:
+        return
+    field_defs = Model.fields_get()
+    for field_el in doc.iter('field'):
+        field_name = field_el.get('name')
+        if not field_name or field_name not in field_defs:
+            continue
+        if field_defs[field_name].get('type') != 'many2one':
+            continue
+        existing = field_el.get('options', '{}')
+        try:
+            opts = ast.literal_eval(existing)
+        except (ValueError, SyntaxError):
+            opts = {}
+        opts.setdefault('no_open', True)
+        opts.setdefault('no_create', True)
+        field_el.set('options', repr(opts))
+
 
 class NavigationMixin(models.AbstractModel):
     _name = 'navigation.mixin'
@@ -32,11 +58,20 @@ class NavigationMixin(models.AbstractModel):
             if not access or not access.can_create:
                 for view_type in ['list', 'form']:
                     if view_type in res['views']:
-                        import lxml.etree as etree
                         doc = etree.fromstring(res['views'][view_type]['arch'])
                         doc.set('create', '0')  # Paksa tombol New jadi hilang
                         res['views'][view_type]['arch'] = etree.tostring(
                             doc, encoding='unicode')
+
+        # Global: inject no_open/no_create on all Many2one fields
+        for view_type in ['form', 'list', 'tree', 'kanban', 'search']:
+            arch = res.get('views', {}).get(view_type, {}).get('arch')
+            if arch:
+                doc = etree.fromstring(arch)
+                _inject_m2o_no_open_create(doc, self._name, self.env)
+                res['views'][view_type]['arch'] = etree.tostring(
+                    doc, encoding='unicode')
+
         return res
 
     @api.depends_context('uid')

@@ -139,5 +139,50 @@
             <field name="menu_name">Commission Settlements</field>
             <field name="parent_menu">accounting_commissions</field>
         </record>
+
+        <!-- Petty Cash submenu under Accounting -->
+        <record id="menu_petty_cash_parent" model="general.menu">
+            <field name="menu_id">pc_parent</field>
+            <field name="menu_name">Petty Cash</field>
+            <field name="parent_menu">accounting</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <record id="menu_pc_expenses" model="general.menu">
+            <field name="menu_id">pc_expenses</field>
+            <field name="menu_name">Cash Expenses</field>
+            <field name="parent_menu">pc_parent</field>
+        </record>
+
+        <record id="menu_pc_topups" model="general.menu">
+            <field name="menu_id">pc_topups</field>
+            <field name="menu_name">Top Ups</field>
+            <field name="parent_menu">pc_parent</field>
+        </record>
+
+        <record id="menu_pc_transfers" model="general.menu">
+            <field name="menu_id">pc_transfers</field>
+            <field name="menu_name">Transfers</field>
+            <field name="parent_menu">pc_parent</field>
+        </record>
+
+        <record id="menu_pc_settlements" model="general.menu">
+            <field name="menu_id">pc_settlements</field>
+            <field name="menu_name">Settlements</field>
+            <field name="parent_menu">pc_parent</field>
+        </record>
+
+        <!-- Petty Cash Configuration -->
+        <record id="menu_petty_cash_funds" model="general.menu">
+            <field name="menu_id">petty_cash_funds</field>
+            <field name="menu_name">Petty Cash Funds</field>
+            <field name="parent_menu">accounting_config</field>
+        </record>
+
+        <record id="menu_pc_categories" model="general.menu">
+            <field name="menu_id">pc_categories</field>
+            <field name="menu_name">Expense Categories</field>
+            <field name="parent_menu">accounting_config</field>
+        </record>
     </data>
 </odoo>
