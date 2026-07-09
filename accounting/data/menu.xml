@@ -74,10 +74,10 @@
             <field name="parent_menu">accounting_banking</field>
         </record>
 
-        <!-- Reports submenu -->
-        <record id="menu_accounting_reports" model="general.menu">
-            <field name="menu_id">accounting_reports</field>
-            <field name="menu_name">Reporting</field>
+        <!-- Ledger submenu -->
+        <record id="menu_accounting_ledger" model="general.menu">
+            <field name="menu_id">accounting_ledger</field>
+            <field name="menu_name">Ledger</field>
             <field name="parent_menu">accounting</field>
             <field name="is_parent" eval="True"/>
         </record>
@@ -85,19 +85,59 @@
         <record id="menu_trial_balance" model="general.menu">
             <field name="menu_id">trial_balance</field>
             <field name="menu_name">Trial Balance</field>
-            <field name="parent_menu">accounting_reports</field>
+            <field name="parent_menu">accounting_ledger</field>
         </record>
 
         <record id="menu_general_ledger" model="general.menu">
             <field name="menu_id">general_ledger</field>
             <field name="menu_name">General Ledger</field>
-            <field name="parent_menu">accounting_reports</field>
+            <field name="parent_menu">accounting_ledger</field>
         </record>
 
         <record id="menu_aged_receivable" model="general.menu">
             <field name="menu_id">aged_receivable</field>
             <field name="menu_name">Aged Receivable</field>
+            <field name="parent_menu">accounting_ledger</field>
+        </record>
+
+        <!-- Reporting submenu -->
+        <record id="menu_accounting_reports" model="general.menu">
+            <field name="menu_id">accounting_reports</field>
+            <field name="menu_name">Reporting</field>
+            <field name="parent_menu">accounting</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <record id="menu_balance_sheet" model="general.menu">
+            <field name="menu_id">balance_sheet</field>
+            <field name="menu_name">Balance Sheet</field>
             <field name="parent_menu">accounting_reports</field>
+        </record>
+
+        <record id="menu_profit_loss" model="general.menu">
+            <field name="menu_id">profit_loss</field>
+            <field name="menu_name">Profit And Loss</field>
+            <field name="parent_menu">accounting_reports</field>
+        </record>
+
+        <!-- Commissions submenu -->
+        <record id="menu_accounting_commissions" model="general.menu">
+            <field name="menu_id">accounting_commissions</field>
+            <field name="menu_name">Commissions</field>
+            <field name="parent_menu">accounting</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <record id="menu_commission_plans" model="general.menu">
+            <field name="menu_id">commission_plans</field>
+            <field name="menu_name">Commission Plans</field>
+            <field name="parent_menu">accounting_commissions</field>
+        </record>
+
+        <record id="menu_commission_settlements" model="general.menu">
+            <field name="menu_id">commission_settlements</field>
+            <field name="menu_name">Commission Settlements</field>
+            <field name="parent_menu">accounting_commissions</field>
         </record>
     </data>
 </odoo>

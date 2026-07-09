@@ -149,7 +149,7 @@
                       <li t-if="record.contact_name.raw_value">
                           <field name="contact_name"/>
                       </li>
-                      <li t-if="record.city.raw_value or record.country_id.raw_value">
+                      <li t-if="record.city.raw_value or record.country.raw_value">
                           <t t-if="record.city.raw_value"><field name="city"/><t t-if="record.country.raw_value">, </t></t>
                           <t t-if="record.country.raw_value"><field name="country"/></t>
                       </li>
@@ -961,7 +961,7 @@
     </record>
 
     <!-- sales.product_category form view -->
-    <record id="sales.product_category_view_form" model="ir.ui.view">
+    <record id="product_category_view_form" model="ir.ui.view">
       <field name="name">sales.product_category.view.form</field>
       <field name="model">sales.product_category</field>
       <field name="arch" type="xml">
@@ -1509,7 +1509,10 @@
             <field name="previous_payment_count" invisible="1"/>
             <field name="user_can_invoicing" invisible="1"/>
             <button string="Back" name="action_open_sales_order" type="object"/>
-            <button string="Confirm" name="action_post" type="object" class="btn-primary" invisible="state != 'draft'"/>
+            <button string="Confirm" name="action_post" type="object" class="btn-primary" invisible="state != 'draft' or not user_can_invoicing"/>
+            <button string="Confirm"
+                    class="btn-primary opacity-50 pe-none"
+                    invisible="state != 'draft' or user_can_invoicing"/>
             <button string="Send by Email" name="action_send_invoice_by_email" type="object"
                     class="btn-primary"
                     invisible="state != 'posted'"/>

@@ -615,6 +615,7 @@ class auth(models.Model):
     can_invoicing = fields.Boolean(default=False)
     can_receive = fields.Boolean(default=False)
     can_billing = fields.Boolean(default=False)
+    can_commission = fields.Boolean(default=False)
 
     @api.model
     def create(self, vals):

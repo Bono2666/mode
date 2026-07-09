@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 import logging
 _logger = logging.getLogger(__name__)
 from datetime import timedelta
@@ -613,9 +613,15 @@ class sales_invoice_accounting(models.Model):
         for line in self.line_ids.sorted('sequence'):
             if not line.sub_total:
                 continue
+            # Resolve per-line account: product category > default revenue account
+            line_account = revenue_account
+            if line.product_id and line.product_id.product_category:
+                cat = line.product_id.product_category
+                if cat.income_account_id:
+                    line_account = cat.income_account_id
             lines.append((0, 0, {
                 'sequence': seq,
-                'account_id': revenue_account.id,
+                'account_id': line_account.id,
                 'partner_id': (
                     self.customer_id.partner_id.id
                     if self.customer_id and self.customer_id.partner_id
@@ -660,13 +666,76 @@ class sales_invoice_accounting(models.Model):
             }))
             seq += 1
 
+        # --- 3b. Commission lines ---
+        if self.sales_name:
+            plans = self.env['accounting.commission.plan'].sudo().search([
+                ('active', '=', True),
+            ], limit=1)
+            if plans:
+                plan = plans
+                base_amount = self.amount_untaxed if plan.based_on == 'untaxed' else self.amount_total
+                rate = plan.rate
+                commission_amount = (base_amount * rate / 100.0) if plan.type == 'percentage' else rate
+
+                if commission_amount > 0:
+                    expense_account = plan.expense_account_id
+                    if not expense_account:
+                        expense_account = self.env['accounting.account'].sudo().search(
+                            [('code', '=', '510000')], limit=1)
+                    if not expense_account:
+                        expense_account = self.env['accounting.account'].sudo().search(
+                            [('type_id.code', '=', 'expense')], limit=1)
+
+                    payable_account = plan.payable_account_id
+                    if not payable_account:
+                        payable_account = self.env['accounting.account'].sudo().search(
+                            [('code', '=', '220000')], limit=1)
+                    if not payable_account:
+                        payable_account = self.env['accounting.account'].sudo().search(
+                            [('type_id.code', '=', 'payable')], limit=1)
+                    if not payable_account:
+                        payable_account = self.env['accounting.account'].sudo().search(
+                            [('type_id.code', '=', 'liability')], limit=1)
+
+                    if expense_account:
+                        lines.append((0, 0, {
+                            'sequence': seq,
+                            'account_id': expense_account.id,
+                            'name': 'Commission: %s (%s%%)' % (self.sales_name.name, rate),
+                            'debit': commission_amount,
+                            'credit': 0.0,
+                        }))
+                        seq += 1
+
+                    if payable_account:
+                        lines.append((0, 0, {
+                            'sequence': seq,
+                            'account_id': payable_account.id,
+                            'name': 'Commission Payable: %s' % self.sales_name.name,
+                            'debit': 0.0,
+                            'credit': commission_amount,
+                            'partner_id': self.sales_name.user_id.partner_id.id if self.sales_name.user_id and self.sales_name.user_id.partner_id else False,
+                        }))
+                        seq += 1
+
+                    # Auto-create and post settlement
+                    settlement = self.env['accounting.commission.settlement'].sudo().create({
+                        'invoice_id': self.id,
+                        'salesperson_id': self.sales_name.id,
+                        'plan_id': plan.id,
+                        'date': fields.Date.today(),
+                        'base_amount': base_amount,
+                        'rate': rate,
+                        'commission_amount': commission_amount,
+                    })
+
         # --- 4. Create the accounting move ---
         if not lines:
             return
 
         move = self.env['accounting.move'].create({
             'ref': '%s: %s' % (self.invoice_number,
-                               self.customer_id.name if self.customer_id else ''),
+                               self.customer_id.customer_name if self.customer_id else ''),
             'date': self.invoice_date or fields.Date.today(),
             'journal_id': journal.id,
             'state': 'draft',
@@ -678,6 +747,15 @@ class sales_invoice_accounting(models.Model):
                 move.action_post()
             except UserError:
                 pass
+        # Link commission settlement to this move and auto-post
+        self.env['accounting.commission.settlement'].sudo().search([
+            ('invoice_id', '=', self.id),
+            ('state', '=', 'draft'),
+        ]).write({
+            'move_id': move.id,
+            'state': 'posted',
+        })
+
         self.accounting_move_id = move.id
         return move
 
@@ -774,8 +852,21 @@ class sales_invoice_accounting(models.Model):
                 move.action_post()
             except UserError:
                 pass
+        # Link commission settlement to this move and auto-post
+        self.env['accounting.commission.settlement'].sudo().search([
+            ('invoice_id', '=', self.id),
+            ('state', '=', 'draft'),
+        ]).write({
+            'move_id': move.id,
+            'state': 'posted',
+        })
+
         self.accounting_move_id = move.id
         return move
+
+    def _get_extra_move_lines(self):
+        """Hook for subclasses to inject additional journal lines (e.g. commission)."""
+        return []
 
     def action_view_accounting_move(self):
         self.ensure_one()
@@ -1034,9 +1125,15 @@ class purchases_bill_accounting(models.Model):
             if not line.total:
                 continue
             total_expense += line.sub_total
+            # Resolve per-line account: product category > default expense account
+            line_account = expense_account
+            if line.product_id and line.product_id.product_category:
+                cat = line.product_id.product_category
+                if cat.expense_account_id:
+                    line_account = cat.expense_account_id
             lines.append((0, 0, {
                 'sequence': seq,
-                'account_id': expense_account.id,
+                'account_id': line_account.id,
                 'partner_id': partner.id if partner else False,
                 'name': line.description or 'Bill Line',
                 'debit': line.sub_total,
@@ -1500,3 +1597,707 @@ class accounting_aged_receivable_report(models.Model):
                 ORDER BY rp.name
             )
         """ % (self._table,))
+
+
+class accounting_balance_sheet_wizard(models.TransientModel):
+    _name = 'accounting.balance.sheet.wizard'
+    _description = 'Balance Sheet Wizard'
+
+    date_as_of = fields.Date(
+        string='As Of Date', required=True,
+        default=fields.Date.today)
+    target_move = fields.Selection([
+        ('posted', 'Posted Entries'),
+        ('all', 'All Entries'),
+    ], string='Target Moves', default='posted', required=True)
+
+    def action_generate(self):
+        self.ensure_one()
+        report_data = self.env['accounting.balance.sheet.report'].search([])
+        report = self.env.ref(
+            'accounting.action_report_balance_sheet')
+        return report.with_context(
+            date_as_of=self.date_as_of,
+        ).report_action(report_data)
+
+
+class accounting_balance_sheet_report(models.Model):
+    _name = 'accounting.balance.sheet.report'
+    _description = 'Balance Sheet Report'
+    _auto = False
+    _rec_name = 'account_name'
+    _order = 'category_order, subcategory_order, account_code'
+
+    account_id = fields.Many2one('accounting.account', readonly=True)
+    account_code = fields.Char(readonly=True)
+    account_name = fields.Char(readonly=True)
+    type_name = fields.Char(readonly=True)
+    category = fields.Char(readonly=True)
+    category_order = fields.Integer(readonly=True)
+    subcategory = fields.Char(readonly=True)
+    subcategory_order = fields.Integer(readonly=True)
+    balance = fields.Float(readonly=True, digits=(16, 0))
+
+    def init(self):
+        self.env.cr.execute(
+            "DROP VIEW IF EXISTS %s CASCADE" % (self._table,))
+        self.env.cr.execute("""
+            CREATE OR REPLACE VIEW %s AS (
+                WITH net_income AS (
+                    SELECT
+                        COALESCE(SUM(CASE WHEN at2.code = 'income'
+                                          THEN ml2.credit - ml2.debit
+                                          ELSE 0.0 END), 0.0)
+                        - COALESCE(SUM(CASE WHEN at2.code = 'expense'
+                                            THEN ml2.debit - ml2.credit
+                                            ELSE 0.0 END), 0.0)
+                        AS amount
+                    FROM accounting_move_line ml2
+                    JOIN accounting_account a2 ON a2.id = ml2.account_id
+                    JOIN accounting_account_type at2 ON at2.id = a2.type_id
+                    JOIN accounting_move m2 ON m2.id = ml2.move_id
+                    WHERE m2.state = 'posted'
+                      AND at2.code IN ('income', 'expense')
+                )
+                SELECT
+                    ROW_NUMBER() OVER (ORDER BY
+                        CASE WHEN at.code IN ('bank','cash','current_asset',
+                                               'prepayment','receivable') THEN 1
+                             WHEN at.code = 'fixed_asset' THEN 1
+                             WHEN at.code IN ('payable','liability','tax') THEN 2
+                             ELSE 3 END,
+                        CASE WHEN at.code IN ('bank','cash','current_asset',
+                                               'prepayment','receivable') THEN 1
+                             WHEN at.code = 'fixed_asset' THEN 2
+                             ELSE 0 END,
+                        a.code) AS id,
+                    a.id AS account_id,
+                    a.code AS account_code,
+                    CASE WHEN a.code = '310000'
+                         THEN 'Retained Earnings (incl. Net Profit)'
+                         ELSE a.name
+                    END AS account_name,
+                    at.name AS type_name,
+                    CASE WHEN at.code IN ('bank','cash','current_asset','fixed_asset',
+                                           'prepayment','receivable') THEN 'Assets'
+                         WHEN at.code IN ('payable','liability','tax') THEN 'Liabilities'
+                         ELSE 'Equity' END AS category,
+                    CASE WHEN at.code IN ('bank','cash','current_asset','fixed_asset',
+                                           'prepayment','receivable') THEN 1
+                         WHEN at.code IN ('payable','liability','tax') THEN 2
+                         ELSE 3 END AS category_order,
+                    CASE WHEN at.code IN ('bank','cash','current_asset',
+                                           'prepayment','receivable') THEN 'Current Asset'
+                         WHEN at.code = 'fixed_asset' THEN 'Fixed Asset'
+                         ELSE '' END AS subcategory,
+                    CASE WHEN at.code IN ('bank','cash','current_asset',
+                                           'prepayment','receivable') THEN 1
+                         WHEN at.code = 'fixed_asset' THEN 2
+                         ELSE 0 END AS subcategory_order,
+                    CASE WHEN at.code IN ('bank','cash','current_asset','fixed_asset',
+                                           'prepayment','receivable')
+                         THEN COALESCE(ml_agg.total_debit, 0.0)
+                              - COALESCE(ml_agg.total_credit, 0.0)
+                         WHEN a.code = '310000'
+                         THEN COALESCE(ml_agg.total_credit, 0.0)
+                              - COALESCE(ml_agg.total_debit, 0.0)
+                              + COALESCE(ni.amount, 0.0)
+                         ELSE COALESCE(ml_agg.total_credit, 0.0)
+                              - COALESCE(ml_agg.total_debit, 0.0)
+                    END AS balance
+                FROM accounting_account a
+                JOIN accounting_account_type at ON at.id = a.type_id
+                CROSS JOIN net_income ni
+                LEFT JOIN (
+                    SELECT ml.account_id,
+                           SUM(ml.debit) AS total_debit,
+                           SUM(ml.credit) AS total_credit
+                    FROM accounting_move_line ml
+                    JOIN accounting_move m ON m.id = ml.move_id
+                    WHERE m.state = 'posted'
+                    GROUP BY ml.account_id
+                ) ml_agg ON ml_agg.account_id = a.id
+                WHERE a.active = TRUE
+                  AND at.code IN ('bank','cash','current_asset','fixed_asset',
+                                   'prepayment','receivable','payable','liability','tax','equity')
+                ORDER BY category_order, subcategory_order, a.code
+            )
+        """ % (self._table,))
+
+
+class accounting_profit_loss_wizard(models.TransientModel):
+    _name = 'accounting.profit.loss.wizard'
+    _description = 'Profit And Loss Wizard'
+
+    date_from = fields.Date(
+        string='Start Date', required=True,
+        default=lambda self: fields.Date.today().replace(day=1))
+    date_to = fields.Date(
+        string='End Date', required=True,
+        default=fields.Date.today)
+    target_move = fields.Selection([
+        ('posted', 'Posted Entries'),
+        ('all', 'All Entries'),
+    ], string='Target Moves', default='posted', required=True)
+
+    def action_generate(self):
+        self.ensure_one()
+        report_data = self.env['accounting.profit.loss.report'].search([])
+        report = self.env.ref(
+            'accounting.action_report_profit_loss')
+        return report.with_context(
+            date_from=self.date_from,
+            date_to=self.date_to,
+        ).report_action(report_data)
+
+
+class accounting_profit_loss_report(models.Model):
+    _name = 'accounting.profit.loss.report'
+    _description = 'Profit And Loss Report'
+    _auto = False
+    _rec_name = 'account_name'
+    _order = 'category_order, account_code'
+
+    account_id = fields.Many2one('accounting.account', readonly=True)
+    account_code = fields.Char(readonly=True)
+    account_name = fields.Char(readonly=True)
+    type_name = fields.Char(readonly=True)
+    category = fields.Char(readonly=True)
+    category_order = fields.Integer(readonly=True)
+    balance = fields.Float(readonly=True, digits=(16, 0))
+
+    def init(self):
+        self.env.cr.execute(
+            "DROP VIEW IF EXISTS %s CASCADE" % (self._table,))
+        self.env.cr.execute("""
+            CREATE OR REPLACE VIEW %s AS (
+                SELECT
+                    ROW_NUMBER() OVER (ORDER BY
+                        CASE WHEN at.code = 'income' THEN 1 ELSE 2 END,
+                        a.code) AS id,
+                    a.id AS account_id,
+                    a.code AS account_code,
+                    a.name AS account_name,
+                    at.name AS type_name,
+                    CASE WHEN at.code = 'income' THEN 'Revenue' ELSE 'Expenses' END AS category,
+                    CASE WHEN at.code = 'income' THEN 1 ELSE 2 END AS category_order,
+                    CASE WHEN at.code = 'income'
+                         THEN COALESCE(ml_agg.total_credit, 0.0)
+                              - COALESCE(ml_agg.total_debit, 0.0)
+                         ELSE COALESCE(ml_agg.total_debit, 0.0)
+                              - COALESCE(ml_agg.total_credit, 0.0)
+                    END AS balance
+                FROM accounting_account a
+                JOIN accounting_account_type at ON at.id = a.type_id
+                LEFT JOIN (
+                    SELECT ml.account_id,
+                           SUM(ml.debit) AS total_debit,
+                           SUM(ml.credit) AS total_credit
+                    FROM accounting_move_line ml
+                    JOIN accounting_move m ON m.id = ml.move_id
+                    WHERE m.state = 'posted'
+                    GROUP BY ml.account_id
+                ) ml_agg ON ml_agg.account_id = a.id
+                WHERE a.active = TRUE
+                  AND at.code IN ('income', 'expense')
+                ORDER BY category_order, a.code
+            )
+        """ % (self._table,))
+
+
+# ===================================================================
+# COMMISSION PLANS
+# ===================================================================
+
+
+class accounting_commission_plan(models.Model):
+    _name = 'accounting.commission.plan'
+    _inherit = ['navigation.mixin']
+    _description = 'Commission Plan'
+    _rec_name = 'name'
+    _menu_code = 'commission_plans'
+
+    name = fields.Char(string='Plan Name', required=True)
+    code = fields.Char(string='Code', readonly=True, copy=False)
+    type = fields.Selection([
+        ('percentage', 'Percentage'),
+        ('fixed', 'Fixed Amount'),
+    ], string='Type', default='percentage', required=True)
+    rate = fields.Float(string='Rate (%) / Amount', required=True, digits=(16, 2))
+    based_on = fields.Selection([
+        ('untaxed', 'Untaxed Amount'),
+        ('total', 'Total Amount'),
+    ], string='Based On', default='untaxed', required=True)
+    journal_id = fields.Many2one(
+        'accounting.journal', string='Journal',
+        domain=[('type', '=', 'general')],
+        help='Journal used for commission entries.')
+    expense_account_id = fields.Many2one(
+        'accounting.account', string='Expense Account',
+        domain=[('type_id.code', '=', 'expense')])
+    payable_account_id = fields.Many2one(
+        'accounting.account', string='Payable Account',
+        domain=[('type_id.code', 'in', ['payable', 'liability'])])
+    active = fields.Boolean(default=True)
+    is_edit = fields.Boolean(default=False)
+
+    @api.model
+    def create(self, vals):
+        if not vals.get('code'):
+            vals['code'] = self.env['ir.sequence'].next_by_code(
+                'accounting.commission.plan') or '/'
+        return super(accounting_commission_plan, self).create(vals)
+
+
+class accounting_commission_settlement(models.Model):
+    _name = 'accounting.commission.settlement'
+    _inherit = ['navigation.mixin']
+    _description = 'Commission Settlement'
+    _rec_name = 'name'
+    _menu_code = 'commission_settlements'
+
+    name = fields.Char(string='Reference', readonly=True, copy=False)
+    invoice_id = fields.Many2one(
+        'sales.invoice', string='Invoice', readonly=True, ondelete='restrict')
+    salesperson_id = fields.Many2one(
+        'general.custom_users', string='Salesperson', readonly=True)
+    plan_id = fields.Many2one(
+        'accounting.commission.plan', string='Commission Plan', readonly=True)
+    date = fields.Date(string='Date', default=fields.Date.today, readonly=True)
+    base_amount = fields.Float(string='Base Amount', digits=(16, 0), readonly=True)
+    rate = fields.Float(string='Rate (%)', digits=(16, 2), readonly=True)
+    commission_amount = fields.Float(
+        string='Commission Amount', digits=(16, 0), readonly=True)
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('posted', 'Posted'),
+        ('cancel', 'Cancelled'),
+    ], string='Status', default='draft')
+    move_id = fields.Many2one(
+        'accounting.move', string='Journal Entry', readonly=True, copy=False)
+    is_edit = fields.Boolean(default=False)
+
+    @api.model
+    def create(self, vals):
+        if not vals.get('name'):
+            vals['name'] = self.env['ir.sequence'].next_by_code(
+                'accounting.commission.settlement') or '/'
+        return super(accounting_commission_settlement, self).create(vals)
+
+    def action_post(self):
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_('Only draft settlements can be posted.'))
+        self._create_accounting_move()
+        self.write({'state': 'posted'})
+
+    def action_cancel(self):
+        self.ensure_one()
+        if self.state == 'draft':
+            self.write({'state': 'cancel'})
+        elif self.state == 'posted':
+            if self.move_id and self.move_id.state == 'posted':
+                self.move_id.action_cancel()
+            self.write({'state': 'cancel'})
+
+    def _create_accounting_move(self):
+        self.ensure_one()
+        if not self.plan_id.journal_id:
+            journal = self.env['accounting.journal'].search(
+                [('type', '=', 'general')], limit=1)
+            if not journal:
+                raise UserError(
+                    _('No general journal found. Please configure one.'))
+        else:
+            journal = self.plan_id.journal_id
+
+        expense_account = self.plan_id.expense_account_id
+        if not expense_account:
+            expense_account = self.env['accounting.account'].search(
+                [('code', '=', '510000')], limit=1)
+        if not expense_account:
+            expense_account = self.env['accounting.account'].search(
+                [('type_id.code', '=', 'expense')], limit=1)
+        if not expense_account:
+            raise UserError(
+                _('No expense account found for commission.'))
+
+        payable_account = self.plan_id.payable_account_id
+        if not payable_account:
+            payable_account = self.env['accounting.account'].search(
+                [('code', '=', '220000')], limit=1)
+        if not payable_account:
+            payable_account = self.env['accounting.account'].search(
+                [('type_id.code', '=', 'payable')], limit=1)
+        if not payable_account:
+            payable_account = self.env['accounting.account'].search(
+                [('type_id.code', '=', 'liability')], limit=1)
+        if not payable_account:
+            raise UserError(
+                _('No payable account found for commission.'))
+
+        move_lines = [
+            (0, 0, {
+                'account_id': expense_account.id,
+                'name': 'Commission: %s' % self.name,
+                'debit': self.commission_amount,
+                'credit': 0.0,
+                'partner_id': self.invoice_id.customer_id.partner_id.id if self.invoice_id.customer_id and self.invoice_id.customer_id.partner_id else False,
+            }),
+            (0, 0, {
+                'account_id': payable_account.id,
+                'name': 'Commission Payable: %s' % self.name,
+                'debit': 0.0,
+                'credit': self.commission_amount,
+                'partner_id': self.salesperson_id.partner_id.id if self.salesperson_id.partner_id else False,
+            }),
+        ]
+
+        move = self.env['accounting.move'].create({
+            'ref': 'Commission: %s - %s' % (self.name, self.salesperson_id.name if self.salesperson_id else ''),
+            'date': self.date or fields.Date.today(),
+            'journal_id': journal.id,
+            'line_ids': move_lines,
+        })
+        move.action_post()
+        self.write({'move_id': move.id})
+
+    def action_view_move(self):
+        self.ensure_one()
+        return {
+            'name': _('Journal Entry'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.move',
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'res_id': self.move_id.id,
+            'target': 'current',
+        }
+
+
+class sales_delivery_accounting(models.Model):
+    _inherit = 'sales.delivery'
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        deliveries = super(sales_delivery_accounting, self).create(vals_list)
+        for delivery in deliveries:
+            if delivery.state == 'done':
+                delivery._create_cogs_accounting_move()
+        return deliveries
+
+    def write(self, vals):
+        previous_states = {d.id: d.state for d in self}
+        result = super(sales_delivery_accounting, self).write(vals)
+        if vals.get('state') == 'done':
+            for delivery in self:
+                if previous_states.get(delivery.id) != 'done':
+                    delivery._create_cogs_accounting_move()
+        return result
+
+    def _create_cogs_accounting_move(self):
+        self.ensure_one()
+        journal = self.env['accounting.journal'].search(
+            [('type', '=', 'general')], limit=1)
+        if not journal:
+            return
+
+        lines = []
+        seq = 1
+        for dline in self.line_ids:
+            if not dline.product_id or not dline.product_id.product_category:
+                continue
+            cat = dline.product_id.product_category
+            if not cat.expense_account_id or not cat.stock_account_id:
+                continue
+            cogs_amount = (dline.quantity or 0) * dline.product_id.price
+            if cogs_amount <= 0:
+                continue
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': cat.expense_account_id.id,
+                'name': 'COGS: %s' % (dline.description or 'Delivery Line'),
+                'debit': cogs_amount,
+                'credit': 0.0,
+            }))
+            seq += 1
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': cat.stock_account_id.id,
+                'name': 'COGS: %s' % (dline.description or 'Delivery Line'),
+                'debit': 0.0,
+                'credit': cogs_amount,
+            }))
+            seq += 1
+
+        if not lines:
+            return
+
+        move = self.env['accounting.move'].create({
+            'ref': 'COGS: %s' % self.delivery_number,
+            'date': self.delivery_date or fields.Date.today(),
+            'journal_id': journal.id,
+            'line_ids': lines,
+        })
+        if move.is_balanced:
+            try:
+                move.action_post()
+            except UserError:
+                pass
+
+
+class purchases_receipt_accounting(models.Model):
+    _inherit = 'purchases.receipt'
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        receipts = super(purchases_receipt_accounting, self).create(vals_list)
+        for receipt in receipts:
+            if receipt.state == 'received':
+                receipt._create_receipt_accounting_move()
+        return receipts
+
+    def write(self, vals):
+        previous_states = {r.id: r.state for r in self}
+        result = super(purchases_receipt_accounting, self).write(vals)
+        if vals.get('state') == 'received':
+            for receipt in self:
+                if previous_states.get(receipt.id) != 'received':
+                    receipt._create_receipt_accounting_move()
+        return result
+
+    def _create_receipt_accounting_move(self):
+        self.ensure_one()
+        journal = self.env['accounting.journal'].search(
+            [('type', '=', 'purchase')], limit=1)
+        if not journal:
+            journal = self.env['accounting.journal'].search(
+                [('type', '=', 'general')], limit=1)
+        if not journal:
+            raise UserError(_(
+                'No purchase or general journal found. '
+                'Please configure a journal first.'
+            ))
+
+        interim_account = self.env['accounting.account'].search(
+            [('code', '=', '113200')], limit=1)
+        if not interim_account:
+            raise UserError(_(
+                'Account 113200 (Stock Interim Received) not found. '
+                'Please add it to the Chart of Accounts.'
+            ))
+
+        lines = []
+        seq = 1
+        for rline in self.line_ids:
+            if not rline.product_id or not rline.product_id.product_category:
+                continue
+            cat = rline.product_id.product_category
+            if not cat.stock_account_id:
+                continue
+            amount = (rline.quantity or 0) * rline.product_id.price
+            if amount <= 0:
+                continue
+            # Dr Stock Account
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': cat.stock_account_id.id,
+                'name': 'Goods Received: %s' % (rline.description or 'Receipt Line'),
+                'debit': amount,
+                'credit': 0.0,
+            }))
+            seq += 1
+            # Cr Stock Interim Received
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': interim_account.id,
+                'name': 'Goods Received: %s' % (rline.description or 'Receipt Line'),
+                'debit': 0.0,
+                'credit': amount,
+            }))
+            seq += 1
+
+        if not lines:
+            return
+
+        move = self.env['accounting.move'].create({
+            'ref': 'Receipt: %s' % self.receipt_number,
+            'date': self.receipt_date or fields.Date.today(),
+            'journal_id': journal.id,
+            'line_ids': lines,
+        })
+        if move.is_balanced:
+            try:
+                move.action_post()
+            except UserError:
+                pass
+
+
+class purchases_bill_accounting_interim(models.Model):
+    _inherit = 'purchases.bill'
+
+    def _create_accounting_move(self):
+        """Override: use Stock Interim Received instead of Expense for purchase bills.
+        Dr Stock Interim Received / Cr Accounts Payable."""
+        self.ensure_one()
+        journal = self._get_purchase_journal()
+        payable_account = self._get_payable_account()
+
+        interim_account = self.env['accounting.account'].search(
+            [('code', '=', '113200')], limit=1)
+
+        lines = []
+        seq = 1
+        total_debit = 0.0
+        total_tax = 0.0
+
+        vendor = self.vendor_id
+        partner = vendor.partner_id if vendor and vendor.partner_id else False
+
+        # --- 1. Interim Received lines (debit) ---
+        for line in self.line_ids.sorted('id'):
+            if not line.total:
+                continue
+            total_debit += line.sub_total
+            line_account = interim_account if interim_account else self._get_expense_account()
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': line_account.id,
+                'partner_id': partner.id if partner else False,
+                'name': line.description or 'Bill Line',
+                'debit': line.sub_total,
+                'credit': 0.0,
+            }))
+            seq += 1
+
+        # --- 2. Tax lines (debit) ---
+        grouped_taxes = {}
+        for line in self.line_ids:
+            if not line.tax_amount:
+                continue
+            tax = line.tax_id
+            tax_key = tax.id if tax else 0
+            if tax_key not in grouped_taxes:
+                tax_account = self._get_tax_account(tax)
+                grouped_taxes[tax_key] = {
+                    'name': tax.name if tax else 'Tax',
+                    'amount': 0.0,
+                    'account_id': tax_account.id if tax_account else False,
+                }
+            grouped_taxes[tax_key]['amount'] += line.tax_amount
+            total_tax += line.tax_amount
+
+        for tax_data in grouped_taxes.values():
+            if not tax_data['amount'] or not tax_data['account_id']:
+                continue
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': tax_data['account_id'],
+                'partner_id': partner.id if partner else False,
+                'name': tax_data['name'],
+                'debit': tax_data['amount'],
+                'credit': 0.0,
+            }))
+            seq += 1
+
+        # --- 3. Payable line (credit) ---
+        total = total_debit + total_tax
+        if not total:
+            total = self.amount_total or 0.0
+
+        if total:
+            due_date = (
+                self.due_date
+                or (self.bill_date + timedelta(days=30) if self.bill_date
+                    else fields.Date.today())
+            )
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': payable_account.id,
+                'partner_id': partner.id if partner else False,
+                'name': 'Bill: %s' % self.bill_number,
+                'debit': 0.0,
+                'credit': total,
+                'date_maturity': due_date,
+            }))
+            seq += 1
+
+        if not lines:
+            return
+
+        move = self.env['accounting.move'].create({
+            'ref': 'Bill: %s' % (self.bill_number or ''),
+            'date': self.bill_date or fields.Date.today(),
+            'journal_id': journal.id,
+            'state': 'draft',
+            'line_ids': lines,
+        })
+        if move.is_balanced:
+            try:
+                move.action_post()
+            except UserError:
+                pass
+        self.accounting_move_id = move.id
+        return move
+
+
+class product_category_account(models.Model):
+    _inherit = 'sales.product_category'
+
+    income_account_id = fields.Many2one(
+        'accounting.account', string='Income Account', required=True,
+        help='Revenue account for products in this category.')
+    expense_account_id = fields.Many2one(
+        'accounting.account', string='Expense Account',
+        help='Expense account for products in this category.')
+    stock_account_id = fields.Many2one(
+        'accounting.account', string='Stock Account',
+        help='Stock/inventory account for products in this category.')
+
+    @api.constrains('expense_account_id', 'stock_account_id')
+    def _check_expense_stock_accounts(self):
+        for rec in self:
+            if rec.expense_account_id and not rec.stock_account_id:
+                raise ValidationError(_(
+                    'Stock Account is required when Expense Account is set.'
+                ))
+            if rec.stock_account_id and not rec.expense_account_id:
+                raise ValidationError(_(
+                    'Expense Account is required when Stock Account is set.'
+                ))
+
+
+class sales_invoice_commission(models.Model):
+    _inherit = 'sales.invoice'
+
+    commission_settlement_ids = fields.One2many(
+        'accounting.commission.settlement', 'invoice_id',
+        string='Commission Settlements', copy=False)
+    commission_amount = fields.Float(
+        string='Commission', compute='_compute_commission',
+        store=True, digits=(16, 0))
+    commission_count = fields.Integer(
+        string='Commission Count', compute='_compute_commission_count')
+
+    @api.depends('commission_settlement_ids.commission_amount',
+                 'commission_settlement_ids.state')
+    def _compute_commission(self):
+        for rec in self:
+            posted = rec.commission_settlement_ids.filtered(
+                lambda s: s.state == 'posted')
+            rec.commission_amount = sum(posted.mapped('commission_amount'))
+
+    def _compute_commission_count(self):
+        for rec in self:
+            rec.commission_count = len(rec.commission_settlement_ids)
+
+    def action_view_commission_settlements(self):
+        self.ensure_one()
+        return {
+            'name': _('Commission Settlements'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.commission.settlement',
+            'view_mode': 'tree,form',
+            'domain': [('invoice_id', '=', self.id)],
+            'target': 'current',
+        }

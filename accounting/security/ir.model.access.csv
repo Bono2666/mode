@@ -14,3 +14,9 @@ access_accounting_aged_receivable_wizard,accounting.aged.receivable.wizard,model
 access_accounting_trial_balance_report,accounting.trial.balance.report,model_accounting_trial_balance_report,,1,0,0,0
 access_accounting_aged_receivable_report,accounting.aged.receivable.report,model_accounting_aged_receivable_report,,1,0,0,0
 access_accounting_general_ledger_report,accounting.general.ledger.report,model_accounting_general_ledger_report,,1,0,0,0
+access_accounting_balance_sheet_wizard,accounting.balance.sheet.wizard,model_accounting_balance_sheet_wizard,,1,1,1,1
+access_accounting_profit_loss_wizard,accounting.profit.loss.wizard,model_accounting_profit_loss_wizard,,1,1,1,1
+access_accounting_balance_sheet_report,accounting.balance.sheet.report,model_accounting_balance_sheet_report,,1,0,0,0
+access_accounting_profit_loss_report,accounting.profit.loss.report,model_accounting_profit_loss_report,,1,0,0,0
+access_accounting_commission_plan,accounting.commission.plan,model_accounting_commission_plan,,1,1,1,1
+access_accounting_commission_settlement,accounting.commission.settlement,model_accounting_commission_settlement,,1,1,1,1

@@ -23,6 +23,7 @@ Sales Payments, and Vendor Bills.
         'data/sequence.xml',
         'data/menu.xml',
         'views/views.xml',
+        'views/templates.xml',
     ],
     'demo': [],
     'license': 'LGPL-3',

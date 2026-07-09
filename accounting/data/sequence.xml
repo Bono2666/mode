@@ -27,5 +27,23 @@
             <field name="padding">6</field>
             <field name="number_increment">1</field>
         </record>
+
+        <!-- Commission Plan Sequence -->
+        <record id="seq_commission_plan" model="ir.sequence">
+            <field name="name">Commission Plan Sequence</field>
+            <field name="code">accounting.commission.plan</field>
+            <field name="prefix">CP</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+
+        <!-- Commission Settlement Sequence -->
+        <record id="seq_commission_settlement" model="ir.sequence">
+            <field name="name">Commission Settlement Sequence</field>
+            <field name="code">accounting.commission.settlement</field>
+            <field name="prefix">CS</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
     </data>
 </odoo>

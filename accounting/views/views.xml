@@ -691,6 +691,51 @@
       </field>
     </record>
 
+    <!-- Balance Sheet Wizard -->
+    <record id="view_accounting_balance_sheet_wizard_form" model="ir.ui.view">
+      <field name="name">Balance Sheet Wizard</field>
+      <field name="model">accounting.balance.sheet.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Balance Sheet">
+          <group>
+            <group>
+              <field name="date_as_of"/>
+            </group>
+            <group>
+              <field name="target_move"/>
+            </group>
+          </group>
+          <footer>
+            <button string="Generate" name="action_generate" type="object" class="btn-primary"/>
+            <button string="Cancel" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <!-- Profit And Loss Wizard -->
+    <record id="view_accounting_profit_loss_wizard_form" model="ir.ui.view">
+      <field name="name">Profit And Loss Wizard</field>
+      <field name="model">accounting.profit.loss.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Profit And Loss">
+          <group>
+            <group>
+              <field name="date_from"/>
+              <field name="date_to"/>
+            </group>
+            <group>
+              <field name="target_move"/>
+            </group>
+          </group>
+          <footer>
+            <button string="Generate" name="action_generate" type="object" class="btn-primary"/>
+            <button string="Cancel" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
     <!-- ================================================================= -->
     <!-- REPORT VIEWS                                                      -->
     <!-- ================================================================= -->
@@ -740,6 +785,36 @@
           <field name="age_31_60" sum="31–60 Days"/>
           <field name="age_61_90" sum="61–90 Days"/>
           <field name="age_90_plus" sum="90+ Days"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- Balance Sheet Report Tree -->
+    <record model="ir.ui.view" id="view_accounting_balance_sheet_report_tree">
+      <field name="name">Balance Sheet Report</field>
+      <field name="model">accounting.balance.sheet.report</field>
+      <field name="arch" type="xml">
+        <tree create="false" delete="false" edit="false">
+          <field name="category"/>
+          <field name="account_code"/>
+          <field name="account_name"/>
+          <field name="type_name"/>
+          <field name="balance" sum="Total"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- Profit And Loss Report Tree -->
+    <record model="ir.ui.view" id="view_accounting_profit_loss_report_tree">
+      <field name="name">Profit And Loss Report</field>
+      <field name="model">accounting.profit.loss.report</field>
+      <field name="arch" type="xml">
+        <tree create="false" delete="false" edit="false">
+          <field name="category"/>
+          <field name="account_code"/>
+          <field name="account_name"/>
+          <field name="type_name"/>
+          <field name="balance" sum="Net Total"/>
         </tree>
       </field>
     </record>
@@ -819,6 +894,20 @@
       <field name="target">new</field>
     </record>
 
+    <record model="ir.actions.act_window" id="action_balance_sheet_wizard">
+      <field name="name">Balance Sheet</field>
+      <field name="res_model">accounting.balance.sheet.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_profit_loss_wizard">
+      <field name="name">Profit And Loss</field>
+      <field name="res_model">accounting.profit.loss.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
     <!-- ================================================================= -->
     <!-- MENU ITEMS                                                        -->
     <!-- ================================================================= -->
@@ -834,11 +923,16 @@
     <menuitem name="Banking" id="menu_accounting_banking_parent" parent="accounting_root_menu" sequence="2"/>
     <menuitem name="Bank Statements" id="menu_bank_statements_act" parent="menu_accounting_banking_parent" action="action_bank_statements" sequence="1"/>
 
-    <!-- Reports submenu -->
-    <menuitem name="Reporting" id="menu_accounting_reports_parent" parent="accounting_root_menu" sequence="3"/>
-    <menuitem name="Trial Balance" id="menu_trial_balance_act" parent="menu_accounting_reports_parent" action="action_trial_balance_wizard" sequence="1"/>
-    <menuitem name="General Ledger" id="menu_general_ledger_act" parent="menu_accounting_reports_parent" action="action_general_ledger_wizard" sequence="2"/>
-    <menuitem name="Aged Receivable" id="menu_aged_receivable_act" parent="menu_accounting_reports_parent" action="action_aged_receivable_wizard" sequence="3"/>
+    <!-- Ledger submenu -->
+    <menuitem name="Ledger" id="menu_accounting_ledger_parent" parent="accounting_root_menu" sequence="3"/>
+    <menuitem name="Trial Balance" id="menu_trial_balance_act" parent="menu_accounting_ledger_parent" action="action_trial_balance_wizard" sequence="1"/>
+    <menuitem name="General Ledger" id="menu_general_ledger_act" parent="menu_accounting_ledger_parent" action="action_general_ledger_wizard" sequence="2"/>
+    <menuitem name="Aged Receivable" id="menu_aged_receivable_act" parent="menu_accounting_ledger_parent" action="action_aged_receivable_wizard" sequence="3"/>
+
+    <!-- Reporting submenu -->
+    <menuitem name="Reporting" id="menu_accounting_reports_parent" parent="accounting_root_menu" sequence="4"/>
+    <menuitem name="Balance Sheet" id="menu_balance_sheet_act" parent="menu_accounting_reports_parent" action="action_balance_sheet_wizard" sequence="1"/>
+    <menuitem name="Profit And Loss" id="menu_profit_loss_act" parent="menu_accounting_reports_parent" action="action_profit_loss_wizard" sequence="2"/>
 
     <!-- Accounting config under main Configuration -->
     <menuitem name="Accounting Configuration" id="menu_accounting_config_parent" parent="general.menu_master_menu" sequence="4"/>
@@ -894,6 +988,232 @@
                   class="btn-secondary" invisible="not accounting_move_id"/>
         </xpath>
       </field>
+    </record>
+
+    <!-- Add Account Properties tab to Product Category form -->
+    <record id="view_product_category_account_inherit" model="ir.ui.view">
+      <field name="name">product.category.account.inherit</field>
+      <field name="model">sales.product_category</field>
+      <field name="inherit_id" ref="sales.product_category_view_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//div[@class='oe_title']" position="after">
+          <notebook>
+            <page string="Account Properties" name="account_properties">
+              <field name="id" invisible="1"/>
+              <field name="is_edit" invisible="1"/>
+              <group>
+                <group>
+                  <field name="income_account_id" readonly="not is_edit and id" options="{'no_open': True, 'no_create': True}"/>
+                  <field name="expense_account_id" readonly="not is_edit and id" options="{'no_open': True, 'no_create': True}"/>
+                  <field name="stock_account_id" readonly="not is_edit and id" options="{'no_open': True, 'no_create': True}"/>
+                </group>
+              </group>
+            </page>
+          </notebook>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- Add Commission button to Sales Invoice form -->
+    <record id="view_sales_invoice_commission_inherit" model="ir.ui.view">
+      <field name="name">sales.invoice.commission.inherit</field>
+      <field name="model">sales.invoice</field>
+      <field name="inherit_id" ref="sales.sales_invoice_form_view"/>
+      <field name="arch" type="xml">
+        <xpath expr="//header" position="inside">
+          <field name="commission_amount" invisible="1"/>
+          <field name="commission_count" invisible="1"/>
+          <button string="Commissions" name="action_view_commission_settlements" type="object"
+                  class="btn-secondary" invisible="commission_count == 0"/>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- COMMISSION PLANS VIEWS                                             -->
+    <!-- ================================================================= -->
+
+    <!-- Commission Plan Tree -->
+    <record model="ir.ui.view" id="view_commission_plan_tree">
+      <field name="name">Commission Plan Tree</field>
+      <field name="model">accounting.commission.plan</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="code"/>
+          <field name="name"/>
+          <field name="type"/>
+          <field name="rate"/>
+          <field name="based_on"/>
+          <field name="active"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- Commission Plan Form -->
+    <record model="ir.ui.view" id="view_commission_plan_form">
+      <field name="name">Commission Plan Form</field>
+      <field name="model">accounting.commission.plan</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <field name="active" widget="boolean_toggle" invisible="not is_edit"/>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <field name="code"/>
+              <h1>
+                <div class="d-flex">
+                  <field class="text-break" name="name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Standard Commission 5%" readonly="not is_edit and id"/>
+                </div>
+              </h1>
+            </div>
+            <group>
+              <group>
+                <field name="type" readonly="not is_edit and id"/>
+                <field name="rate" readonly="not is_edit and id"/>
+                <field name="based_on" readonly="not is_edit and id"/>
+              </group>
+              <group>
+                <field name="journal_id" readonly="not is_edit and id"/>
+                <field name="expense_account_id" readonly="not is_edit and id"/>
+                <field name="payable_account_id" readonly="not is_edit and id"/>
+              </group>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Commission Settlement Tree -->
+    <record model="ir.ui.view" id="view_commission_settlement_tree">
+      <field name="name">Commission Settlement Tree</field>
+      <field name="model">accounting.commission.settlement</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="date"/>
+          <field name="salesperson_id"/>
+          <field name="plan_id"/>
+          <field name="base_amount"/>
+          <field name="rate"/>
+          <field name="commission_amount"/>
+          <field name="state"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- Commission Settlement Form -->
+    <record model="ir.ui.view" id="view_commission_settlement_form">
+      <field name="name">Commission Settlement Form</field>
+      <field name="model">accounting.commission.settlement</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <field name="is_edit" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Post" name="action_post" type="object" class="btn-primary" invisible="state != 'draft'"/>
+            <button string="Cancel Settlement" name="action_cancel" type="object" class="btn-secondary" invisible="state not in ['draft', 'posted']"/>
+            <button string="Journal Entry" name="action_view_move" type="object" class="btn-secondary" invisible="not move_id"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <field name="state" widget="statusbar" statusbar_visible="draft,posted"/>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <field name="name"/>
+              <h1>
+                <div class="d-flex">
+                  <field class="text-break" name="salesperson_id" options="{'line_breaks': False}" widget="text" readonly="1"/>
+                </div>
+              </h1>
+            </div>
+            <group>
+              <group>
+                <field name="date" readonly="1"/>
+                <field name="plan_id" readonly="1"/>
+                <field name="invoice_id" readonly="1"/>
+              </group>
+              <group>
+                <field name="base_amount" readonly="1"/>
+                <field name="rate" readonly="1"/>
+                <field name="commission_amount" readonly="1"/>
+                <field name="move_id" invisible="1"/>
+              </group>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Commission Plan Action -->
+    <record model="ir.actions.act_window" id="action_commission_plans">
+      <field name="name">Commission Plans</field>
+      <field name="res_model">accounting.commission.plan</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <!-- Commission Settlement Action -->
+    <record model="ir.actions.act_window" id="action_commission_settlements">
+      <field name="name">Commission Settlements</field>
+      <field name="res_model">accounting.commission.settlement</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- COMMISSION MENU ITEMS                                              -->
+    <!-- ================================================================= -->
+
+    <menuitem name="Commissions" id="menu_accounting_commissions_parent" parent="accounting_root_menu" sequence="5"/>
+    <menuitem name="Commission Plans" id="menu_commission_plans_act" parent="menu_accounting_commissions_parent" action="action_commission_plans" sequence="1"/>
+    <menuitem name="Commission Settlements" id="menu_commission_settlements_act" parent="menu_accounting_commissions_parent" action="action_commission_settlements" sequence="2"/>
+
+    <!-- ================================================================= -->
+    <!-- REPORT ACTIONS (PDF)                                               -->
+    <!-- ================================================================= -->
+
+    <record id="action_report_balance_sheet" model="ir.actions.report">
+      <field name="name">Balance Sheet</field>
+      <field name="model">accounting.balance.sheet.report</field>
+      <field name="report_type">qweb-html</field>
+      <field name="report_name">accounting.report_balance_sheet_template</field>
+      <field name="report_file">accounting.report_balance_sheet_template</field>
+      <field name="print_report_name">'Balance Sheet - %s' % (context.get('date_as_of', '') or '')</field>
+    </record>
+
+    <record id="action_report_profit_loss" model="ir.actions.report">
+      <field name="name">Profit And Loss</field>
+      <field name="model">accounting.profit.loss.report</field>
+      <field name="report_type">qweb-html</field>
+      <field name="report_name">accounting.report_profit_loss_template</field>
+      <field name="report_file">accounting.report_profit_loss_template</field>
+      <field name="print_report_name">'P&amp;L - %s s/d %s' % (context.get('date_from', '') or '', context.get('date_to', '') or '')</field>
     </record>
 
   </data>

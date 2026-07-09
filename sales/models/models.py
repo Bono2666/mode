@@ -1435,12 +1435,14 @@ class sales_order(models.Model):
         return res
 
     def _refresh_line_indent_flags(self):
-        """Perbarui label Indent pada baris SO setelah create/update."""
+        """Set initial Indent label on SO lines. Only overwrites auto-generated
+        values ('Indent' or empty); preserves user-edited custom text."""
         for order in self.filtered(lambda o: o.state in RESERVED_SO_STATES):
             for line in order.order_line_ids:
                 if not line.product_id:
-                    if line.info:
-                        line.info = ""
+                    current = line.info or ''
+                    if current == 'Indent':
+                        line.write({'info': ''})
                     continue
                 free = max(0, line.product_id.stock -
                            line.product_id.qty_reserved_sale)
@@ -1448,7 +1450,10 @@ class sales_order(models.Model):
                     (l.quantity or 0) for l in order.order_line_ids
                     if l.product_id == line.product_id)
                 new_info = "Indent" if demand > free else ""
-                if line.info != new_info:
+                current = line.info or ''
+                # Only auto-clear "Indent" when stock becomes sufficient.
+                # Never overwrite empty or user-edited custom text.
+                if current == 'Indent' and current != new_info:
                     line.write({'info': new_info})
 
     def _check_approval_requirement(self):
@@ -2117,7 +2122,7 @@ class sales_order_line(models.Model):
             if l.product_id == product)
 
     def _set_indent_from_availability(self):
-        """Indent jika total kebutuhan produk di SO ini melebihi stok bebas."""
+        """Reset info label based on current stock availability (onchange)."""
         if not self.product_id:
             self.info = ""
             return
@@ -2719,6 +2724,7 @@ class sales_invoice(models.Model):
 
     def action_post(self):
         self.ensure_one()
+        self._check_invoicing_access()
         if self.state != 'draft':
             raise UserError(_("Only draft invoices can be confirmed."))
         if not self.line_ids:
@@ -2969,9 +2975,10 @@ class sales_invoice(models.Model):
             'context': self.env.context,
         }
 
+    @api.depends_context('uid')
     def _compute_invoicing_permissions(self):
-        self.user_can_invoicing = False
-        if self.env.user.has_group('base.group_system'):
+        is_admin = self.env.user.has_group('base.group_system')
+        if is_admin:
             for rec in self:
                 rec.user_can_invoicing = True
             return
@@ -2986,9 +2993,8 @@ class sales_invoice(models.Model):
              current_custom_user.id if current_custom_user else None)
         ], limit=1)
 
-        if invoicing_authorized:
-            for rec in self:
-                rec.user_can_invoicing = True
+        for rec in self:
+            rec.user_can_invoicing = bool(invoicing_authorized)
 
     def _check_invoicing_access(self):
         self.ensure_one()

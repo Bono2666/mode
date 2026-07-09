@@ -15,9 +15,15 @@
             <field name="type_id" ref="account_type_receivable"/>
             <field name="reconcile" eval="True"/>
         </record>
-        <record id="account_120000" model="accounting.account">
-            <field name="code">120000</field>
+        <record id="account_113100" model="accounting.account">
+            <field name="code">113100</field>
             <field name="name">Inventory</field>
+            <field name="type_id" ref="account_type_current_asset"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+        <record id="account_113200" model="accounting.account">
+            <field name="code">113200</field>
+            <field name="name">Stock Interim Received</field>
             <field name="type_id" ref="account_type_current_asset"/>
             <field name="reconcile" eval="False"/>
         </record>

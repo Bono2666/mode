@@ -104,6 +104,7 @@
                         <field name="can_invoicing" string="Invoicing"/>
                         <field name="can_receive" string="Receive"/>
                         <field name="can_billing" string="Billing"/>
+                        <field name="can_commission" string="Commission"/>
                     </tree>
                   </field>
                 </page>

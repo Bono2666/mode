@@ -155,8 +155,8 @@ class SalesOrderProcurement(models.Model):
         return po.action_view_purchase_order()
 
     def _sync_procurement_rfq(self):
-        """Sinkronkan RFQ dengan kekurangan stok saat SO dibuat/diupdate."""
-        missing_vendor_products = []
+        """Sinkronkan RFQ dengan kekurangan stok saat SO dibuat/diupdate.
+        Produk tanpa vendor diabaikan (tidak dibuatkan RFQ)."""
         po_ctx = {'skip_purchase_order_create_auth_check': True}
 
         for order in self.filtered(lambda o: o.state != 'cancel'):
@@ -176,7 +176,6 @@ class SalesOrderProcurement(models.Model):
 
             for product, qty in shortages.items():
                 if not product.vendor_id:
-                    missing_vendor_products.append(product.product_name)
                     continue
                 if linked_rfqs.filtered(
                         lambda r: product in r.order_line_ids.product_id):
@@ -187,12 +186,6 @@ class SalesOrderProcurement(models.Model):
                 else:
                     order.with_context(**po_ctx)._create_rfq_for_product(
                         product, qty)
-
-        if missing_vendor_products:
-            raise UserError(_(
-                "Cannot create RFQ automatically. The following products have "
-                "insufficient stock but no vendor configured:\n%(products)s"
-            ) % {'products': '\n'.join(f"- {name}" for name in missing_vendor_products)})
 
     def _get_shortage_product_quantities(self):
         """Kekurangan per produk: kebutuhan SO vs stok fisik dikurangi booking SO lain."""

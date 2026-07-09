@@ -4,141 +4,229 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a collection of **Odoo 17.0** custom modules by Bonoworx that together form a complete ERP system covering Sales, Purchases, Inventory, Employee management, and a custom RBAC (Role-Based Access Control) system. Each directory is an independent Odoo module.
+This is a collection of **Odoo 17.0** custom modules by Bonoworx that together form a complete ERP system covering Sales, Purchases, Inventory, Accounting, Employee management, and a custom RBAC (Role-Based Access Control) system. Each directory is an independent Odoo module.
 
 ## Module Dependency Order
 
 ```
 disable_autosave  ←─  base
 general           ←─  base, disable_autosave
-user_management   ←─  base, general, disable_autosave
 employees         ←─  base, general, disable_autosave
 sales             ←─  base, general, employees, disable_autosave, mail
 purchases         ←─  base, general, sales, employees, disable_autosave, mail
 inventory         ←─  base, general, sales, purchases, disable_autosave
 accounting        ←─  base, general, disable_autosave, sales, purchases
+user_management   ←─  base, general, disable_autosave
 ```
 
-When making cross-module changes, respect this dependency chain. `general` is the foundation that all other modules depend on.
+When making cross-module changes, respect this dependency chain. `general` is the foundation.
 
 ## Commands
 
-This is an Odoo addons directory. It is deployed by placing it in an Odoo instance's `addons` path and installing modules through the Odoo Apps menu or CLI.
-
 ```bash
-# Start Odoo with these modules available (add to addons path)
+# Start Odoo with modules available
 odoo --addons-path=/path/to/mode -d <database> -u <module_name>
 
-# Upgrade a specific module (e.g., after schema changes)
-odoo --addons-path=/path/to/mode -d <database> -u sales --stop-after-init
-
-# Initialize a fresh database with all modules
-odoo --addons-path=/path/to/mode -d <database> -i general,sales,purchases,inventory,employees,user_management,disable_autosave
+# Initialize fresh database
+odoo --addons-path=/path/to/mode -d <database> -i general,sales,purchases,inventory,accounting,employees,user_management,disable_autosave
 ```
 
-There are no tests, linters, or build scripts in this repository. Module upgrades happen via `-u <module>`.
+No tests, linters, or build scripts. Module upgrades via `-u <module>`.
 
 ## Architecture
 
 ### Custom RBAC System (general module)
 
-The entire application uses a custom permission layer built on top of Odoo's native access control:
+- **`general.menu`** — Defines all menu items with a `menu_id` string code (e.g., `'sales_order'`, `'rfq'`, `'customers'`).
+- **`general.custom_users`** — Wraps `res.users` with additional fields (position, image). Creation syncs to `res.users` and `res.partner`.
+- **`general.auth`** — Granular menu-level permissions per user: `can_create`, `can_update`, `can_delete`, `can_submit`, `can_send`, `can_confirm`, `can_invoicing`, `can_receive`, `can_billing`, `can_commission`.
+- **`res.users`** (extended) — Has `hide_menu_ids`. `_refresh_custom_menu_access()` rebuilds menu visibility on login.
+- **`ir.ui.menu`** (extended) — Has `restrict_user_ids`. `_filter_visible_menus()` hides menus from restricted users (admins bypass).
 
-- **`general.menu`** — Defines all menu items with a `menu_id` string code (e.g., `'sales_order'`, `'purchase_order'`, `'rfq'`, `'customers'`, `'products'`).
-- **`general.custom_users`** — Wraps `res.users` with additional fields (position, image). Creation and deletion here synchronizes to `res.users` and `res.partner`. When a custom user is created, a corresponding `res.users` record is auto-created and linked.
-- **`general.auth`** — Stores granular, menu-level permissions per user: `can_create`, `can_update`, `can_delete`, `can_submit`, `can_send`, `can_confirm`, `can_invoicing`, `can_receive`, `can_billing`. Has a uniqueness constraint on `(custom_user_id, menu_id)`.
-- **`res.users`** (extended) — Has `hide_menu_ids` (menus restricted from the user). The `_refresh_custom_menu_access()` method rebuilds menu visibility based on `general.auth` entries. Called automatically on login via `_update_last_login()`.
-- **`ir.ui.menu`** (extended) — Has `restrict_user_ids`. `_filter_visible_menus()` hides menus from restricted users (admins bypass this).
+**Permission flow:** Login → `_update_last_login()` → `_refresh_custom_menu_access()` → for each `general.menu`, if no `general.auth` entry, menu is hidden. `NavigationMixin.get_views()` strips `Create` button when `can_create` is False.
 
-**How permissions flow:** User logs in → `_update_last_login()` calls `_refresh_custom_menu_access()` → for each `general.menu`, if the user has no `general.auth` entry, that Odoo menu is hidden via `restrict_user_ids`. Additionally, `NavigationMixin.get_views()` manipulates view XML to remove the "Create" button when the user lacks `can_create`.
+### Per-Module Access Mixins
 
-### Identical NavigationMixin (code duplication — be aware)
+| Module | Mixin | `_name` | Notes |
+|--------|-------|---------|-------|
+| general | `NavigationMixin` | `navigation.mixin` | Original — provides CRUD permissions, `get_views()`, `action_edit/save/delete/back` |
+| sales | `NavigationMixin` | `navigation.mixin` | Identical copy — keep in sync with general |
+| employees | `NavigationMixin` | `navigation.mixin` | Identical copy — keep in sync with general |
+| purchases | `PurchaseEditMixin` | `purchases.edit.mixin` | Simpler variant |
+| inventory | `InventoryAccessMixin` | `inventory.access.mixin` | Enhanced — `user_can_confirm`, operation-type-based menu codes, `skip_inventory_access` |
 
-`general/models/models.py`, `sales/models/models.py`, and `employees/models/models.py` each define an identical `navigation.mixin` abstract model. These are **separate models** despite having the same `_name`. Each module's models inherit from its own module's version. If you change one, you must replicate the change in all three files. The purchases module uses its own simpler `purchases.edit.mixin` instead, and inventory uses `inventory.access.mixin`.
+### Form Header Button Standard
 
-### Sales Module (`sales`)
+Every form follows a strict header button layout. **Back must always be first (far left).**
+
+**Required invisible fields in every form header:**
+```xml
+<field name="is_edit" invisible="1"/>
+<field name="user_can_update" invisible="1"/>
+<field name="user_can_delete" invisible="1"/>
+```
+
+**Standard button set (exact order and conditions):**
+
+| # | Button | `invisible` | When visible |
+|---|--------|-------------|-------------|
+| 1 | **Back** | `is_edit or not id` | Viewing existing record |
+| 2 | **Edit** (active) | `not id or is_edit or not user_can_update` | Viewing with permission |
+| 3 | **Edit** (disabled) | `not id or is_edit or user_can_update` | Viewing without permission |
+| 4 | **Save** | `id and not is_edit` | New record OR editing |
+| 5 | **Cancel** (discard-new) | `id` | New record only |
+| 6 | **Cancel** (discard-edit) | `not is_edit` | Editing existing |
+| 7 | **Delete** (active) | `not id or is_edit or not user_can_delete` | Viewing with permission |
+| 8 | **Delete** (disabled) | `not id or is_edit or user_can_delete` | Viewing without permission |
+
+**Layout rules:**
+- `.o_control_panel { display: none !important; }` in every form header
+- `model_description` span between buttons and statusbar
+- All sheet fields: `readonly="not is_edit and id"`
+- Action-specific buttons (Post, Confirm, Send) go between Back and `model_description`
+
+### Sales Module
 
 **Flow:** Quotations → (approval) → Sales Orders → Invoices + Deliveries
 
-Key models:
+Key models: `sales.customer`, `sales.products`, `sales.sales_order`, `sales.sales_order_line`, `sales.price_condition`, `sales.payment_terms`, `sales.taxes`, `sales.sales_approval_matrix`, `sales.invoice`, `sales.payment`, `sales.delivery`, plus supporting lookup tables and wizard models.
 
-- `sales.customer` — Customers synced to `res.partner`. Has ship-to addresses, payment terms, price conditions. Deletion cascades to partner.
-- `sales.products` — Products with stock tracking, sales/purchase flags, customer tax, reserved quantity computed from open SOs.
-- `sales.sales_order` — Dual role: Quotations (state: draft→wait_approval→approved→sent→sale) and Sales Orders (state: sale_draft→wait_approval→approved→sale). Uses `is_quotation` boolean to distinguish. Inherits `mail.thread` for activity tracking.
-- `sales.sales_order_line` — Order lines with price condition auto-application (based on customer category/type and product category/specific product), stock reservation indicator ("Indent" tag), delivery tracking.
-- `sales.price_condition` — Tiered pricing: can apply to all/category/specific products, all/category/specific customers. Both fixed price and discount modes. Prioritized by specificity (more specific = higher priority = lower priority number). Synced to customers on create/update.
-- `sales.payment_terms` — Payment term templates with installment details and early payment discounts.
-- `sales.sales_approval_matrix` — Multi-step approval chain. Each row defines an approver (linked to `general.custom_users`), a minimum amount threshold, and which actions they can perform (approve, revise, return, reject). Approval logs track state per step.
-- `sales.invoice` — Custom invoicing (separate from Odoo's native `account.move`). Supports regular invoices and down payments (percentage or fixed).
-- `sales.delivery` — Delivery orders linked to sales orders.
-- Multiple wizard models (`sales.approve.wizard`, `sales.reject.wizard`, `sales.return.wizard`, `sales.revise.wizard`) for approval workflow interactions.
+**Indent Logic** — `info` field on `sales_order_line`:
+- `_set_indent_from_availability()` (onchange): always resets `info` to `"Indent"` or `""` based on stock vs demand
+- `_refresh_line_indent_flags()` (on save): only clears `"Indent"` when stock becomes sufficient; never overwrites user-edited custom text
+- User-edited values preserved on save
 
-**Approval flow:** On order line change → `_check_approval_requirement()` checks if total exceeds threshold or discount exceeds base → creates `sales_approval_log` entries for each matrix row with `min_amount < total_amount` → user calls `action_submit_for_approval()` → state becomes `wait_approval` → each approver in sequence approves/revises/returns/rejects → when all approved, state becomes `approved`.
+### Purchases Module
 
-**Invoice flow:** SO state must be `sale` → `action_create_invoice_simple()` opens wizard → creates `sales.invoice` with lines from SO (or down payment calculation) → invoice goes through draft → posted lifecycle.
+**Flow:** RFQs → Purchase Orders → Bills + Receipts
 
-### Purchases Module (`purchases`)
+Key models: `purchases.vendor`, `purchases.purchase_order`, `purchases.purchase_order_line`, `purchases.bill`, `purchases.bill.line`, `purchases.receipt`, `purchases.receipt.line`, approval matrix and wizard models.
 
-**Flow:** RFQs → (optional approval) → Purchase Orders → Bills + Receipts
+**Procurement** (`sales_procurement.py`): Auto-creates RFQs from SOs for products with insufficient stock. Products without a configured vendor are silently skipped (no UserError).
 
-Key models:
+### Inventory Module
 
-- `purchases.vendor` — Vendors synced to `res.partner` with `is_company=True` and `supplier_rank=1`.
-- `purchases.purchase_order` — Dual role: RFQs (state: draft→sent) and Purchase Orders (state: draft→purchase→wait_approval→approved). Uses `entry_menu_code` to track which menu the record was created from (`'rfq'` vs `'purchase_order'`). The `get_views()` method handles different permission checks for RFQ vs PO views. Inherits `mail.thread`.
-- `purchases.purchase_order_line` — Lines with tax, received quantity tracking, and `qty_to_receive` computed field. `init()` drops a stale FK constraint (migration cleanup).
-- `purchases.purchase_approval_matrix` — Same pattern as sales approval matrix. Threshold-based with multi-step sequence.
-- `purchases.bill` — Vendor bills with payment tracking and `purchases.payment.register` wizard. Bills are created from POs via `_prepare_bill_vals()`.
-- `purchases.receipt` — Goods receipt with stock update on validation. Receipt lines track ordered vs received quantities.
-- `purchases.receipt.line` — Links to PO lines, auto-populates from `purchase_order_line_id`.
+Uses `InventoryAccessMixin`. Models: `inventory.warehouse`, `inventory.location`, `inventory.stock_move`, `inventory.transfer`, `inventory.adjustment`. Auto-creates transfers from PO/SO writes. Transfers validate → stock moves + delivery/receipt documents.
 
-**RFQ/PO lifecycle:** Created as RFQ (draft) → `action_submit_rfq()` → sent → `action_confirm_order()` → purchase → if approval needed: `action_submit_for_approval()` → wait_approval → approvals process → approved. The `is_sent` flag is set permanently when email is sent.
+### Accounting Module
 
-### Inventory Module (`inventory`)
+**Core models:** `accounting.account.type`, `accounting.account`, `accounting.journal`, `accounting.fiscal.year`, `accounting.period`, `accounting.move`, `accounting.move.line`, `accounting.bank.statement`, `accounting.bank.statement.line`.
 
-Key models:
+**Sales/Purchases integration** (via `_inherit`):
+- `sales_invoice_accounting` — `_create_accounting_move()`: Dr AR / Cr Revenue / Cr Tax + Commission lines
+- `sales_payment_accounting` — Dr Cash / Cr AR
+- `purchases_bill_accounting` — Original expense-based bill move
+- `purchases_payment_register_accounting` — Dr AP / Cr Cash
 
-- `inventory.warehouse` — Physical warehouses with locations.
-- `inventory.location` — Stock locations with types (internal, supplier, customer, inventory adjustment, transit).
-- `inventory.stock_move` — Individual stock movements. `action_done()` applies stock changes to `sales.products.stock`. Tracks origin document/model for traceability.
-- `inventory.transfer` — Multi-line transfers (receipt, delivery, internal transfer). On validation, creates individual stock moves and auto-creates `purchases.receipt` or `sales.delivery` records. Links to SO/PO via `sales_order_id`/`purchase_order_id`.
-- `inventory.adjustment` — Inventory count adjustments. Compares counted vs current quantity, creates stock moves for differences.
+**Report Wizards + SQL Views:** Trial Balance, General Ledger, Aged Receivable, Balance Sheet, Profit And Loss. Reports render as `qweb-html` with PDF printable via Odoo's Print button.
 
-**Auto-creation of inventory transfers:** When a `purchases.purchase_order` enters `to_receive` status, `_ensure_inventory_receipt_transfer()` auto-creates a draft inventory transfer from supplier location to stock location. Similarly, when a `sales.sales_order` enters `sale` state, `_ensure_inventory_delivery_transfer()` auto-creates a delivery transfer from stock to customer location. Both are hooks via `write()` overrides.
+**Chart of Accounts (15 accounts):**
+| Code | Name | Type |
+|------|------|------|
+| 100000 | Cash / Bank | bank |
+| 110000 | Accounts Receivable | receivable |
+| 113100 | Inventory | current_asset |
+| 113200 | Stock Interim Received | current_asset |
+| 130000 | Prepayments | prepayment |
+| 140000 | Fixed Assets | fixed_asset |
+| 141000 | Accumulated Depreciation | fixed_asset |
+| 210000 | Tax Payable | tax |
+| 220000 | Accounts Payable | payable |
+| 300000 | Equity | equity |
+| 310000 | Retained Earnings | equity |
+| 400000 | Sales Revenue | income |
+| 410000 | Service Revenue | income |
+| 500000 | Cost of Goods Sold | expense |
+| 510000 | Operating Expenses | expense |
 
-### Procurement (purchases/models/sales_procurement.py)
+**Menu structure:**
+```
+Accounting
+├── Transactions → Journal Entries
+├── Banking → Bank Statements
+├── Ledger → Trial Balance / General Ledger / Aged Receivable
+├── Reporting → Balance Sheet / Profit And Loss
+├── Commissions → Commission Plans / Commission Settlements
+└── Accounting Configuration → COA / Account Types / Journals / Fiscal Years / Periods
+```
 
-When a Sales Order is created or updated, `_sync_procurement_rfq()` on `sales.sales_order` calculates stock shortages per product and automatically creates or updates RFQs with the vendor assigned to each product (`sales.products.vendor_id`, added by `SalesProductsVendor`). Products without a configured vendor raise a `UserError`. The system links SOs to RFQs via `purchases_purchase_order_sales_order_rel` (M2M).
+### Commission System
 
-### Employee Module (`employees`)
+**`accounting.commission.plan`** — Master data: `type` (percentage/fixed), `rate`, `based_on` (untaxed/total), `journal_id`, `expense_account_id`, `payable_account_id`.
 
-Simple module: `employees.employees` model with employee ID (auto-sequenced), name, position (→ `general.position`), department (→ `general.department`), and sales code.
+**`accounting.commission.settlement`** — Per-invoice settlement: auto-created and auto-posted when invoice is posted. Linked to the same `accounting.move` as the invoice.
 
-### Disable Autosave (`disable_autosave`)
+**Flow:** Invoice posted → `_create_accounting_move()` → commission lines added inline:
+```
+Dr Commission Expense (plan.expense_account_id or 510000)
+    Cr Commission Payable (plan.payable_account_id or 220000)
+```
+Settlement record auto-created, linked to the move, and marked posted.
 
-Technical module that disables Odoo's auto-save via JavaScript (`static/src/js/disable_autosave.js`) and CSS (`static/src/css/disable_autosave.css`). Depended on by all other modules.
+### Product Category Account Properties
 
-### User Management (`user_management`)
+`product_category_account` (`_inherit='sales.product_category'`) adds three fields:
+- `income_account_id` (required) — Revenue account for sales
+- `expense_account_id` — Expense/COGS account
+- `stock_account_id` — Stock/Inventory account
 
-Stub module — its model file is entirely commented out. The `security/ir.model.access.csv` is also commented out in the manifest. Exists as a placeholder.
+Validation: if one of expense/stock is filled, the other becomes required.
+
+**Integration points:**
+- **Sales Invoice revenue:** per-line account from `product_id.product_category.income_account_id` (fallback: 400000)
+- **Purchase Bill:** per-line account from `product_id.product_category.expense_account_id` (fallback: 500000)
+
+### Delivery Accounting (COGS)
+
+`sales_delivery_accounting` (`_inherit='sales.delivery'`):
+- `create()` and `write()` detect state transition to `'done'`
+- Creates COGS journal entry per delivery line: `Dr expense_account_id / Cr stock_account_id`
+- Amount: `delivery_line.quantity × product.price`
+- Handles both manual Validate and auto-created (inventory transfer) paths
+
+### Receipt Accounting (Stock Interim)
+
+`purchases_receipt_accounting` (`_inherit='purchases.receipt'`):
+- `create()` and `write()` detect state transition to `'received'`
+- Creates journal: `Dr stock_account_id / Cr 113200 (Stock Interim Received)`
+- Amount: `receipt_line.quantity × product.price`
+
+### Bill Accounting (Interim)
+
+`purchases_bill_accounting_interim` (`_inherit='purchases.bill'`):
+- Overrides `_create_accounting_move()` to use interim account
+- Journal: `Dr 113200 (Stock Interim Received) / Cr Accounts Payable (220000)`
+- Net effect after Receipt + Bill: `Dr Stock / Cr AP` (113200 nets to zero)
+
+### Balance Sheet & Profit And Loss
+
+- **Balance Sheet:** SQL view with Assets (Current/Fixed Asset sub-groups), Liabilities, Equity. Retained Earnings = account 310000 balance + Net Income.
+- **Profit And Loss:** SQL view with Revenue / Expenses sections, Net Profit/Loss.
+- Both use `qweb-html` report type; Odoo Print button generates PDF.
+- Wizards provide date filters (passed via context).
 
 ## Key Patterns
 
 ### Edit/Save Pattern
-
-Most models use an `is_edit` Boolean field + `action_edit()`/`action_save()` methods. Views conditionally render editable fields based on `is_edit`. `action_edit` sets it to True; `action_save` sets it to False and reloads the form.
+`is_edit` Boolean + `action_edit()`/`action_save()`. Fields: `readonly="not is_edit and id"`.
 
 ### Sequence-Generated IDs
-
-All master/transaction records use `ir.sequence` for auto-generated codes (e.g., `sales.sales_code`, `purchases.po_code`, `inventory.move_number`). Sequences are defined in each module's `data/sequence.xml`.
+All master/transaction records use `ir.sequence`. Defined in each module's `data/sequence.xml`.
 
 ### Partner Synchronization
-
-Both `sales.customer` and `purchases.vendor` create and sync records to `res.partner`. Changes to name, email, phone, address, image are propagated to the linked partner. Deletion cascades.
+`sales.customer` and `purchases.vendor` sync to `res.partner`. Changes propagate; deletion cascades.
 
 ### Wizard Confirmation Pattern
-
-Approval actions (approve, reject, return, revise) follow an identical pattern: the model's `action_<name>()` method validates state and opens a `TransientModel` wizard; the wizard's `action_<name>_confirm()` calls back to the model's `action_<name>_final()` with context-carried data.
+Model's `action_<name>()` validates state → opens `TransientModel` wizard → `action_<name>_confirm()` calls back to `action_<name>_final()`.
 
 ### Context-Based Permission Bypass
+`skip_inventory_access`, `skip_auto_inventory_receipt_transfer`, `skip_auto_inventory_delivery_transfer`, `skip_purchase_order_create_auth_check`.
 
-System-generated records (inventory transfers created from SO/PO, receipt stock moves) use context keys like `skip_inventory_access`, `skip_auto_inventory_receipt_transfer`, `skip_purchase_order_create_auth_check` to bypass permission checks that would otherwise block automated operations.
+### SQL View Report Models (`_auto = False`)
+`init()` does `CREATE OR REPLACE VIEW`. All fields `readonly=True`. Read-only in security ACLs.
+
+### Accounting Auto-Posting Pattern
+`_inherit` on source models, override `action_post()` to call `super()` then `_create_accounting_move()`. Smart button links to the move.
+
+### Create/Write State Detection Pattern
+For auto-created records (delivery, receipt) that bypass action methods, use `create()` + `write()` to detect state transitions. Check `vals.get('state')` in write and check initial state in create. This handles both manual and programmatic paths.
