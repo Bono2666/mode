@@ -49,11 +49,11 @@ No tests, linters, or build scripts. Module upgrades via `-u <module>`.
 
 | Module | Mixin | `_name` | Notes |
 |--------|-------|---------|-------|
-| general | `NavigationMixin` | `navigation.mixin` | Original — provides CRUD permissions, `get_views()`, `action_edit/save/delete/back` |
-| sales | `NavigationMixin` | `navigation.mixin` | Identical copy — keep in sync with general |
-| employees | `NavigationMixin` | `navigation.mixin` | Identical copy — keep in sync with general |
-| purchases | `PurchaseEditMixin` | `purchases.edit.mixin` | Simpler variant |
-| inventory | `InventoryAccessMixin` | `inventory.access.mixin` | Enhanced — `user_can_confirm`, operation-type-based menu codes, `skip_inventory_access` |
+| general | `NavigationMixin` | `navigation.mixin` | Original — CRUD permissions, `get_views()`, `action_edit/save/delete/back`, no_open/no_create injection |
+| sales | `NavigationMixin` | `navigation.mixin` | Identical copy — keep in sync with general, includes own `_inject_m2o_no_open_create` |
+| employees | `NavigationMixin` | `navigation.mixin` | Identical copy — keep in sync with general, includes own `_inject_m2o_no_open_create` |
+| purchases | `PurchaseEditMixin` | `purchases.edit.mixin` | Simpler variant; `bill` and `receipt` models also override `get_views()` with injection |
+| inventory | `InventoryAccessMixin` | `inventory.access.mixin` | Enhanced — `user_can_confirm`, operation-type-based menu codes, `skip_inventory_access`, no_open/no_create injection |
 
 ### Form Header Button Standard
 
@@ -110,7 +110,7 @@ Uses `InventoryAccessMixin`. Models: `inventory.warehouse`, `inventory.location`
 
 ### Accounting Module
 
-**Core models:** `accounting.account.type`, `accounting.account`, `accounting.journal`, `accounting.fiscal.year`, `accounting.period`, `accounting.move`, `accounting.move.line`, `accounting.bank.statement`, `accounting.bank.statement.line`.
+**Core models:** `accounting.account.type`, `accounting.account`, `accounting.journal`, `accounting.fiscal.year`, `accounting.period`, `accounting.move`, `accounting.move.line`, `accounting.bank.statement`, `accounting.bank.statement.line`, `accounting.commission.plan`, `accounting.commission.settlement`, `accounting.petty.cash`, `accounting.petty.cash.category`, `accounting.petty.cash.expense`, `accounting.petty.cash.topup`, `accounting.petty.cash.transfer`, `accounting.petty.cash.settlement`.
 
 **Sales/Purchases integration** (via `_inherit`):
 - `sales_invoice_accounting` — `_create_accounting_move()`: Dr AR / Cr Revenue / Cr Tax + Commission lines
@@ -120,13 +120,15 @@ Uses `InventoryAccessMixin`. Models: `inventory.warehouse`, `inventory.location`
 
 **Report Wizards + SQL Views:** Trial Balance, General Ledger, Aged Receivable, Balance Sheet, Profit And Loss. Reports render as `qweb-html` with PDF printable via Odoo's Print button.
 
-**Chart of Accounts (15 accounts):**
+**Chart of Accounts (17 accounts):**
 | Code | Name | Type |
 |------|------|------|
 | 100000 | Cash / Bank | bank |
+| 100500 | Petty Cash - General | cash |
 | 110000 | Accounts Receivable | receivable |
 | 113100 | Inventory | current_asset |
 | 113200 | Stock Interim Received | current_asset |
+| 120000 | Employee Advances | current_asset |
 | 130000 | Prepayments | prepayment |
 | 140000 | Fixed Assets | fixed_asset |
 | 141000 | Accumulated Depreciation | fixed_asset |
@@ -144,10 +146,11 @@ Uses `InventoryAccessMixin`. Models: `inventory.warehouse`, `inventory.location`
 Accounting
 ├── Transactions → Journal Entries
 ├── Banking → Bank Statements
+├── Petty Cash → Cash Expenses / Top Ups / Transfers / Settlements
 ├── Ledger → Trial Balance / General Ledger / Aged Receivable
 ├── Reporting → Balance Sheet / Profit And Loss
 ├── Commissions → Commission Plans / Commission Settlements
-└── Accounting Configuration → COA / Account Types / Journals / Fiscal Years / Periods
+└── Accounting Configuration → COA / Account Types / Journals / Fiscal Years / Periods / Petty Cash Funds / Expense Categories
 ```
 
 ### Commission System
@@ -162,6 +165,30 @@ Dr Commission Expense (plan.expense_account_id or 510000)
     Cr Commission Payable (plan.payable_account_id or 220000)
 ```
 Settlement record auto-created, linked to the move, and marked posted.
+
+### Petty Cash System
+
+**Models:** `accounting.petty.cash` (fund), `accounting.petty.cash.category` (expense category), `accounting.petty.cash.expense`, `accounting.petty.cash.topup`, `accounting.petty.cash.transfer`, `accounting.petty.cash.settlement`.
+
+**Default data** (in `sequence.xml`, `noupdate="0"`):
+- **Fund:** MAIN — Main Office Cash (journal: Cash Journal, cash account: 100500, expense account: 510000)
+- **Categories:** Office Supplies, Transportation, Meals & Entertainment (all → 510000)
+
+**Workflows:**
+| Type | States | Journal Entry |
+|------|--------|---------------|
+| Cash Expense | Draft → Submitted → Approved → Posted → Cancelled | `Dr Expense / Cr Petty Cash` |
+| Top Up | Draft → Approved → Posted | `Dr Petty Cash / Cr Bank` |
+| Transfer | Draft → Approved → Posted | `Dr Dest Fund / Cr Source Fund` |
+| Settlement | Draft → Verified → Posted | `Dr Petty Cash / Cr Employee Advance` |
+
+**Integration:** Auto-creates `accounting.move` on Post. Smart button links to the move. Uses `navigation.mixin` for permissions.
+
+**Fund model requires:** `code`, `name`, `journal_id` (cash/bank/general), `default_cash_account_id` (cash/bank account). Balance computed from GL.
+
+**Category model requires:** `name`, `expense_account_id` (expense account).
+
+**Settlement `employee_id`:** Uses `ondelete='restrict'` (required field — cannot null on delete).
 
 ### Product Category Account Properties
 
@@ -232,7 +259,18 @@ Model's `action_<name>()` validates state → opens `TransientModel` wizard → 
 For auto-created records (delivery, receipt) that bypass action methods, use `create()` + `write()` to detect state transitions. Check `vals.get('state')` in write and check initial state in create. This handles both manual and programmatic paths.
 
 ### Many2one Dropdown Defaults (no_open / no_create)
-All Many2one dropdown fields globally default to `no_open=True` and `no_create=True`. This is enforced by a JS patch in `general/static/src/js/many2one_defaults.js` that overrides `Many2OneField.prototype.setup()`.
+All Many2one dropdown fields globally default to `no_open=True` and `no_create=True`. This is enforced at two layers:
+
+**1. Server-side (primary)** — `_inject_m2o_no_open_create(doc, model_name, env)` is called from every mixin's `get_views()`:
+- `NavigationMixin.get_views()` in `general`, `sales`, `employees`
+- `PurchaseEditMixin.get_views()` in `purchases` (plus `bill.get_views()` and `receipt.get_views()`)
+- `InventoryAccessMixin.get_views()` in `inventory`
+
+The function parses the view XML via `lxml.etree`, finds all `<field>` tags whose model field is `many2one`, and merges `{'no_open': True, 'no_create': True}` into their `options` attribute using `ast.literal_eval` + `repr()` for safe round-tripping. Explicitly-set values are preserved via `dict.setdefault()`.
+
+**2. Client-side (fallback)** — `general/static/src/js/many2one_defaults.js` patches `Many2OneField.prototype.setup()` to inject defaults before the component processes options. Loaded into `web.assets_backend` via `general/__manifest__.py`.
+
+**Each module has its own local copy** of the helper function (named `_inject_m2o_no_open_create` or `inject_m2o_no_open_create`) — no cross-module imports, avoiding `ModuleNotFoundError` during upgrades.
 
 **Effect:** Users cannot open related records (external link button) or create new records ("Create and Edit...") from any dropdown field.
 
@@ -242,3 +280,5 @@ All Many2one dropdown fields globally default to `no_open=True` and `no_create=T
 ```
 
 **When writing new views:** Do NOT add `options="{'no_open': True, 'no_create': True}"` on individual `<field>` tags — it's redundant noise. The global default already covers it. Only add `options` when you need to opt a specific field back in (set to `False`).
+
+**When adding a new module with its own mixin/`get_views()`:** Copy the `_inject_m2o_no_open_create` helper function and add the injection loop (see existing mixins for the exact pattern).
