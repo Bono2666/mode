@@ -594,11 +594,19 @@ class products(models.Model):
             [('name', '=', 'IDR')], limit=1)
         or self.env.company.currency_id)
     price = fields.Float(string="Price", digits=(16, 0))
+    price_yen = fields.Float(string="Price (Yen)", digits=(16, 0))
     tax_string = fields.Char(
         compute='_compute_tax_string', string='Tax Description')
     customer_tax = fields.Many2one(
         comodel_name='sales.taxes', string='Customer Tax', default=lambda self: self.env['sales.taxes'].search([('default_tax', '=', True)], limit=1))
     stock = fields.Integer(string='Stock', default=0)
+    substitution_parts_number = fields.Char(string='Substitution Parts Number')
+    lead_time_days = fields.Integer(string='Lead Time (Days)')
+    stock_jpn = fields.Integer(string='Stock JPN')
+    weight_kg = fields.Float(string='Weight (Kg)')
+    reseller_price = fields.Float(string='Reseller Price', digits=(16, 0))
+    remarks = fields.Text(string='Remarks')
+    product_availability = fields.Char(string='Product Availability')
     sales_order_line_ids = fields.One2many(
         'sales.sales_order_line', 'product_id', string='Sales Order Lines')
     qty_reserved_sale = fields.Integer(
@@ -3569,3 +3577,228 @@ class SalesDeliveryLine(models.Model):
                 self.description = self.sales_order_line_id.product_id.product_name
             self.ordered_qty = self.sales_order_line_id.quantity
             self.quantity = self.sales_order_line_id.qty_to_deliver
+
+
+class ExchangeRate(models.Model):
+    _name = 'sales.exchange_rate'
+    _description = 'Exchange Rate'
+    _inherit = ['navigation.mixin']
+    _rec_name = 'name'
+
+    name = fields.Char(string='Description', required=True)
+    currency_from = fields.Char(string='From Currency', required=True, default='JPY')
+    currency_to = fields.Char(string='To Currency', required=True, default='IDR')
+    rate = fields.Float(string='Rate', required=True, digits=(16, 6),
+                        help='Exchange rate: 1 From Currency = X To Currency')
+    is_edit = fields.Boolean(default=False)
+
+
+class ProductImportWizard(models.TransientModel):
+    _name = 'sales.product.import'
+    _description = 'Import Products from CSV'
+
+    file = fields.Binary(string='CSV File', required=True)
+    filename = fields.Char(string='Filename')
+    state = fields.Selection([('upload', 'Upload'), ('importing', 'Importing'), ('done', 'Done')], default='upload')
+    rows_data = fields.Text(string='Parsed Rows (JSON)')
+    total_rows = fields.Integer(string='Total Rows')
+    current_row = fields.Integer(string='Current Row')
+    created_count = fields.Integer(string='Created')
+    updated_count = fields.Integer(string='Updated')
+    skipped_count = fields.Integer(string='Skipped')
+    error_count = fields.Integer(string='Errors')
+    last_error = fields.Text(string='Last Error')
+
+    BATCH_SIZE = 500
+
+    def action_import(self):
+        import logging
+        _logger = logging.getLogger(__name__)
+
+        if not self.file:
+            raise UserError(_('Please select a CSV file.'))
+
+        rate_record = self.env['sales.exchange_rate'].search([], limit=1)
+        if not rate_record:
+            raise UserError(_('Please configure an exchange rate first in Configuration > Exchange Rate.'))
+
+        import base64
+        import csv
+        import io
+
+        raw = base64.b64decode(self.file)
+
+        content = None
+        for enc in ('utf-8-sig', 'utf-8', 'cp932', 'shift_jis', 'euc-jp', 'latin-1'):
+            try:
+                content = raw.decode(enc)
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
+        if content is None:
+            raise UserError(_('Cannot decode the file. Please ensure it is a valid CSV file.'))
+
+        sniffer = csv.Sniffer()
+        try:
+            dialect = sniffer.sniff(content.split('\n')[0], delimiters=',;\t')
+            delimiter = dialect.delimiter
+        except csv.Error:
+            delimiter = ','
+
+        reader = csv.reader(io.StringIO(content), delimiter=delimiter)
+        header = next(reader, None)
+
+        if not header:
+            raise UserError(_('The CSV file appears to be empty.'))
+
+        if len(header) < 10:
+            raise UserError(_(
+                'CSV header has only %d columns (delimiter: %r). '
+                'Expected at least 10 columns. Header: %s'
+            ) % (len(header), delimiter, header))
+
+        import json
+        all_rows = list(reader)
+        valid_rows = [r for r in all_rows if len(r) >= 10 and r[0].strip()]
+
+        _logger.info('IMPORT: Parsed %d total rows, %d valid rows', len(all_rows), len(valid_rows))
+
+        self.write({
+            'rows_data': json.dumps(valid_rows),
+            'total_rows': len(valid_rows),
+            'current_row': 0,
+            'state': 'importing',
+        })
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'product_import_progress',
+            'context': {
+                'default_wizard_id': self.id,
+                'default_total_rows': len(valid_rows),
+                'default_current_row': 0,
+            },
+        }
+
+    def action_import_batch(self):
+        import logging
+        import json
+        _logger = logging.getLogger(__name__)
+
+        all_rows = json.loads(self.rows_data)
+        batch_start = self.current_row
+        batch_end = min(batch_start + self.BATCH_SIZE, len(all_rows))
+
+        if batch_start >= len(all_rows):
+            self.state = 'done'
+            return True
+
+        ProductCategory = self.env['sales.product_category']
+        Product = self.env['sales.products']
+
+        rate_record = self.env['sales.exchange_rate'].search([], limit=1)
+
+        default_income_account = False
+        try:
+            default_income_account = self.env['accounting.account'].search(
+                [('code', '=', '400000')], limit=1)
+        except Exception:
+            pass
+
+        has_income_field = 'income_account_id' in ProductCategory._fields
+
+        default_category = ProductCategory.search([], limit=1)
+        if not default_category:
+            cat_vals = {'category_name': 'Uncategorized'}
+            if has_income_field and default_income_account:
+                cat_vals['income_account_id'] = default_income_account.id
+            default_category = ProductCategory.create(cat_vals)
+
+        category_cache = {}
+        created = self.created_count
+        updated = self.updated_count
+        skipped = self.skipped_count
+        last_error = self.last_error or ''
+
+        for i in range(batch_start, batch_end):
+            row = all_rows[i]
+            row_num = i + 2
+            try:
+                product_id_str = row[0].strip()
+                substitution = row[1].strip()
+                product_name = row[2].strip()
+                lead_time = int(row[3].strip()) if row[3].strip() else 0
+                stock_jpn = int(row[4].strip()) if row[4].strip() else 0
+                price_yen = float(row[5].strip().replace(',', '.')) if row[5].strip() else 0
+                weight = float(row[6].strip().replace(',', '.')) if row[6].strip() else 0
+                remarks = row[7].strip()
+                category_name = row[9].strip() if len(row) > 9 else ''
+
+                if not product_id_str:
+                    skipped += 1
+                    continue
+
+                category_id = default_category.id
+                if category_name:
+                    if category_name not in category_cache:
+                        cat = ProductCategory.search([('category_name', '=', category_name)], limit=1)
+                        if not cat:
+                            cat_vals = {'category_name': category_name}
+                            if has_income_field and default_income_account:
+                                cat_vals['income_account_id'] = default_income_account.id
+                            cat = ProductCategory.create(cat_vals)
+                        category_cache[category_name] = cat.id
+                    category_id = category_cache[category_name]
+
+                price_idr = price_yen * rate_record.rate if price_yen else 0
+
+                vals = {
+                    'product_name': product_name,
+                    'substitution_parts_number': substitution,
+                    'lead_time_days': lead_time,
+                    'stock_jpn': stock_jpn,
+                    'price_yen': price_yen,
+                    'price': price_idr,
+                    'weight_kg': weight,
+                    'remarks': remarks,
+                    'product_category': category_id,
+                }
+
+                existing = Product.search([('product_id', '=', product_id_str)], limit=1)
+                if existing:
+                    existing.write(vals)
+                    updated += 1
+                else:
+                    vals['product_id'] = product_id_str
+                    Product.create(vals)
+                    created += 1
+
+            except Exception as e:
+                last_error = f'Row {row_num}: {str(e)}'
+
+        new_state = 'done' if batch_end >= len(all_rows) else 'importing'
+        self.write({
+            'current_row': batch_end,
+            'created_count': created,
+            'updated_count': updated,
+            'skipped_count': skipped,
+            'last_error': last_error,
+            'state': new_state,
+        })
+
+        self.env.cr.commit()
+
+        _logger.info('IMPORT: Batch done rows %d-%d / %d — created=%d updated=%d errors=%s',
+                      batch_start, batch_end, len(all_rows), created, updated, last_error[:100] if last_error else 'none')
+
+        return True
+
+    def action_open_importer(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Import Products'),
+            'res_model': 'sales.product.import',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_state': 'upload'},
+        }

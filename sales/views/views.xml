@@ -551,13 +551,18 @@
                 <page string="General Information" name="general_information">
                   <group>
                     <group name="group_general">
+                      <field name="substitution_parts_number" readonly="not is_edit and id"/>
                       <field name="barcode" readonly="not is_edit and id"/>
                       <field name="product_category" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
                       <field name="product_unit" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
                       <field name="product_type" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
                       <field name="stock" string="Quantiity On Hand" readonly="1"/>
+                      <field name="stock_jpn" readonly="not is_edit and id"/>
+                      <field name="price_yen" readonly="1"/>
+                      <field name="price" readonly="price_yen != 0"/>
                     </group>
                     <group name="group_standard_price">
+                        <field name="reseller_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="not is_edit and id"/>
                         <label for="base_price"/>
                         <div name="pricing" class="o_row">
                           <field name="base_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="not is_edit and id"/>
@@ -565,7 +570,13 @@
                           <field name="tax_string" class="ms-2" readonly="1"/>
                         </div>
                         <field name="customer_tax" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                        <field name="weight_kg" readonly="not is_edit and id"/>
+                        <field name="lead_time_days" readonly="not is_edit and id"/>
+                        <field name="product_availability" readonly="not is_edit and id"/>
                     </group>
+                  </group>
+                  <group string="Remarks">
+                    <field name="remarks" readonly="not is_edit and id" nolabel="1" placeholder="Additional remarks..."/>
                   </group>
                 </page>
               </notebook>
@@ -2042,6 +2053,109 @@
     </record>
 
     <menuitem name="Delivery Orders" id="sales.delivery_orders_menu" parent="sales.orders_menu" action="sales_delivery_action" sequence="4"/>
+
+    <!-- ────────────────────────────
+         EXCHANGE RATE
+         ──────────────────────────── -->
+
+    <record id="exchange_rate_tree_view" model="ir.ui.view">
+      <field name="name">sales.exchange_rate.tree</field>
+      <field name="model">sales.exchange_rate</field>
+      <field name="arch" type="xml">
+        <tree editable="bottom">
+          <field name="name"/>
+          <field name="currency_from"/>
+          <field name="currency_to"/>
+          <field name="rate"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="exchange_rate_form_view" model="ir.ui.view">
+      <field name="name">sales.exchange_rate.form</field>
+      <field name="model">sales.exchange_rate</field>
+      <field name="arch" type="xml">
+        <form string="Exchange Rate">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back_kanban" type="object" invisible="is_edit or not id" class="oe_highlight"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <style>.o_control_panel { display: none !important; }</style>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <h1><field name="name" placeholder="e.g. JPY to IDR" readonly="not is_edit and id"/></h1>
+            </div>
+            <group>
+              <group>
+                <field name="currency_from" readonly="not is_edit and id"/>
+                <field name="currency_to" readonly="not is_edit and id"/>
+                <field name="rate" readonly="not is_edit and id"/>
+              </group>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="exchange_rate_action" model="ir.actions.act_window">
+      <field name="name">Exchange Rate</field>
+      <field name="res_model">sales.exchange_rate</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+    </record>
+
+    <!-- ────────────────────────────
+         PRODUCT IMPORT WIZARD
+         ──────────────────────────── -->
+
+    <record id="product_import_wizard_form" model="ir.ui.view">
+      <field name="name">sales.product.import.form</field>
+      <field name="model">sales.product.import</field>
+      <field name="arch" type="xml">
+        <form string="Import Products">
+          <field name="state" invisible="1"/>
+          <field name="rows_data" invisible="1"/>
+          <field name="total_rows" invisible="1"/>
+          <field name="current_row" invisible="1"/>
+          <field name="created_count" invisible="1"/>
+          <field name="updated_count" invisible="1"/>
+          <field name="skipped_count" invisible="1"/>
+          <field name="error_count" invisible="1"/>
+          <field name="last_error" invisible="1"/>
+          <group>
+            <field name="file" filename="filename"/>
+            <field name="filename" invisible="1"/>
+          </group>
+          <footer>
+            <button string="Import" name="action_import" type="object" class="oe_highlight"/>
+            <button string="Cancel" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="product_import_wizard_action" model="ir.actions.act_window">
+      <field name="name">Import Products</field>
+      <field name="res_model">sales.product.import</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+    <menuitem name="Exchange Rate" id="sales.exchange_rate_menu" parent="general.menu_master_menu" action="sales.exchange_rate_action" sequence="6"/>
+    <menuitem name="Import Products" id="sales.product_import_menu" parent="sales.menu_sales_root" action="sales.product_import_wizard_action" sequence="99"/>
 
   </data>
 </odoo>

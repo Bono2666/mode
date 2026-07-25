@@ -37,5 +37,11 @@ From quotations to invoices
     'demo': [
         'demo/demo.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'sales/static/src/xml/product_import.xml',
+            'sales/static/src/js/product_import.js',
+        ],
+    },
     'license': 'LGPL-3'
 }

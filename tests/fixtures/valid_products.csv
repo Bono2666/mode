@@ -1,0 +1,4 @@
+Part No.,Substitution Parts Number,Parts name,Lead Times,Stock JPN,YEN,Weight,Remarks,Product Availability,Product Category
+P001,SUB001,Widget Alpha,7,100,1500.50,2.5,Sample product A,In Stock,Electronics
+P002,SUB002,Widget Beta,14,50,2300.00,3.2,Sample product B,In Stock,Electronics
+P003,,Widget Gamma,3,200,800.75,1.8,Sample product C,Out Stock,Hardware

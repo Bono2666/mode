@@ -430,9 +430,9 @@
         </field>
     </record>
 
-    <!-- Menimpa menu Apps agar hanya bisa dilihat oleh Administrator (Grup Settings) -->
+    <!-- Sembunyikan menu Apps untuk semua user -->
     <record id="base.menu_management" model="ir.ui.menu">
-        <field name="groups_id" eval="[(6, 0, [ref('base.group_system')])]"/>
+        <field name="active" eval="False"/>
     </record>
     
     <!-- actions opening views on models -->

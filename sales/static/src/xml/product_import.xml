@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sales.ProductImportProgress">
+        <div class="o_import_progress_container p-4">
+            <div t-if="state.status === 'running'" class="o_import_running">
+                <h3 class="mb-3">Importing Products...</h3>
+                <div class="progress mb-3" style="height: 24px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                         role="progressbar"
+                         t-att-style="'width: ' + progressPct + '%'"
+                         t-att-aria-valuenow="progressPct"
+                         aria-valuemin="0" aria-valuemax="100">
+                        <span t-esc="progressPct + '%'"/>
+                    </div>
+                </div>
+                <p class="text-muted">
+                    Row <t t-esc="state.current"/> / <t t-esc="state.total"/>
+                    — Created: <t t-esc="state.created"/>
+                    — Updated: <t t-esc="state.updated"/>
+                    — Skipped: <t t-esc="state.skipped"/>
+                </p>
+                <p t-if="state.lastError" class="text-danger mt-2" style="max-height:100px; overflow:auto;">
+                    <t t-esc="state.lastError"/>
+                </p>
+            </div>
+
+            <div t-if="state.status === 'done'" class="o_import_done text-center">
+                <h3 class="text-success mb-3">Import Complete!</h3>
+                <p>Created: <strong t-esc="state.created"/> products</p>
+                <p>Updated: <strong t-esc="state.updated"/> products</p>
+                <p>Skipped: <strong t-esc="state.skipped"/> rows</p>
+                <p t-if="state.lastError" class="text-danger mt-2" style="max-height:100px; overflow:auto;">
+                    Last error: <t t-esc="state.lastError"/>
+                </p>
+                <button class="btn btn-primary mt-3" t-on-click="onClose">Close</button>
+            </div>
+
+            <div t-if="state.status === 'error'" class="o_import_error text-center">
+                <h3 class="text-danger mb-3">Import Error</h3>
+                <p class="text-danger" style="max-height:200px; overflow:auto;">
+                    <t t-esc="state.lastError"/>
+                </p>
+                <button class="btn btn-secondary mt-3" t-on-click="onClose">Close</button>
+            </div>
+        </div>
+    </t>
+
+</templates>

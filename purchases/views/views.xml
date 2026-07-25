@@ -310,6 +310,7 @@
               <page string="General Information" name="general_information">
                 <group>
                   <group>
+                    <field name="substitution_parts_number" readonly="not is_edit and id"/>
                     <field name="barcode" readonly="not is_edit and id"/>
                     <field name="product_category" options="{'no_open': True, 'no_create': True}"
                            readonly="not is_edit and id"/>
@@ -317,14 +318,23 @@
                            readonly="not is_edit and id"/>
                     <field name="vendor_id" options="{'no_open': True, 'no_create': True}"
                            readonly="not is_edit and id"/>
-                    <field name="price" readonly="not is_edit and id"/>
+                    <field name="price_yen" readonly="1"/>
+                    <field name="price" readonly="price_yen != 0"/>
                     <field name="stock" string="Quantiity On Hand" readonly="1"/>
+                    <field name="stock_jpn" readonly="not is_edit and id"/>
                   </group>
                   <group>
+                    <field name="reseller_price" readonly="not is_edit and id"/>
                     <field name="base_price" readonly="not is_edit and id"/>
                     <field name="customer_tax" options="{'no_open': True, 'no_create': True}"
                            readonly="not is_edit and id"/>
+                    <field name="weight_kg" readonly="not is_edit and id"/>
+                    <field name="lead_time_days" readonly="not is_edit and id"/>
+                    <field name="product_availability" readonly="not is_edit and id"/>
                   </group>
+                </group>
+                <group string="Remarks">
+                  <field name="remarks" readonly="not is_edit and id" nolabel="1" placeholder="Additional remarks..."/>
                 </group>
               </page>
             </notebook>
