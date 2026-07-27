@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ================================================================== -->
+        <!-- REPORT: Asset Register                                              -->
+        <!-- ================================================================== -->
+
+        <record id="action_report_asset_register" model="ir.actions.report">
+            <field name="name">Asset Register</field>
+            <field name="model">assets.asset</field>
+            <field name="report_type">qweb-html</field>
+            <field name="report_name">assets.report_asset_register</field>
+            <field name="report_file">assets.report_asset_register</field>
+            <field name="binding_model_id" ref="model_assets_asset"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <template id="report_asset_register">
+            <t t-call="web.html_container">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h3 class="text-center mt-2 mb-3">
+                            <strong>ASSET REGISTER</strong>
+                        </h3>
+                        <table class="table table-sm o_main_table">
+                            <thead>
+                                <tr>
+                                    <th class="text-start" style="width: 10%;">Number</th>
+                                    <th class="text-start" style="width: 22%;">Name</th>
+                                    <th class="text-start" style="width: 10%;">Acquired</th>
+                                    <th class="text-end" style="width: 12%;">Original Value</th>
+                                    <th class="text-start" style="width: 12%;">Method</th>
+                                    <th class="text-end" style="width: 12%;">Book Value</th>
+                                    <th class="text-end" style="width: 12%;">Depreciable</th>
+                                    <th class="text-center" style="width: 10%;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="total_original" t-value="0.0"/>
+                                <t t-set="total_book" t-value="0.0"/>
+                                <t t-foreach="docs" t-as="asset">
+                                    <tr>
+                                        <td><t t-esc="asset.asset_number"/></td>
+                                        <td><t t-esc="asset.name"/></td>
+                                        <td><t t-esc="asset.acquisition_date"
+                                               t-options="{'widget': 'date'}"/></td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.0f}'.format(asset.original_value)"/>
+                                        </td>
+                                        <td><t t-esc="dict(asset._fields['method'].selection).get(asset.method, asset.method)"/></td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.0f}'.format(asset.book_value)"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.0f}'.format(asset.depreciable_value)"/>
+                                        </td>
+                                        <td class="text-center">
+                                            <t t-esc="dict(asset._fields['state'].selection).get(asset.state, asset.state)"/>
+                                        </td>
+                                    </tr>
+                                    <t t-set="total_original"
+                                       t-value="total_original + asset.original_value"/>
+                                    <t t-set="total_book"
+                                       t-value="total_book + asset.book_value"/>
+                                </t>
+                                <tr class="border-top">
+                                    <td colspan="3"><strong>Total</strong></td>
+                                    <td class="text-end">
+                                        <strong>
+                                            <t t-esc="'{:,.0f}'.format(total_original)"/>
+                                        </strong>
+                                    </td>
+                                    <td></td>
+                                    <td class="text-end">
+                                        <strong>
+                                            <t t-esc="'{:,.0f}'.format(total_book)"/>
+                                        </strong>
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </template>
+
+        <!-- ================================================================== -->
+        <!-- REPORT: Asset Depreciation Schedule                                  -->
+        <!-- ================================================================== -->
+
+        <record id="action_report_depreciation_schedule"
+                model="ir.actions.report">
+            <field name="name">Depreciation Schedule</field>
+            <field name="model">assets.asset</field>
+            <field name="report_type">qweb-html</field>
+            <field name="report_name">assets.report_depreciation_schedule</field>
+            <field name="report_file">assets.report_depreciation_schedule</field>
+            <field name="binding_model_id" ref="model_assets_asset"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <template id="report_depreciation_schedule">
+            <t t-call="web.html_container">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h3 class="text-center mt-2 mb-3">
+                            <strong>DEPRECIATION SCHEDULE</strong>
+                        </h3>
+                        <t t-foreach="docs" t-as="asset">
+                            <div class="mb-4">
+                                <h5 class="mb-2">
+                                    <strong>
+                                        <t t-esc="asset.asset_number"/> -
+                                        <t t-esc="asset.name"/>
+                                    </strong>
+                                    <span class="ms-2 badge"
+                                          t-att-class="'bg-success' if asset.state == 'running' else 'bg-secondary'">
+                                        <t t-esc="dict(asset._fields['state'].selection).get(asset.state, asset.state)"/>
+                                    </span>
+                                </h5>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 8%;">#</th>
+                                            <th style="width: 18%;">Date</th>
+                                            <th class="text-end" style="width: 18%;">Depreciation</th>
+                                            <th class="text-end" style="width: 18%;">Accumulated</th>
+                                            <th class="text-end" style="width: 18%;">Remaining</th>
+                                            <th class="text-center" style="width: 20%;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="asset.depreciation_line_ids"
+                                           t-as="line">
+                                            <tr t-att-class="'table-success' if line.state == 'posted' else ''">
+                                                <td><t t-esc="line.sequence"/></td>
+                                                <td><t t-esc="line.depreciation_date"
+                                                       t-options="{'widget': 'date'}"/></td>
+                                                <td class="text-end">
+                                                    <t t-esc="'{:,.0f}'.format(line.depreciation_value)"/>
+                                                </td>
+                                                <td class="text-end">
+                                                    <t t-esc="'{:,.0f}'.format(line.accumulated_value)"/>
+                                                </td>
+                                                <td class="text-end">
+                                                    <t t-esc="'{:,.0f}'.format(line.remaining_value)"/>
+                                                </td>
+                                                <td class="text-center">
+                                                    <t t-if="line.state == 'posted'">
+                                                        <span class="badge bg-success">Posted</span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="badge bg-info">Draft</span>
+                                                    </t>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                                <hr/>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </template>
+
+        <!-- ================================================================== -->
+        <!-- REPORT: Asset Revaluation History                                    -->
+        <!-- ================================================================== -->
+
+        <record id="action_report_revaluation_history"
+                model="ir.actions.report">
+            <field name="name">Revaluation History</field>
+            <field name="model">assets.asset</field>
+            <field name="report_type">qweb-html</field>
+            <field name="report_name">assets.report_revaluation_history</field>
+            <field name="report_file">assets.report_revaluation_history</field>
+            <field name="binding_model_id" ref="model_assets_asset"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <template id="report_revaluation_history">
+            <t t-call="web.html_container">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h3 class="text-center mt-2 mb-3">
+                            <strong>ASSET REVALUATION HISTORY</strong>
+                        </h3>
+                        <t t-foreach="docs" t-as="asset">
+                            <div class="mb-4" t-if="asset.revaluation_line_ids">
+                                <h5 class="mb-2">
+                                    <strong>
+                                        <t t-esc="asset.asset_number"/> -
+                                        <t t-esc="asset.name"/>
+                                    </strong>
+                                </h5>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 15%;">Date</th>
+                                            <th class="text-end" style="width: 18%;">Book Value Before</th>
+                                            <th class="text-end" style="width: 18%;">Fair Value After</th>
+                                            <th class="text-end" style="width: 18%;">Surplus/Deficit</th>
+                                            <th style="width: 15%;">Remaining Life</th>
+                                            <th class="text-center" style="width: 16%;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="asset.revaluation_line_ids"
+                                           t-as="reval">
+                                            <tr t-att-class="'table-success' if reval.state == 'posted' else ''">
+                                                <td><t t-esc="reval.revaluation_date"
+                                                       t-options="{'widget': 'date'}"/></td>
+                                                <td class="text-end">
+                                                    <t t-esc="'{:,.0f}'.format(reval.book_value_before)"/>
+                                                </td>
+                                                <td class="text-end">
+                                                    <t t-esc="'{:,.0f}'.format(reval.fair_value_after)"/>
+                                                </td>
+                                                <td class="text-end"
+                                                    t-att-style="'color: green;' if reval.surplus_deficit_value >= 0 else 'color: red;'">
+                                                    <t t-esc="'{:,.0f}'.format(reval.surplus_deficit_value)"/>
+                                                </td>
+                                                <td><t t-esc="reval.remaining_useful_life"/> periods</td>
+                                                <td class="text-center">
+                                                    <t t-if="reval.state == 'posted'">
+                                                        <span class="badge bg-success">Posted</span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="badge bg-info">Draft</span>
+                                                    </t>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                                <hr/>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </template>
+
+    </data>
+</odoo>

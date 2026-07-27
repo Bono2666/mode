@@ -116,6 +116,11 @@
                 <field name="menu_name">Sales Matrix</field>
                 <field name="parent_menu">approvals_config</field>
             </record>
+            <record id="pricing_margin_config_data_menu" model="general.menu">
+                <field name="menu_id">pricing_margin_config</field>
+                <field name="menu_name">Pricing Margin</field>
+                <field name="parent_menu">master_data</field>
+            </record>
         </data>
 
 </odoo>

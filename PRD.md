@@ -91,7 +91,7 @@ Every form follows a strict header button layout. **Back must always be first (f
 
 **Flow:** Quotations → (approval) → Sales Orders → Invoices + Deliveries
 
-Key models: `sales.customer`, `sales.products`, `sales.sales_order`, `sales.sales_order_line`, `sales.price_condition`, `sales.payment_terms`, `sales.taxes`, `sales.sales_approval_matrix`, `sales.invoice`, `sales.payment`, `sales.delivery`, plus supporting lookup tables and wizard models.
+Key models: `sales.customer`, `sales.products`, `sales.sales_order`, `sales.sales_order_line`, `sales.price_condition`, `sales.payment_terms`, `sales.taxes`, `sales.sales_approval_matrix`, `sales.invoice`, `sales.payment`, `sales.delivery`, `sales.pricing_margin_config`, plus supporting lookup tables and wizard models.
 
 **Indent Logic** — `info` field on `sales_order_line`:
 
@@ -110,6 +110,21 @@ Key models: `sales.customer`, `sales.products`, `sales.sales_order`, `sales.sale
 - Exchange rate conversion: `price_idr = price_yen × exchange_rate`
 - Encoding detection: UTF-8, CP932, Shift-JIS, EUC-JP, Latin-1
 - Delimiter auto-detection: comma, semicolon, tab
+
+**Pricing Margin Configuration** (`sales.pricing_margin_config`):
+
+- Singleton model — only one config record allowed; `create()` updates existing record instead of creating new
+- Access: Configuration → Pricing Margin menu
+- Fields: `name`, `reseller_margin` (Float, %), `sales_margin` (Float, %)
+- Used by `sales.products` to auto-compute selling prices from base `price`
+
+**Product Price Computation** (`sales.products`):
+
+- `base_price` (Sales Price) — computed from `price × (1 + sales_margin / 100)`, auto-updates when `price` changes
+- `reseller_price` — computed from `price × (1 + reseller_margin / 100)`, auto-updates when `price` changes
+- Both fields are readonly (computed, no manual override)
+- Compute methods read margin from latest `sales.pricing_margin_config` record (`order='id desc'`)
+- `base_price` is used as `unit_price` in sales order lines and for tax string display
 
 ### Purchases Module
 
@@ -168,6 +183,80 @@ Accounting
 ├── Reporting → Balance Sheet / Profit And Loss
 ├── Commissions → Commission Plans / Commission Settlements
 └── Accounting Configuration → COA / Account Types / Journals / Fiscal Years / Periods / Petty Cash Funds / Expense Categories
+```
+
+### Assets Module
+
+**Flow:** Purchase Bill (posted) → Asset Created (draft) → Confirm → Running → Compute Depreciation (daily cron) → Revaluation (optional) → Disposal
+
+Key models: `assets.model`, `assets.asset`, `assets.depreciation_line`, `assets.revaluation_line`, `assets.disposal_wizard`, `assets.revaluation_wizard`.
+
+**Asset Model** (`assets.model`):
+
+- Template for asset categories (e.g. Vehicles, Office Equipment)
+- Fields: `method` (straight_line / declining / declining_then_straight), `method_number`, `method_period`, `method_progress_factor`, `prorata_computation_type`, `account_asset_id`, `account_depreciation_id`, `account_depreciation_expense_id`, `journal_id`
+- Auto-fills depreciation settings when creating a new asset
+
+**Fixed Asset** (`assets.asset`):
+
+- State machine: draft → running → paused / close / disposed
+- Auto-generated `asset_number` via ir.sequence (`ASSET000001`)
+- Key fields: `asset_model_id`, `original_value`, `salvage_value`, `depreciable_value` (computed), `book_value` (computed), `fair_value` (computed from revaluation history), `custodian_id`, `location`, `purchase_line_id`
+- `action_confirm()` — moves to running state, calls `_generate_depreciation_lines()`
+- `_generate_depreciation_lines()` — supports 3 methods:
+  - **Straight Line:** equal depreciation per period
+  - **Declining Balance:** diminishing value with configurable factor
+  - **Declining then Straight Line:** switches to straight line when beneficial
+- `action_pause()` / `action_resume()` — pause/resume depreciation
+- `book_value = fair_value - accumulated_depreciation`
+
+**Depreciation Board** (`assets.depreciation_line`):
+
+- One row per depreciation period in the schedule
+- Fields: `sequence`, `depreciation_date`, `depreciation_value`, `accumulated_value` (computed), `remaining_value` (computed), `move_id`
+- `action_post_depreciation()` — creates journal entry: Dr Depreciation Expense / Cr Accumulated Depreciation
+- Daily cron job (`ir_cron_post_depreciation`) auto-posts all due depreciation lines for running assets
+
+**Revaluation** (`assets.revaluation_line`):
+
+- Records fair value revaluation events on an asset
+- Fields: `book_value_before`, `fair_value_after`, `surplus_deficit_value` (computed), `remaining_useful_life`, `note`, `move_id`
+- `action_post_revaluation()` — creates journal entries: surplus to equity account, deficit splits between surplus account and impairment loss account
+
+**Disposal Wizard** (`assets.disposal_wizard`):
+
+- TransientModel for full disposal/sale of an asset
+- Fields: `sale_price`, `disposal_date`, `gain_loss` (computed from book_value vs sale_price)
+- `action_confirm_disposal()` — creates closing entry: Dr Accumulated Depreciation, Dr Cash/Bank (if sold), Cr Asset Account, Dr/Cr Gain/Loss
+
+**Purchases Integration** (`purchases.bill` inherits):
+
+- When a purchase bill is posted, auto-creates `assets.asset` in draft for any bill line where the account has `is_asset_account=True`
+
+**Chart of Accounts additions:**
+
+| Code | Name | Type |
+|------|------|------|
+| 114000 | Fixed Assets - Vehicles/Machinery/Equipment | fixed_asset |
+| 114900 | Accumulated Depreciation - Fixed Assets | fixed_asset |
+| 520000 | Depreciation Expense | expense |
+| 420000 | Gain/Loss on Asset Disposal | income |
+| 320000 | Revaluation Surplus - Fixed Assets | equity |
+| 620000 | Impairment Loss on Fixed Assets | expense |
+
+**Reports:**
+
+- Asset Register — full list with original value, method, book value, status
+- Depreciation Schedule — per-asset depreciation board
+- Revaluation History — per-asset revaluation audit trail
+
+**Menu structure under Accounting:**
+
+```
+Accounting
+├── Assets → Assets (list)
+├── Accounting Configuration → Asset Models
+└── Assets → Depreciation Report
 ```
 
 ### Commission System

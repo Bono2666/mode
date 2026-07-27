@@ -587,7 +587,7 @@ class products(models.Model):
         comodel_name='sales.product_category', string='Product Category', ondelete='cascade', index=True, required=True)
     product_unit = fields.Many2one(
         comodel_name='sales.product_unit', string='Product Unit')
-    base_price = fields.Float(string="Sales Price", digits=(16, 0))
+    base_price = fields.Float(string="Sales Price", compute='_compute_base_price', digits=(16, 0))
     currency_id = fields.Many2one(
         comodel_name='res.currency', string='Currency',
         default=lambda self: self.env['res.currency'].search(
@@ -604,7 +604,9 @@ class products(models.Model):
     lead_time_days = fields.Integer(string='Lead Time (Days)')
     stock_jpn = fields.Integer(string='Stock JPN')
     weight_kg = fields.Float(string='Weight (Kg)')
-    reseller_price = fields.Float(string='Reseller Price', digits=(16, 0))
+    reseller_price = fields.Float(
+        string='Reseller Price', compute='_compute_reseller_price',
+        digits=(16, 0))
     remarks = fields.Text(string='Remarks')
     product_availability = fields.Char(string='Product Availability')
     sales_order_line_ids = fields.One2many(
@@ -648,6 +650,20 @@ class products(models.Model):
                 lambda l: l.sales_order_id
                 and l.sales_order_id.state in RESERVED_SO_STATES)
             product.qty_reserved_sale = sum(lines.mapped('quantity'))
+
+    @api.depends('price')
+    def _compute_reseller_price(self):
+        config = self.env['sales.pricing_margin_config'].sudo().search([], limit=1, order='id desc')
+        margin = config.reseller_margin if config else 0
+        for product in self:
+            product.reseller_price = product.price * (1 + margin / 100) if product.price else 0
+
+    @api.depends('price')
+    def _compute_base_price(self):
+        config = self.env['sales.pricing_margin_config'].sudo().search([], limit=1, order='id desc')
+        margin = config.sales_margin if config else 0
+        for product in self:
+            product.base_price = product.price * (1 + margin / 100) if product.price else 0
 
     def action_back_kanban(self):
         """Open the canonical Products action (kanban) so the Back button
@@ -3802,3 +3818,28 @@ class ProductImportWizard(models.TransientModel):
             'target': 'new',
             'context': {'default_state': 'upload'},
         }
+
+
+class pricing_margin_config(models.Model):
+    _name = 'sales.pricing_margin_config'
+    _inherit = ['navigation.mixin']
+    _description = 'Pricing Margin Configuration'
+    _rec_name = 'name'
+    _menu_code = 'pricing_margin_config'
+
+    name = fields.Char(string="Name", default="Default Margin Configuration")
+    reseller_margin = fields.Float(
+        string="Reseller Margin (%)", digits=(16, 2),
+        help="Margin percentage added to Price for Reseller Price calculation")
+    sales_margin = fields.Float(
+        string="Sales Price Margin (%)", digits=(16, 2),
+        help="Margin percentage added to Price for End User Sales Price calculation")
+    is_edit = fields.Boolean(default=False)
+
+    @api.model
+    def create(self, vals):
+        existing = self.search([], limit=1)
+        if existing:
+            existing.write(vals)
+            return existing
+        return super(pricing_margin_config, self).create(vals)

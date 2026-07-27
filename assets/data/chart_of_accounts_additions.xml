@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- New Chart of Accounts for Asset Management -->
+
+        <!-- Fixed Assets - Vehicles/Machinery/Equipment -->
+        <record id="account_114000" model="accounting.account">
+            <field name="code">114000</field>
+            <field name="name">Fixed Assets - Vehicles/Machinery/Equipment</field>
+            <field name="type_id" ref="accounting.account_type_fixed_asset"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+
+        <!-- Accumulated Depreciation (dedicated) -->
+        <record id="account_114900" model="accounting.account">
+            <field name="code">114900</field>
+            <field name="name">Accumulated Depreciation - Fixed Assets</field>
+            <field name="type_id" ref="accounting.account_type_fixed_asset"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+
+        <!-- Depreciation Expense -->
+        <record id="account_520000" model="accounting.account">
+            <field name="code">520000</field>
+            <field name="name">Depreciation Expense</field>
+            <field name="type_id" ref="accounting.account_type_expense"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+
+        <!-- Gain/Loss on Asset Disposal -->
+        <record id="account_420000" model="accounting.account">
+            <field name="code">420000</field>
+            <field name="name">Gain/Loss on Asset Disposal</field>
+            <field name="type_id" ref="accounting.account_type_income"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+
+        <!-- Revaluation Surplus - Fixed Assets -->
+        <record id="account_320000" model="accounting.account">
+            <field name="code">320000</field>
+            <field name="name">Revaluation Surplus - Fixed Assets</field>
+            <field name="type_id" ref="accounting.account_type_equity"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+
+        <!-- Impairment Loss -->
+        <record id="account_620000" model="accounting.account">
+            <field name="code">620000</field>
+            <field name="name">Impairment Loss on Fixed Assets</field>
+            <field name="type_id" ref="accounting.account_type_expense"/>
+            <field name="reconcile" eval="False"/>
+        </record>
+    </data>
+</odoo>

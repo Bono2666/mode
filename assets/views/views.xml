@@ -1,0 +1,668 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ================================================================== -->
+        <!-- WINDOW ACTIONS                                                      -->
+        <!-- ================================================================== -->
+
+        <record id="action_asset_list" model="ir.actions.act_window">
+            <field name="name">Assets</field>
+            <field name="res_model">assets.asset</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first asset
+                </p>
+            </field>
+        </record>
+
+        <record id="action_asset_model" model="ir.actions.act_window">
+            <field name="name">Asset Models</field>
+            <field name="res_model">assets.model</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first asset model template
+                </p>
+            </field>
+        </record>
+
+        <!-- Top-level Root Menu -->
+        <menuitem name="Assets" id="menu_assets_root"
+                  parent="accounting.accounting_root_menu" sequence="2"/>
+
+        <!-- Menu Items -->
+        <menuitem id="menu_asset_list"
+                  name="Assets"
+                  parent="menu_assets_root"
+                  action="action_asset_list"
+                  sequence="10"/>
+
+        <menuitem id="menu_asset_model"
+                  name="Asset Models"
+                  parent="accounting.menu_accounting_config_parent"
+                  action="action_asset_model"
+                  sequence="8"/>
+
+        <!-- Depreciation Report Action -->
+        <record id="action_depreciation_report_wizard" model="ir.actions.act_window">
+            <field name="name">Depreciation Report</field>
+            <field name="res_model">assets.asset</field>
+            <field name="view_mode">tree,form</field>
+            <field name="context">{'search_default_filter_running': 1}</field>
+        </record>
+
+        <menuitem id="menu_asset_depreciation_report"
+                  name="Depreciation Report"
+                  parent="menu_assets_root"
+                  action="action_depreciation_report_wizard"
+                  sequence="30"/>
+
+        <!-- ================================================================== -->
+        <!-- ASSET MODEL - FORM VIEW                                             -->
+        <!-- ================================================================== -->
+
+        <record id="view_asset_model_form" model="ir.ui.view">
+            <field name="name">assets.model.form</field>
+            <field name="model">assets.model</field>
+            <field name="arch" type="xml">
+                <form string="Asset Model">
+                    <header>
+                        <field name="id" invisible="1"/>
+                        <field name="is_edit" invisible="1"/>
+                        <field name="user_can_update" invisible="1"/>
+                        <field name="user_can_delete" invisible="1"/>
+                        <button string="Back" name="action_back" type="object"
+                                invisible="is_edit or not id"/>
+                        <button string="Edit" name="action_edit" type="object"
+                                invisible="not id or is_edit or not user_can_update"/>
+                        <button string="Edit" class="opacity-50 pe-none"
+                                invisible="not id or is_edit or user_can_update"/>
+                        <button string="Save" name="action_save" type="object"
+                                invisible="id and not is_edit" class="oe_highlight"/>
+                        <button string="Cancel" invisible="id" special="cancel"
+                                class="discard-new"/>
+                        <button string="Cancel" invisible="not is_edit" special="cancel"
+                                class="discard-edit"/>
+                        <button name="action_delete" string="Delete" type="object"
+                                class="oe_highlight" confirm="Are you sure?"
+                                invisible="not id or is_edit or not user_can_delete"/>
+                        <button string="Delete" class="oe_highlight opacity-50 pe-none"
+                                invisible="not id or is_edit or user_can_delete"/>
+                        <span class="min-w-0 text-truncate mt-1">
+                            <field name="model_description"/>
+                        </span>
+                        <style>.o_control_panel { display: none !important; }</style>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" placeholder="e.g. Vehicles"
+                                       readonly="not is_edit and id"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group string="Depreciation Settings">
+                                <field name="method" readonly="not is_edit and id"/>
+                                <field name="method_number" readonly="not is_edit and id"/>
+                                <field name="method_period" readonly="not is_edit and id"/>
+                                <field name="method_progress_factor"
+                                       readonly="not is_edit and id"
+                                       invisible="method == 'straight_line'"/>
+                                <field name="prorata_computation_type"
+                                       readonly="not is_edit and id"/>
+                            </group>
+                            <group string="Accounts">
+                                <field name="account_asset_id" readonly="not is_edit and id"/>
+                                <field name="account_depreciation_id"
+                                       readonly="not is_edit and id"/>
+                                <field name="account_depreciation_expense_id"
+                                       readonly="not is_edit and id"/>
+                                <field name="journal_id" readonly="not is_edit and id"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- ASSET MODEL - TREE VIEW -->
+
+        <record id="view_asset_model_tree" model="ir.ui.view">
+            <field name="name">assets.model.tree</field>
+            <field name="model">assets.model</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="name"/>
+                    <field name="method"/>
+                    <field name="method_number"/>
+                    <field name="method_period"/>
+                    <field name="account_asset_id"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- ================================================================== -->
+        <!-- ASSET - FORM VIEW                                                   -->
+        <!-- ================================================================== -->
+
+        <record id="view_asset_form" model="ir.ui.view">
+            <field name="name">assets.asset.form</field>
+            <field name="model">assets.asset</field>
+            <field name="arch" type="xml">
+                <form string="Fixed Asset">
+                    <header>
+                        <field name="id" invisible="1"/>
+                        <field name="is_edit" invisible="1"/>
+                        <field name="user_can_update" invisible="1"/>
+                        <field name="user_can_delete" invisible="1"/>
+                        <field name="user_can_confirm" invisible="1"/>
+                        <field name="user_can_dispose" invisible="1"/>
+                        <field name="state" invisible="1"/>
+                        <field name="disposal_move_id" invisible="1"/>
+                        <field name="revaluation_line_ids" invisible="1"/>
+                        <field name="purchase_line_id" invisible="1"/>
+
+                        <!-- Back -->
+                        <button string="Back" name="action_back" type="object"
+                                invisible="is_edit or not id"/>
+
+                        <!-- Confirm (active) - only for draft, only if can_confirm -->
+                        <button string="Confirm" name="action_confirm" type="object"
+                                class="btn-primary"
+                                invisible="state != 'draft' or not user_can_confirm"/>
+                        <!-- Confirm (disabled) - only for draft, user lacks permission -->
+                        <button string="Confirm" class="btn-primary opacity-50 pe-none"
+                                invisible="state != 'draft' or user_can_confirm"/>
+
+                        <!-- Compute Depreciation (active) -->
+                        <button string="Compute Depreciation"
+                                name="action_compute_depreciation" type="object"
+                                invisible="state not in ('running', 'paused') or not user_can_confirm"/>
+                        <!-- Compute Depreciation (disabled) -->
+                        <button string="Compute Depreciation"
+                                class="opacity-50 pe-none"
+                                invisible="state not in ('running', 'paused') or user_can_confirm"/>
+
+                        <!-- Pause (active) -->
+                        <button string="Pause" name="action_pause" type="object"
+                                invisible="state != 'running' or not user_can_confirm"/>
+                        <!-- Pause (disabled) -->
+                        <button string="Pause" class="opacity-50 pe-none"
+                                invisible="state != 'running' or user_can_confirm"/>
+
+                        <!-- Resume (active) -->
+                        <button string="Resume" name="action_resume" type="object"
+                                invisible="state != 'paused' or not user_can_confirm"/>
+                        <!-- Resume (disabled) -->
+                        <button string="Resume" class="opacity-50 pe-none"
+                                invisible="state != 'paused' or user_can_confirm"/>
+
+                        <!-- Revalue (active) -->
+                        <button string="Revalue" name="action_open_revaluation_wizard"
+                                type="object"
+                                invisible="state != 'running' or not user_can_confirm"/>
+                        <!-- Revalue (disabled) -->
+                        <button string="Revalue" class="opacity-50 pe-none"
+                                invisible="state != 'running' or user_can_confirm"/>
+
+                        <!-- Dispose (active) -->
+                        <button string="Dispose" name="action_open_disposal_wizard"
+                                type="object"
+                                invisible="state != 'running' or not user_can_dispose"/>
+                        <!-- Dispose (disabled) -->
+                        <button string="Dispose" class="opacity-50 pe-none"
+                                invisible="state != 'running' or user_can_dispose"/>
+
+                        <!-- Edit (active) -->
+                        <button string="Edit" name="action_edit" type="object"
+                                invisible="not id or is_edit or not user_can_update"/>
+                        <!-- Edit (disabled) -->
+                        <button string="Edit" class="opacity-50 pe-none"
+                                invisible="not id or is_edit or user_can_update"/>
+
+                        <!-- Save -->
+                        <button string="Save" name="action_save" type="object"
+                                invisible="id and not is_edit" class="oe_highlight"/>
+
+                        <!-- Cancel (new) -->
+                        <button string="Cancel" invisible="id" special="cancel"
+                                class="discard-new"/>
+                        <!-- Cancel (edit) -->
+                        <button string="Cancel" invisible="not is_edit" special="cancel"
+                                class="discard-edit"/>
+
+                        <!-- Delete (active) -->
+                        <button name="action_delete" string="Delete" type="object"
+                                class="oe_highlight" confirm="Are you sure?"
+                                invisible="not id or is_edit or not user_can_delete"/>
+                        <!-- Delete (disabled) -->
+                        <button string="Delete" class="oe_highlight opacity-50 pe-none"
+                                invisible="not id or is_edit or user_can_delete"/>
+
+                        <span class="min-w-0 text-truncate mt-1">
+                            <field name="model_description"/>
+                        </span>
+
+                        <!-- Statusbar -->
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,running,close"/>
+
+                        <style>.o_control_panel { display: none !important; }</style>
+                    </header>
+
+                    <sheet>
+                        <!-- Smart Buttons -->
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_depreciation_lines"
+                                    type="object" class="oe_stat_button"
+                                    icon="fa-bars">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Depreciation Board</span>
+                                </div>
+                            </button>
+                            <button name="action_view_revaluation_history"
+                                    type="object" class="oe_stat_button"
+                                    icon="fa-history"
+                                    invisible="not revaluation_line_ids">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Revaluation History</span>
+                                </div>
+                            </button>
+                            <button name="action_view_disposal_move"
+                                    type="object" class="oe_stat_button"
+                                    icon="fa-file-text-o"
+                                    invisible="not disposal_move_id">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Disposal Entry</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div class="oe_title">
+                            <field name="asset_number" readonly="1"/>
+                            <h1>
+                                <field name="name" placeholder="Asset Name"
+                                       readonly="not is_edit and id"/>
+                            </h1>
+                        </div>
+
+                        <group>
+                            <group string="Asset Information">
+                                <field name="asset_model_id" readonly="not is_edit and id"/>
+                                <field name="acquisition_date" readonly="not is_edit and id"/>
+                                <field name="first_depreciation_date"
+                                       readonly="not is_edit and id"/>
+                                <field name="custodian_id" readonly="not is_edit and id"/>
+                                <field name="location" readonly="not is_edit and id"/>
+                            </group>
+                            <group string="Values">
+                                <field name="original_value" readonly="not is_edit and id"/>
+                                <field name="salvage_value" readonly="not is_edit and id"/>
+                                <field name="depreciable_value" readonly="1"/>
+                                <field name="book_value" readonly="1"/>
+                                <field name="fair_value" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="Depreciation Settings" name="depreciation">
+                                <group>
+                                    <group>
+                                        <field name="method" readonly="not is_edit and id"/>
+                                        <field name="method_number"
+                                               readonly="not is_edit and id"/>
+                                        <field name="method_period"
+                                               readonly="not is_edit and id"/>
+                                        <field name="method_progress_factor"
+                                               readonly="not is_edit and id"
+                                               invisible="method == 'straight_line'"/>
+                                        <field name="prorata_computation_type"
+                                               readonly="not is_edit and id"/>
+                                    </group>
+                                    <group>
+                                        <field name="account_asset_id"
+                                               readonly="not is_edit and id"/>
+                                        <field name="account_depreciation_id"
+                                               readonly="not is_edit and id"/>
+                                        <field name="account_depreciation_expense_id"
+                                               readonly="not is_edit and id"/>
+                                        <field name="journal_id"
+                                               readonly="not is_edit and id"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Revaluation Accounts" name="revaluation_accounts">
+                                <group>
+                                    <field name="account_revaluation_surplus_id"
+                                           readonly="not is_edit and id"/>
+                                    <field name="account_revaluation_loss_id"
+                                           readonly="not is_edit and id"/>
+                                </group>
+                            </page>
+
+                            <page string="Depreciation Board" name="depreciation_board">
+                                <field name="depreciation_line_ids" readonly="1">
+                                    <tree create="0" delete="0" edit="0"
+                                          decoration-info="state == 'draft'"
+                                          decoration-success="state == 'posted'">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="depreciation_date"/>
+                                        <field name="depreciation_value"/>
+                                        <field name="accumulated_value"/>
+                                        <field name="remaining_value"/>
+                                        <field name="state" widget="badge"
+                                               decoration-info="state == 'draft'"
+                                               decoration-success="state == 'posted'"/>
+                                        <button name="action_post_depreciation"
+                                                string="Post" type="object"
+                                                class="btn-primary"
+                                                invisible="state != 'draft'"/>
+                                        <button name="action_view_move"
+                                                string="View Entry" type="object"
+                                                icon="fa-external-link"
+                                                invisible="state != 'posted'"/>
+                                    </tree>
+                                </field>
+                            </page>
+
+                            <page string="Revaluation History" name="revaluation_history">
+                                <field name="revaluation_line_ids" readonly="1">
+                                    <tree create="0" delete="0" edit="0"
+                                          decoration-info="state == 'draft'"
+                                          decoration-success="state == 'posted'">
+                                        <field name="revaluation_date"/>
+                                        <field name="book_value_before"/>
+                                        <field name="fair_value_after"/>
+                                        <field name="surplus_deficit_value"/>
+                                        <field name="remaining_useful_life"/>
+                                        <field name="state" widget="badge"
+                                               decoration-info="state == 'draft'"
+                                               decoration-success="state == 'posted'"/>
+                                        <button name="action_view_move"
+                                                string="View Entry" type="object"
+                                                icon="fa-external-link"
+                                                invisible="state != 'posted'"/>
+                                    </tree>
+                                </field>
+                            </page>
+
+                            <page string="Purchase Info" name="purchase_info"
+                                  invisible="not purchase_line_id">
+                                <group>
+                                    <field name="purchase_line_id" readonly="1"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- ASSET - TREE VIEW -->
+
+        <record id="view_asset_tree" model="ir.ui.view">
+            <field name="name">assets.asset.tree</field>
+            <field name="model">assets.asset</field>
+            <field name="arch" type="xml">
+                <tree decoration-info="state == 'draft'"
+                      decoration-warning="state == 'paused'"
+                      decoration-success="state == 'running'"
+                      decoration-muted="state in ('close', 'disposed')">
+                    <field name="asset_number"/>
+                    <field name="name"/>
+                    <field name="acquisition_date"/>
+                    <field name="original_value"/>
+                    <field name="method"/>
+                    <field name="book_value"/>
+                    <field name="state" widget="badge"
+                           decoration-info="state == 'draft'"
+                           decoration-warning="state == 'paused'"
+                           decoration-success="state == 'running'"
+                           decoration-muted="state in ('close', 'disposed')"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- ASSET - SEARCH VIEW -->
+
+        <record id="view_asset_search" model="ir.ui.view">
+            <field name="name">assets.asset.search</field>
+            <field name="model">assets.asset</field>
+            <field name="arch" type="xml">
+                <search string="Search Assets">
+                    <field name="asset_number"/>
+                    <field name="name"/>
+                    <field name="custodian_id"/>
+                    <filter name="filter_draft" string="Draft"
+                            domain="[('state', '=', 'draft')]"/>
+                    <filter name="filter_running" string="Running"
+                            domain="[('state', '=', 'running')]"/>
+                    <filter name="filter_paused" string="Paused"
+                            domain="[('state', '=', 'paused')]"/>
+                    <filter name="filter_disposed" string="Disposed"
+                            domain="[('state', '=', 'disposed')]"/>
+                    <separator/>
+                    <filter name="filter_straight_line" string="Straight Line"
+                            domain="[('method', '=', 'straight_line')]"/>
+                    <filter name="filter_declining" string="Declining Balance"
+                            domain="[('method', '=', 'declining')]"/>
+                    <filter name="filter_declining_then_sl"
+                            string="Declining then Straight Line"
+                            domain="[('method', '=', 'declining_then_straight')]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_state" string="Status"
+                                context="{'group_by': 'state'}"/>
+                        <filter name="group_method" string="Method"
+                                context="{'group_by': 'method'}"/>
+                        <filter name="group_custodian" string="Custodian"
+                                context="{'group_by': 'custodian_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ================================================================== -->
+        <!-- DEPRECIATION LINE - FORM VIEW                                       -->
+        <!-- ================================================================== -->
+
+        <record id="view_depreciation_line_form" model="ir.ui.view">
+            <field name="name">assets.depreciation_line.form</field>
+            <field name="model">assets.depreciation_line</field>
+            <field name="arch" type="xml">
+                <form string="Depreciation Line" create="false" edit="false">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="asset_id"/>
+                                <field name="sequence"/>
+                                <field name="depreciation_date"/>
+                            </group>
+                            <group>
+                                <field name="depreciation_value"/>
+                                <field name="accumulated_value"/>
+                                <field name="remaining_value"/>
+                                <field name="move_id" invisible="1"/>
+                                <field name="state" widget="badge"
+                                       decoration-info="state == 'draft'"
+                                       decoration-success="state == 'posted'"/>
+                            </group>
+                        </group>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_move"
+                                    type="object" class="oe_stat_button"
+                                    icon="fa-file-text-o"
+                                    invisible="not move_id">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Journal Entry</span>
+                                </div>
+                            </button>
+                        </div>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- DEPRECIATION LINE - TREE VIEW -->
+
+        <record id="view_depreciation_line_tree" model="ir.ui.view">
+            <field name="name">assets.depreciation_line.tree</field>
+            <field name="model">assets.depreciation_line</field>
+            <field name="arch" type="xml">
+                <tree decoration-info="state == 'draft'"
+                      decoration-success="state == 'posted'">
+                    <field name="sequence" widget="handle"/>
+                    <field name="asset_id"/>
+                    <field name="depreciation_date"/>
+                    <field name="depreciation_value"/>
+                    <field name="accumulated_value"/>
+                    <field name="remaining_value"/>
+                    <field name="state" widget="badge"
+                           decoration-info="state == 'draft'"
+                           decoration-success="state == 'posted'"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- ================================================================== -->
+        <!-- REVALUATION LINE - FORM VIEW                                        -->
+        <!-- ================================================================== -->
+
+        <record id="view_revaluation_line_form" model="ir.ui.view">
+            <field name="name">assets.revaluation_line.form</field>
+            <field name="model">assets.revaluation_line</field>
+            <field name="arch" type="xml">
+                <form string="Revaluation Line" create="false" edit="false">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="asset_id"/>
+                                <field name="revaluation_date"/>
+                                <field name="remaining_useful_life"/>
+                            </group>
+                            <group>
+                                <field name="book_value_before"/>
+                                <field name="fair_value_after"/>
+                                <field name="surplus_deficit_value"/>
+                                <field name="move_id" invisible="1"/>
+                                <field name="state" widget="badge"
+                                       decoration-info="state == 'draft'"
+                                       decoration-success="state == 'posted'"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="note" readonly="1"/>
+                        </group>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_move"
+                                    type="object" class="oe_stat_button"
+                                    icon="fa-file-text-o"
+                                    invisible="not move_id">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Journal Entry</span>
+                                </div>
+                            </button>
+                        </div>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- REVALUATION LINE - TREE VIEW -->
+
+        <record id="view_revaluation_line_tree" model="ir.ui.view">
+            <field name="name">assets.revaluation_line.tree</field>
+            <field name="model">assets.revaluation_line</field>
+            <field name="arch" type="xml">
+                <tree decoration-info="state == 'draft'"
+                      decoration-success="state == 'posted'">
+                    <field name="asset_id"/>
+                    <field name="revaluation_date"/>
+                    <field name="book_value_before"/>
+                    <field name="fair_value_after"/>
+                    <field name="surplus_deficit_value"/>
+                    <field name="remaining_useful_life"/>
+                    <field name="state" widget="badge"
+                           decoration-info="state == 'draft'"
+                           decoration-success="state == 'posted'"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- ================================================================== -->
+        <!-- DISPOSAL WIZARD - FORM VIEW                                         -->
+        <!-- ================================================================== -->
+
+        <record id="view_disposal_wizard_form" model="ir.ui.view">
+            <field name="name">assets.disposal_wizard.form</field>
+            <field name="model">assets.disposal_wizard</field>
+            <field name="arch" type="xml">
+                <form string="Dispose Asset">
+                    <group>
+                        <group>
+                            <field name="asset_id" invisible="1"/>
+                            <field name="asset_number" readonly="1"/>
+                            <field name="asset_name" readonly="1"/>
+                            <field name="book_value" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="disposal_date"/>
+                            <field name="sale_price"/>
+                            <field name="gain_loss" readonly="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="note"/>
+                    </group>
+                    <footer>
+                        <button string="Confirm Disposal"
+                                name="action_confirm_disposal" type="object"
+                                class="btn-primary"
+                                confirm="Are you sure you want to dispose this asset?"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- ================================================================== -->
+        <!-- REVALUATION WIZARD - FORM VIEW                                      -->
+        <!-- ================================================================== -->
+
+        <record id="view_revaluation_wizard_form" model="ir.ui.view">
+            <field name="name">assets.revaluation_wizard.form</field>
+            <field name="model">assets.revaluation_wizard</field>
+            <field name="arch" type="xml">
+                <form string="Revalue Asset">
+                    <group>
+                        <group>
+                            <field name="asset_id" invisible="1"/>
+                            <field name="asset_number" readonly="1"/>
+                            <field name="asset_name" readonly="1"/>
+                            <field name="book_value_current" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="revaluation_date"/>
+                            <field name="fair_value_new"/>
+                            <field name="surplus_deficit" readonly="1"/>
+                            <field name="remaining_useful_life"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="note"/>
+                    </group>
+                    <footer>
+                        <button string="Confirm Revaluation"
+                                name="action_confirm_revaluation" type="object"
+                                class="btn-primary"
+                                confirm="Are you sure you want to revalue this asset?"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+    </data>
+</odoo>

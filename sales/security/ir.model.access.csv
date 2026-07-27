@@ -37,3 +37,4 @@ access_sales_delivery,sales.delivery,model_sales_delivery,,1,1,1,1
 access_sales_delivery_line,sales.delivery.line,model_sales_delivery_line,,1,1,1,1
 access_sales_exchange_rate,sales.exchange_rate,model_sales_exchange_rate,,1,1,1,1
 access_sales_product_import,sales.product.import,model_sales_product_import,,1,1,1,1
+access_sales_pricing_margin_config,sales.pricing_margin_config,model_sales_pricing_margin_config,,1,1,1,1

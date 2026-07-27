@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_assets_asset,assets.asset,model_assets_asset,,1,1,1,1
+access_assets_model,assets.model,model_assets_model,,1,1,1,1
+access_assets_depreciation_line,assets.depreciation_line,model_assets_depreciation_line,,1,1,1,1
+access_assets_revaluation_line,assets.revaluation_line,model_assets_revaluation_line,,1,1,1,1
+access_assets_disposal_wizard,assets.disposal_wizard,model_assets_disposal_wizard,,1,1,1,1
+access_assets_revaluation_wizard,assets.revaluation_wizard,model_assets_revaluation_wizard,,1,1,1,1

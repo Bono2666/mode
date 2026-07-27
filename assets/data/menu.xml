@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Assets Parent Menu -->
+        <record id="assets_menu_root" model="general.menu">
+            <field name="menu_id">assets</field>
+            <field name="menu_name">Assets</field>
+            <field name="parent_menu">accounting</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <!-- Assets Sub-menus -->
+        <record id="asset_list_menu" model="general.menu">
+            <field name="menu_id">asset_list</field>
+            <field name="menu_name">Assets</field>
+            <field name="parent_menu">assets</field>
+        </record>
+
+        <record id="asset_model_menu" model="general.menu">
+            <field name="menu_id">asset_model</field>
+            <field name="menu_name">Asset Models</field>
+            <field name="parent_menu">accounting_config</field>
+        </record>
+
+        <record id="asset_depreciation_report_menu" model="general.menu">
+            <field name="menu_id">asset_depreciation_report</field>
+            <field name="menu_name">Depreciation Report</field>
+            <field name="parent_menu">assets</field>
+        </record>
+
+    </data>
+</odoo>

@@ -18,6 +18,19 @@
       </field>
     </record>
 
+    <!-- sales.pricing_margin_config tree view -->
+    <record model="ir.ui.view" id="sales.pricing_margin_config_tree">
+      <field name="name">Pricing Margin Configuration</field>
+      <field name="model">sales.pricing_margin_config</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="reseller_margin" string="Reseller Margin (%)"/>
+          <field name="sales_margin" string="Sales Price Margin (%)"/>
+        </tree>
+      </field>
+    </record>
+
     <!-- sales.payment_terms tree view -->
     <record id="sales.payment_terms_view_tree" model="ir.ui.view">
       <field name="name">Payment Terms</field>
@@ -505,7 +518,7 @@
 
     <!-- sales.products form view -->
     <record id="sales.products_view_form" model="ir.ui.view">
-      <field name="name">sales.products.view.form</field>
+      <field name="name">sales.products.view.form.v2</field>
       <field name="model">sales.products</field>
       <field name="arch" type="xml">
           <form string="">
@@ -562,11 +575,11 @@
                       <field name="price" readonly="price_yen != 0"/>
                     </group>
                     <group name="group_standard_price">
-                        <field name="reseller_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="not is_edit and id"/>
+                        <field name="reseller_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="1"/>
                         <label for="base_price"/>
                         <div name="pricing" class="o_row">
-                          <field name="base_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="not is_edit and id"/>
-                          <field name="currency_id" class="oe_inline" readonly="not is_edit and id"/>
+                          <field name="base_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="1"/>
+                          <field name="currency_id" class="oe_inline" readonly="1"/>
                           <field name="tax_string" class="ms-2" readonly="1"/>
                         </div>
                         <field name="customer_tax" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
@@ -784,6 +797,70 @@
             </notebook>
           </sheet>
         </form>
+      </field>
+    </record>
+
+    <!-- sales.pricing_margin_config form view -->
+    <record id="sales.pricing_margin_config_view_form" model="ir.ui.view">
+      <field name="name">sales.pricing_margin_config.view.form</field>
+      <field name="model">sales.pricing_margin_config</field>
+      <field name="arch" type="xml">
+          <form string="">
+            <header>
+              <field name="id" invisible="1"/>
+              <field name="is_edit" invisible="1"/>
+              <field name="user_can_update" invisible="1"/>
+              <field name="user_can_delete" invisible="1"/>
+              <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+              <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+              <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+              <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+              <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+              <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+              <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+              <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+              <span class="min-w-0 text-truncate mt-1">
+                <field name="model_description"/>
+              </span>
+              <style>
+                .o_control_panel {
+                  display: none !important;
+                }
+              </style>
+            </header>
+            <sheet>
+              <div class="oe_title">
+                <h1>
+                  <div class="d-flex">
+                    <field class="text-break" name="name" options="{'line_breaks': False}" widget="text" placeholder="e.g. Default Margin Configuration" readonly="not is_edit and id"/>
+                  </div>
+                </h1>
+              </div>
+              <group>
+                <group string="Margin Settings">
+                  <label for="reseller_margin"/>
+                  <div class="o_row" style="width: 30% !important;">
+                    <field name="reseller_margin" readonly="not is_edit and id" nolabel="1"/>
+                    <span>%%</span>
+                  </div>
+                  <label for="sales_margin"/>
+                  <div class="o_row" style="width: 30% !important;">
+                    <field name="sales_margin" readonly="not is_edit and id" nolabel="1"/>
+                    <span>%%</span>
+                  </div>
+                </group>
+              </group>
+              <div class="mt-4 mb-3">
+                <h4 class="mb-2">Formula</h4>
+                <p class="text-muted mb-1">
+                  Reseller Price = Price + (Price x Reseller Margin / 100)
+                </p>
+                <p class="text-muted mb-0">
+                  Sales Price (End User) = Price + (Price x Sales Price Margin / 100)
+                </p>
+              </div>
+            </sheet>
+          </form>
       </field>
     </record>
 
@@ -1742,6 +1819,20 @@
         </p>
       </field>
     </record>
+    <record model="ir.actions.act_window" id="sales.pricing_margin_config_action">
+      <field name="name">Pricing Margin Configuration</field>
+      <field name="res_model">sales.pricing_margin_config</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create a new margin configuration
+        </p>
+        <p>
+          Configure the margin percentages used to automatically calculate Reseller Price and Sales Price (End User) from the product base Price.
+        </p>
+      </field>
+    </record>
     <record model="ir.actions.act_window" id="sales.customer_action">
       <field name="name">Customer</field>
       <field name="res_model">sales.customer</field>
@@ -1953,7 +2044,8 @@
     <menuitem name="Invoicing" id="sales.invoicing_menu" parent="general.menu_master_menu" sequence="3"/>
     <menuitem name="Product" id="sales.product_menu" parent="general.menu_master_menu" sequence="5"/>
     <menuitem name="Price Conditions" id="sales.price_condition_menu" parent="general.menu_master_menu" action="sales.price_condition_action" sequence="8"/>
-    <menuitem name="Approval" id="sales.approval_matrix_menu" parent="general.menu_master_menu" sequence="9"/>
+    <menuitem name="Pricing Margin" id="sales.pricing_margin_config_menu" parent="general.menu_master_menu" action="sales.pricing_margin_config_action" sequence="9"/>
+    <menuitem name="Approval" id="sales.approval_matrix_menu" parent="general.menu_master_menu" sequence="10"/>
     <menuitem name="Sales Approval" id="sales.sales_approvals_menu" parent="sales.menu_approvals_root" action="sales.sales_approval_action" sequence="1"/>
 
     <!-- actions opening views on models -->
