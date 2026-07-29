@@ -37,13 +37,85 @@ Module upgrades via `-u <module>`. E2E tests via Playwright + Pytest (see Testin
 
 ### Custom RBAC System (general module)
 
-- **`general.menu`** — Defines all menu items with a `menu_id` string code (e.g., `'sales_order'`, `'rfq'`, `'customers'`).
-- **`general.custom_users`** — Wraps `res.users` with additional fields (position, image). Creation syncs to `res.users` and `res.partner`.
-- **`general.auth`** — Granular menu-level permissions per user: `can_create`, `can_update`, `can_delete`, `can_submit`, `can_send`, `can_confirm`, `can_invoicing`, `can_receive`, `can_billing`, `can_commission`.
-- **`res.users`** (extended) — Has `hide_menu_ids`. `_refresh_custom_menu_access()` rebuilds menu visibility on login.
-- **`ir.ui.menu`** (extended) — Has `restrict_user_ids`. `_filter_visible_menus()` hides menus from restricted users (admins bypass).
+#### Data Models
 
-**Permission flow:** Login → `_update_last_login()` → `_refresh_custom_menu_access()` → for each `general.menu`, if no `general.auth` entry, menu is hidden. `NavigationMixin.get_views()` strips `Create` button when `can_create` is False.
+- **`general.menu`** — Defines all menu items with a `menu_id` string code (e.g., `'sales_order'`, `'rfq'`, `'customers'`). Also has `menu_name` (display name), `parent_menu` (parent slug), `is_parent` (boolean), and **`ir_ui_menu_id`** (Many2one to `ir.ui.menu`) for direct linking.
+- **`general.custom_users`** — Wraps `res.users` with additional fields (position, image). Creation syncs to `res.users` and `res.partner`.
+- **`general.auth`** — Granular menu-level permissions per user: `can_create`, `can_update`, `can_delete`, `can_submit`, `can_send`, `can_confirm`, `can_invoicing`, `can_receive`, `can_billing`, `can_commission`. Each record links a `general.custom_users` to a `general.menu`.
+- **`res.users`** (extended) — Has `hide_menu_ids`. `_refresh_custom_menu_access()` rebuilds menu visibility on login.
+- **`ir.ui.menu`** (extended) — Has `restrict_user_ids` (Many2many to `res.users`). Users in this list cannot see the menu.
+
+#### The `ir_ui_menu_id` Field (Critical)
+
+**`general.menu.ir_ui_menu_id`** is a Many2one to `ir.ui.menu` that provides a **direct, precise link** between the custom menu definition and the Odoo menu record. This field is essential for correct restriction matching.
+
+**Why it exists:** The original code used `ir.ui.menu.name = general_menu.menu_name` for matching. This is **unsafe** because multiple `ir.ui.menu` records can share the same name (e.g., "Configuration" exists at id=71 under Home and id=51 under Inventory). Name-based matching causes **over-restriction** — restricting menus the user should see.
+
+**Rule:** When adding new menus to `general.menu`, always set `ir_ui_menu_id` to the exact `ir.ui.menu` record. If no match exists, leave it NULL (the menu will be skipped during restriction, which is safer than over-restricting).
+
+#### Login Permission Flow
+
+```
+User login
+  → _update_last_login()
+    → _refresh_custom_menu_access()
+      → Step 1: Clear ALL existing restrict_user_ids for this user
+      → Step 2: Delete auto-generated parent auth entries
+      → Step 3: Compute menu access from general.auth entries
+        → Find direct auth entries for the user
+        → Auto-create parent auth entries (folders needed to reach allowed menus)
+      → Step 4: For each general.menu NOT in the user's auth list:
+        → If ir_ui_menu_id is set: restrict that specific ir.ui.menu
+        → If ir_ui_menu_id is NULL: skip (no restriction applied)
+      → Step 5: Clear registry cache (ormcache_context + ormcache)
+```
+
+**Key behaviors:**
+- Admin users (`base.group_system`) bypass all restrictions — `_get_restricted_menu_ids()` returns empty set
+- `_refresh_custom_menu_access` runs on EVERY login, overwriting any manual DB changes to `restrict_user_ids`
+- The `restrict_user_ids` field on `ir.ui.menu` is the **single source of truth** for menu visibility, but it's auto-computed from `general.auth` + `general.menu`
+- Every `general.menu` entry MUST have a corresponding `general.auth` entry for each user who should see it. If missing, the menu is restricted.
+
+#### Menu Visibility in the Odoo Webclient
+
+Odoo 17's top navigation bar has three layers:
+
+| Layer | Source | Example |
+|-------|--------|---------|
+| **Apps dropdown** (hamburger icon) | `root.children` from `load_menus` — root-level menus only (`parent_id IS NULL`) | Home, Discuss |
+| **App Brand** | `currentApp.name` — the currently selected app | "Home" |
+| **Section tabs** | `currentApp.childrenTree` — children of the current app rendered as dropdowns | Configuration ▼, Purchases ▼ |
+
+**For user 7 (purchases@gmail.com):**
+- Apps dropdown: Home (70), Discuss (80) — root-level menus
+- When Home is selected: sections = Configuration (71), Purchases (136)
+- Configuration dropdown: Invoicing (116) → Payment Terms (124); Product (117) → Product Categories (130), Unit of Measures (132)
+- Purchases dropdown: Orders (137) → RfQ (138), PO (139), Vendors (140); Products (143)
+
+#### Menu Pruning (load_menus override)
+
+The `load_menus()` override on `ir.ui.menu` prunes restricted menus from the menu tree returned by Odoo's base `load_menus()`. It does NOT promote menus to root level — children stay as children, appearing as section tabs under their parent.
+
+**Algorithm:**
+1. Call `super().load_menus(debug)` to get the full menu tree (base Odoo handles `_visible_menu_ids` / groups filtering)
+2. `copy.deepcopy(result)` to avoid corrupting the `ormcache_context` cached result
+3. Get restricted menu IDs via `_get_restricted_menu_ids()` (direct DB search, no cache)
+4. Expand restricted IDs to include ALL descendants (BFS via `children_map`)
+5. Remove restricted menus from the result dict
+6. Clean up children lists (remove references to deleted menus)
+
+**Files:** `general/models/models.py` — class `IrUiMenu`
+
+#### Name-Based Matching Bug Fix
+
+**Problem:** `_refresh_custom_menu_access` originally searched `ir.ui.menu` by `name = menu.menu_name`. Multiple menus share names (e.g., "Configuration", "Products", "Inventory"), causing one `general.menu` entry to restrict multiple unrelated `ir.ui.menu` records.
+
+**Fix:** Added `ir_ui_menu_id` field to `general.menu` for direct linking. The restriction logic now uses `menu.ir_ui_menu_id` when available, falling back to skip (no restriction) when NULL.
+
+**When adding new menus:** Always verify `ir_ui_menu_id` is set correctly. Check for duplicate names in `ir.ui.menu`:
+```sql
+SELECT name, COUNT(*) FROM ir_ui_menu GROUP BY name HAVING COUNT(*) > 1;
+```
 
 ### Per-Module Access Mixins
 
@@ -126,6 +198,16 @@ Key models: `sales.customer`, `sales.products`, `sales.sales_order`, `sales.sale
 - Compute methods read margin from latest `sales.pricing_margin_config` record (`order='id desc'`)
 - `base_price` is used as `unit_price` in sales order lines and for tax string display
 
+**Product Form Conditional Visibility:**
+
+- When `sales_ok = False` (product is not for sale), the following fields are hidden:
+  - `reseller_price` (Reseller Price)
+  - `base_price` + label + currency + tax_string (Sales Price)
+  - `customer_tax` (Customer Tax)
+- `remarks` field uses `colspan="2"` to span full width of the form
+- Implemented via `invisible="not sales_ok"` on field, label, and div elements
+- Applied to both Sales and Purchases product forms
+
 ### Purchases Module
 
 **Flow:** RFQs → Purchase Orders → Bills + Receipts
@@ -187,7 +269,7 @@ Accounting
 
 ### Assets Module
 
-**Flow:** Purchase Bill (posted) → Asset Created (draft) → Confirm → Running → Compute Depreciation (daily cron) → Revaluation (optional) → Disposal
+**Flow:** Journal Entry posted → Asset Created (draft) → Confirm → Running → Compute Depreciation (daily cron) → Revaluation (optional) → Disposal
 
 Key models: `assets.model`, `assets.asset`, `assets.depreciation_line`, `assets.revaluation_line`, `assets.disposal_wizard`, `assets.revaluation_wizard`.
 
@@ -209,6 +291,7 @@ Key models: `assets.model`, `assets.asset`, `assets.depreciation_line`, `assets.
   - **Declining then Straight Line:** switches to straight line when beneficial
 - `action_pause()` / `action_resume()` — pause/resume depreciation
 - `book_value = fair_value - accumulated_depreciation`
+- `create()` uses `@api.model_create_multi` decorator for proper list-of-dicts handling
 
 **Depreciation Board** (`assets.depreciation_line`):
 
@@ -229,9 +312,26 @@ Key models: `assets.model`, `assets.asset`, `assets.depreciation_line`, `assets.
 - Fields: `sale_price`, `disposal_date`, `gain_loss` (computed from book_value vs sale_price)
 - `action_confirm_disposal()` — creates closing entry: Dr Accumulated Depreciation, Dr Cash/Bank (if sold), Cr Asset Account, Dr/Cr Gain/Loss
 
-**Purchases Integration** (`purchases.bill` inherits):
+**Auto-Creation from Journal Entries** (`accounting.move` inherits):
 
-- When a purchase bill is posted, auto-creates `assets.asset` in draft for any bill line where the account has `is_asset_account=True`
+- `accounting_move_asset` class inherits `accounting.move`
+- Overrides `action_post()` to call `_create_assets_from_move()` after posting
+- `_create_assets_from_move()` scans all **debit lines** in the posted journal entry
+- For each line where `debit > 0` AND `account_id.is_asset_account = True`:
+  - Creates `assets.asset` in draft state
+  - Sets `name` from JE line description
+  - Sets `original_value` from JE line debit amount
+  - Sets `acquisition_date` from JE date
+- **Trigger:** Any journal entry (bills, receipts, manual entries, etc.)
+- **No dependency on bill-specific code** — works for any source of journal entries
+
+**`is_asset_account` Field:**
+
+- Added to `accounting.account` model by `assets` module
+- Boolean field, default=False
+- Visible on COA form view via inherited view (`accounting_account_form_inherit_asset`)
+- When a JE is posted with a debit to an account marked `is_asset_account=True`, an asset is auto-created
+- To enable: mark the desired account in Chart of Accounts as "Asset Account"
 
 **Chart of Accounts additions:**
 
@@ -258,6 +358,16 @@ Accounting
 ├── Accounting Configuration → Asset Models
 └── Assets → Depreciation Report
 ```
+
+**Test Coverage** (Playwright + Pytest — 15 tests, all passing):
+
+| Test Class | Tests | What's Tested |
+|------------|-------|---------------|
+| `TestAssetModelCRUD` | 3 | Create, edit, delete asset models |
+| `TestAssetLifecycle` | 5 | Create, confirm, compute depreciation, pause/resume, dispose |
+| `TestAssetDepreciation` | 3 | Line count matches method_number, post line creates JE, straight-line values uniform |
+| `TestAssetRevaluation` | 2 | Revalue via wizard (UI), revaluation creates line (RPC) |
+| `TestAssetAutoCreation` | 2 | JE posting with asset account debit creates asset, correct original_value |
 
 ### Commission System
 
@@ -329,7 +439,7 @@ Validation: if one of expense/stock is filled, the other becomes required.
 
 - `create()` and `write()` detect state transition to `'received'`
 - Creates journal: `Dr stock_account_id / Cr 113200 (Stock Interim Received)`
-- Amount: `receipt_line.quantity × product.price`
+- Amount: `receipt_line.quantity × purchase_order_line.unit_price` (uses PO negotiated price, not product master price)
 
 ### Bill Accounting (Interim)
 
@@ -358,18 +468,22 @@ cd tests
 pip install -r requirements.txt
 playwright install chromium
 pytest                                          # All tests
-pytest -m happy_path                           # Happy path only
-pytest -m error_handling                       # Error handling only
-pytest -v --tb=short                           # Verbose output
+pytest -m asset                                 # Asset management tests only
+pytest -m happy_path                            # Import Products happy path
+pytest -m error_handling                        # Import Products error handling
+pytest -v --tb=short                            # Verbose output
+pytest test_asset_management.py -v              # Asset tests only
+pytest test_import_products.py -v               # Import tests only
 ```
 
 ### Test Structure
 
 ```
 tests/
-├── conftest.py                    # Fixtures: login, navigation, upload helpers
-├── pytest.ini                     # Pytest config + markers
+├── conftest.py                    # Fixtures: login, navigation, form helpers, RPC helpers
+├── pytest.ini                     # Pytest config + markers (asset, happy_path, etc.)
 ├── requirements.txt               # playwright, pytest, pytest-playwright
+├── test_asset_management.py       # 15 test cases for Asset Management (all passing)
 ├── test_import_products.py        # 12 test cases for Import Products
 └── fixtures/
     ├── valid_products.csv         # 3 products (happy path)
@@ -384,13 +498,14 @@ tests/
 
 ### Test Categories
 
-| Marker           | Tests | Coverage                          |
-|------------------|-------|-----------------------------------|
-| `happy_path`     | 3     | Navigate, import valid CSV, bulk  |
-| `error_handling` | 3     | No file, wrong columns, empty     |
-| `update`         | 2     | Update existing, mixed import     |
-| `progress_ui`    | 2     | Progress bar, close button        |
-| `edge_cases`     | 2     | New category, semicolon delimiter |
+| Marker           | Tests | Coverage                                      |
+|------------------|-------|-----------------------------------------------|
+| `asset`          | 15    | Asset model CRUD, lifecycle, depreciation, revaluation, auto-creation |
+| `happy_path`     | 3     | Navigate, import valid CSV, bulk              |
+| `error_handling` | 3     | No file, wrong columns, empty                 |
+| `update`         | 2     | Update existing, mixed import                 |
+| `progress_ui`    | 2     | Progress bar, close button                    |
+| `edge_cases`     | 2     | New category, semicolon delimiter             |
 
 ### Configuration
 
@@ -402,11 +517,49 @@ Environment variables (optional):
 
 ### Key Implementation Notes
 
+**Import Products:**
 - Browser opens non-headless by default for debugging
 - Login uses URL-based DB selection: `/web/login?db=<dbname>`
 - File input is hidden (`d-none`); `set_input_files()` works on hidden inputs
 - Import uses async batch processing; tests wait for `.o_import_done` selector
 - Results parsed from `<strong>` elements inside `.o_import_done`
+
+**Asset Management:**
+- Odoo 17 `.o_dialog` container has `height=0` — Playwright `.is_visible()` returns false; always use `.modal` selectors for dialog fields
+- `navigation.mixin` hides `.o_control_panel` — "New" button invisible; navigate via direct URL: `/web#model=X&action=Y&view_type=form`
+- Wizard buttons with `confirm="Are you sure..."` attribute create stacked modals — dismiss via JS `page.evaluate()` clicking Ok buttons directly, not Playwright locators
+- `fill_dialog_field()` uses `force=True` on click and conditional popover dismiss (only presses Escape if `.o_popover:visible` detected)
+- `create_asset_with_accounts()` uses JSON-RPC (`/web/dataset/call_kw`) with `odoo.csrf_token` for reliable asset creation
+- Selection field options are JSON-encoded in HTML (e.g. `&quot;straight_line&quot;` not bare `straight_line`)
+- Statusbar widget renders as `button[aria-current="step"]` with `data-value` attribute, not hidden `<input>`
+- Form `<input>` elements lack `name` attribute — target parent `<div class="o_field_widget[name="FIELD_NAME"]">` instead
+- Many2one autocomplete uses `input.o-autocomplete--input` with dropdown items in `.o-autocomplete .dropdown-item`
+
+### conftest.py Helper Functions
+
+| Helper | Purpose |
+|--------|---------|
+| `login(page)` | Logs in via URL-based DB selection; waits 8s for session |
+| `click_nav_item(page, name)` | Clicks navbar section tab (leaf `<a>` or dropdown `<button>`) |
+| `navigate_to_asset_model_new/list(page)` | Direct URL navigation to asset model forms |
+| `navigate_to_asset_new/list(page)` | Direct URL navigation to asset forms |
+| `navigate_to_journal_entries(page)` | Sidebar navigation to journal entries |
+| `navigate_to_import_products(page)` | Sidebar navigation to import products wizard |
+| `fill_field(page, field_name, value)` | Fills standard Odoo 17 widget field (div[name] > input pattern) |
+| `fill_many2one_field(page, field_name, text)` | Types into many2one autocomplete + ArrowDown/Enter fallback |
+| `fill_dialog_field(page, field_name, value)` | Fills field inside dialog/wizard (`.modal` selectors, `force=True`) |
+| `select_field(page, field_name, value)` | Selects option from Selection widget (JSON-encoded value matching) |
+| `click_header_button(page, text)` | Clicks navigation.mixin header button (excludes statusbar radio buttons) |
+| `click_dialog_confirm(page)` | Clicks wizard confirm button + handles "Are you sure?" popup |
+| `get_state_text(page)` | Reads statusbar widget state from `button[aria-current="step"]` |
+| `open_first_record(page)` | Clicks first row in list/tree view |
+| `click_save_button(page)` | Clicks Save button in form header |
+| `click_edit_button(page)` | Clicks Edit button in form header |
+| `create_asset_with_accounts(page, name, confirm)` | Creates asset via JSON-RPC with all required accounts; navigates to it |
+| `upload_csv_and_import(page, csv_path)` | Uploads CSV file and clicks Import |
+| `wait_for_import_complete(page)` | Waits for `.o_import_done` or `.o_import_error` selector |
+| `get_import_results(page)` | Parses Created/Updated/Skipped counts from import results |
+| `close_import_dialog(page)` | Closes import dialog via Close or Cancel button |
 
 ## Key Patterns
 
@@ -437,6 +590,8 @@ Model's `action_<name>()` validates state → opens `TransientModel` wizard → 
 ### Accounting Auto-Posting Pattern
 
 `_inherit` on source models, override `action_post()` to call `super()` then `_create_accounting_move()`. Smart button links to the move.
+
+**Asset Auto-Creation:** `accounting_move_asset` inherits `accounting.move`, overrides `action_post()` to call `_create_assets_from_move()` after posting. Scans debit lines for `is_asset_account=True` accounts and creates draft assets automatically.
 
 ### Create/Write State Detection Pattern
 

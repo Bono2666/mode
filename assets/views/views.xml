@@ -664,5 +664,20 @@
             </field>
         </record>
 
+        <!-- ================================================================== -->
+        <!-- INHERITED VIEWS                                                    -->
+        <!-- ================================================================== -->
+
+        <record id="accounting_account_form_inherit_asset" model="ir.ui.view">
+            <field name="name">accounting.account.form.inherit.asset</field>
+            <field name="model">accounting.account</field>
+            <field name="inherit_id" ref="accounting.accounting_account_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='reconcile']/.." position="inside">
+                    <field name="is_asset_account" readonly="not is_edit and id"/>
+                </xpath>
+            </field>
+        </record>
+
     </data>
 </odoo>

@@ -2095,7 +2095,7 @@ class purchases_receipt_accounting(models.Model):
             cat = rline.product_id.product_category
             if not cat.stock_account_id:
                 continue
-            amount = (rline.quantity or 0) * rline.product_id.price
+            amount = (rline.quantity or 0) * rline.purchase_order_line_id.unit_price
             if amount <= 0:
                 continue
             # Dr Stock Account

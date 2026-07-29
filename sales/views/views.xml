@@ -575,22 +575,22 @@
                       <field name="price" readonly="price_yen != 0"/>
                     </group>
                     <group name="group_standard_price">
-                        <field name="reseller_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="1"/>
-                        <label for="base_price"/>
-                        <div name="pricing" class="o_row">
+                        <field name="reseller_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="1" invisible="not sales_ok"/>
+                        <label for="base_price" invisible="not sales_ok"/>
+                        <div name="pricing" class="o_row" invisible="not sales_ok">
                           <field name="base_price" class="oe_inline" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}" readonly="1"/>
                           <field name="currency_id" class="oe_inline" readonly="1"/>
                           <field name="tax_string" class="ms-2" readonly="1"/>
                         </div>
-                        <field name="customer_tax" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id"/>
+                        <field name="customer_tax" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}" readonly="not is_edit and id" invisible="not sales_ok"/>
                         <field name="weight_kg" readonly="not is_edit and id"/>
                         <field name="lead_time_days" readonly="not is_edit and id"/>
                         <field name="product_availability" readonly="not is_edit and id"/>
                     </group>
                   </group>
-                  <group string="Remarks">
-                    <field name="remarks" readonly="not is_edit and id" nolabel="1" placeholder="Additional remarks..."/>
-                  </group>
+                <group string="Remarks">
+                  <field name="remarks" colspan="2" readonly="not is_edit and id" nolabel="1" placeholder="Additional remarks..."/>
+                </group>
                 </page>
               </notebook>
             </sheet>

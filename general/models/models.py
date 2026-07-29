@@ -1,8 +1,12 @@
 import ast
+import copy
+import logging
 import lxml.etree as etree
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
 
 
 def inject_m2o_no_open_create(doc, model_name, env):
@@ -507,6 +511,8 @@ class menu(models.Model):
     menu_name = fields.Char(string="Menu Name")
     parent_menu = fields.Char(string="Parent Menu")
     is_parent = fields.Boolean(string="Is Parent Menu?", default=False)
+    ir_ui_menu_id = fields.Many2one('ir.ui.menu', string="Odoo Menu",
+        help="Direct link to the ir.ui.menu record. Used for precise restriction matching.")
 
 
 class home(models.Model):
@@ -712,10 +718,19 @@ class ResUsers(models.Model):
         custom_user_model = self.env['general.custom_users'].sudo()
 
         for user in self:
+            _logger.info(
+                '[menu-refresh] Starting refresh for user %s (id=%s)',
+                user.login, user.id,
+            )
+
             # Cari semua menu yang membatasi user ini
             restricted_menus = ir_ui_menu_model.search([
                 ('restrict_user_ids', 'in', user.id)
             ])
+            _logger.info(
+                '[menu-refresh] Clearing %d existing restrict_user_ids for user %s',
+                len(restricted_menus), user.login,
+            )
 
             # Hapus relasi Many2many pada model ir.ui.menu
             if restricted_menus:
@@ -729,15 +744,27 @@ class ResUsers(models.Model):
             })
 
             # Hapus semua entri parent auto-generated, lalu hitung ulang
-            auth_model.with_context(skip_menu_refresh=True).search([
+            deleted_parents = auth_model.with_context(skip_menu_refresh=True).search([
                 ('custom_user_id.user_id', '=', user.id),
                 ('is_parent', '=', True)
-            ]).unlink()
+            ])
+            _logger.info(
+                '[menu-refresh] Deleted %d auto-parent auth entries for user %s',
+                len(deleted_parents), user.login,
+            )
+            deleted_parents.unlink()
 
             all_menus = general_menu_model.search([])
             menu_obj = auth_model.search(
                 [('custom_user_id.user_id', '=', user.id)])
             existing_menu_ids = [menu.menu_id.id for menu in menu_obj]
+            existing_names = [
+                m.menu_name for m in general_menu_model.browse(existing_menu_ids)
+            ]
+            _logger.info(
+                '[menu-refresh] User %s has %d direct auth entries: %s',
+                user.login, len(existing_menu_ids), existing_names,
+            )
 
             repeated = True
             while repeated:
@@ -765,19 +792,41 @@ class ResUsers(models.Model):
                                     'can_update': False,
                                     'can_delete': False,
                                 })
+                                _logger.info(
+                                    '[menu-refresh] Created auto-parent for user %s: menu_id=%s',
+                                    user.login, parent_menu_id,
+                                )
 
                 menu_obj = auth_model.search(
                     [('custom_user_id.user_id', '=', user.id)])
                 existing_menu_ids = [menu.menu_id.id for menu in menu_obj]
 
+            final_names = [
+                m.menu_name for m in general_menu_model.browse(existing_menu_ids)
+            ]
+            _logger.info(
+                '[menu-refresh] User %s final existing_menu_ids (%d): %s',
+                user.login, len(existing_menu_ids), final_names,
+            )
+
+            restricted_count = 0
             for menu in all_menus:
                 if menu.id not in existing_menu_ids:
-                    menu_records = ir_ui_menu_model.search(
-                        [('name', '=', menu.menu_name)])
-                    if menu_records:
-                        menu_records.write({
+                    if menu.ir_ui_menu_id:
+                        menu.ir_ui_menu_id.sudo().write({
                             'restrict_user_ids': [(4, user.id)]
                         })
+                        restricted_count += 1
+            _logger.info(
+                '[menu-refresh] Restricted %d ir.ui.menu records for user %s',
+                restricted_count, user.login,
+            )
+
+        # Final safety: clear the entire registry cache so that
+        # load_menus() (ormcache_context) and _visible_menu_ids() (ormcache)
+        # are both invalidated before the webclient re-fetches menus.
+        self.env.registry.clear_cache()
+        _logger.info('[menu-refresh] Registry cache cleared')
 
     @api.model
     def _update_last_login(self):
@@ -798,18 +847,72 @@ class IrUiMenu(models.Model):
         'res.users', string="Restricted Users",
         help='Users restricted from accessing this menu.')
 
-    @api.returns('self')
-    def _filter_visible_menus(self):
-        """
-        Override to filter out menus restricted for current user.
-        Applies only to the current user context.
-        """
-
-        menus = super(IrUiMenu, self)._filter_visible_menus()
-
-        # Allow system admin to see everything
+    def _get_restricted_menu_ids(self):
         if self.env.user.has_group('base.group_system'):
-            return menus
+            return set()
+        return set(self.sudo().search([
+            ('restrict_user_ids', 'in', self.env.uid)
+        ]).ids)
 
-        return menus.filtered(
-            lambda m: self.env.user not in m.restrict_user_ids)
+    def _expand_restricted_ids(self, restricted_ids, children_map):
+        expanded = set(restricted_ids)
+        queue = list(restricted_ids)
+        while queue:
+            mid = queue.pop(0)
+            for cid in children_map.get(mid, []):
+                if cid not in expanded:
+                    expanded.add(cid)
+                    queue.append(cid)
+        return expanded
+
+    def load_web_menus(self, debug):
+        _logger.info('[menu-web] load_web_menus called for user %s (uid=%s)', self.env.user.login, self.env.uid)
+        return super().load_web_menus(debug)
+
+    @api.model
+    def load_menus(self, debug):
+        _logger.info('[menu-load] load_menus called for user %s (uid=%s)', self.env.user.login, self.env.uid)
+        result = super(IrUiMenu, self).load_menus(debug)
+        result = copy.deepcopy(result)
+
+        restricted_ids = self._get_restricted_menu_ids()
+        if not restricted_ids:
+            _logger.info('[menu-load] no restricted menus for user %s, root children=%s',
+                         self.env.user.login, result.get('root', {}).get('children', []))
+            return result
+
+        children_map = {}
+        for mid, menu in result.items():
+            if mid == 'root':
+                continue
+            for cid in menu.get('children', []):
+                children_map.setdefault(mid, []).append(cid)
+
+        to_remove = self._expand_restricted_ids(restricted_ids, children_map)
+        to_remove.discard('root')
+
+        _logger.info(
+            '[menu-load] Pruning %d menus (from %d restricted) for user %s, ids=%s',
+            len(to_remove), len(restricted_ids), self.env.user.login, sorted(to_remove),
+        )
+
+        for menu_id in to_remove:
+            result.pop(menu_id, None)
+
+        for menu in result.values():
+            if 'children' in menu:
+                menu['children'] = [cid for cid in menu['children'] if cid in result]
+
+        root_menu_ids = result.get('root', {}).get('children', [])
+        for rid in root_menu_ids:
+            if rid in result:
+                children = result[rid].get('children', [])
+                _logger.info(
+                    '[menu-load] Root menu %s has children: %s', rid, children,
+                )
+        _logger.info(
+            '[menu-load] Final root children for user %s: %s',
+            self.env.user.login, root_menu_ids,
+        )
+
+        return result

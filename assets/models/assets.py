@@ -240,7 +240,7 @@ class asset(models.Model):
 
     # --- CRUD ---
 
-    @api.model
+    @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get('asset_number'):

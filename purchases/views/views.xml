@@ -170,7 +170,7 @@
       <field name="name">purchases.bill.tree</field>
       <field name="model">purchases.bill</field>
       <field name="arch" type="xml">
-        <tree>
+        <tree create="0">
           <field name="bill_number"/>
           <field name="bill_date"/>
           <field name="purchase_order_id"/>
@@ -324,18 +324,18 @@
                     <field name="stock_jpn" readonly="not is_edit and id"/>
                   </group>
                   <group>
-                    <field name="reseller_price" readonly="not is_edit and id"/>
-                    <field name="base_price" readonly="not is_edit and id"/>
+                    <field name="reseller_price" readonly="not is_edit and id" invisible="not sales_ok"/>
+                    <field name="base_price" readonly="not is_edit and id" invisible="not sales_ok"/>
                     <field name="customer_tax" options="{'no_open': True, 'no_create': True}"
-                           readonly="not is_edit and id"/>
+                           readonly="not is_edit and id" invisible="not sales_ok"/>
                     <field name="weight_kg" readonly="not is_edit and id"/>
                     <field name="lead_time_days" readonly="not is_edit and id"/>
                     <field name="product_availability" readonly="not is_edit and id"/>
                   </group>
                 </group>
-                <group string="Remarks">
-                  <field name="remarks" readonly="not is_edit and id" nolabel="1" placeholder="Additional remarks..."/>
-                </group>
+              <group string="Remarks">
+                <field name="remarks" colspan="2" readonly="not is_edit and id" nolabel="1" placeholder="Additional remarks..."/>
+              </group>
               </page>
             </notebook>
           </sheet>
