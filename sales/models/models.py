@@ -587,7 +587,9 @@ class products(models.Model):
         comodel_name='sales.product_category', string='Product Category', ondelete='cascade', index=True, required=True)
     product_unit = fields.Many2one(
         comodel_name='sales.product_unit', string='Product Unit')
-    base_price = fields.Float(string="Sales Price", compute='_compute_base_price', digits=(16, 0))
+    base_price = fields.Float(
+        string="Sales Price", compute='_compute_base_price',
+        digits=(16, 0), store=True)
     currency_id = fields.Many2one(
         comodel_name='res.currency', string='Currency',
         default=lambda self: self.env['res.currency'].search(
@@ -606,7 +608,7 @@ class products(models.Model):
     weight_kg = fields.Float(string='Weight (Kg)')
     reseller_price = fields.Float(
         string='Reseller Price', compute='_compute_reseller_price',
-        digits=(16, 0))
+        digits=(16, 0), store=True)
     remarks = fields.Text(string='Remarks')
     product_availability = fields.Char(string='Product Availability')
     sales_order_line_ids = fields.One2many(

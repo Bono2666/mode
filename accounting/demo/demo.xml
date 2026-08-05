@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Demo job positions -->
+        <record id="demo_approval_position_checker" model="general.position">
+            <field name="position_name">Finance Checker</field>
+        </record>
+        <record id="demo_approval_position_approver" model="general.position">
+            <field name="position_name">Finance Approver</field>
+        </record>
+        <record id="demo_approval_position_finalizer" model="general.position">
+            <field name="position_name">Finance Director</field>
+        </record>
+
+        <!-- Demo approver users (auto-create res.users on install) -->
+        <record id="demo_approver_checker" model="general.custom_users">
+            <field name="name">Demo Checker</field>
+            <field name="login">demo.checker@bonoworx.com</field>
+            <field name="password">demo1234</field>
+            <field name="position" ref="demo_approval_position_checker"/>
+        </record>
+        <record id="demo_approver_approver" model="general.custom_users">
+            <field name="name">Demo Approver</field>
+            <field name="login">demo.approver@bonoworx.com</field>
+            <field name="password">demo1234</field>
+            <field name="position" ref="demo_approval_position_approver"/>
+        </record>
+        <record id="demo_approver_finalizer" model="general.custom_users">
+            <field name="name">Demo Finalizer</field>
+            <field name="login">demo.finalizer@bonoworx.com</field>
+            <field name="password">demo1234</field>
+            <field name="position" ref="demo_approval_position_finalizer"/>
+        </record>
+
+        <!-- Grant demo approvers access to relevant Accounting menus -->
+        <record id="demo_auth_checker_tx" model="general.auth">
+            <field name="custom_user_id" ref="demo_approver_checker"/>
+            <field name="menu_id" ref="accounting.menu_accounting_transactions"/>
+            <field name="can_create" eval="True"/>
+            <field name="can_update" eval="True"/>
+        </record>
+        <record id="demo_auth_approver_tx" model="general.auth">
+            <field name="custom_user_id" ref="demo_approver_approver"/>
+            <field name="menu_id" ref="accounting.menu_accounting_transactions"/>
+            <field name="can_create" eval="True"/>
+            <field name="can_update" eval="True"/>
+        </record>
+        <record id="demo_auth_finalizer_tx" model="general.auth">
+            <field name="custom_user_id" ref="demo_approver_finalizer"/>
+            <field name="menu_id" ref="accounting.menu_accounting_transactions"/>
+            <field name="can_create" eval="True"/>
+            <field name="can_update" eval="True"/>
+        </record>
+
+        <record id="demo_auth_checker_approvals" model="general.auth">
+            <field name="custom_user_id" ref="demo_approver_checker"/>
+            <field name="menu_id" ref="accounting.menu_accounting_approvals"/>
+            <field name="can_update" eval="True"/>
+        </record>
+        <record id="demo_auth_approver_approvals" model="general.auth">
+            <field name="custom_user_id" ref="demo_approver_approver"/>
+            <field name="menu_id" ref="accounting.menu_accounting_approvals"/>
+            <field name="can_update" eval="True"/>
+        </record>
+        <record id="demo_auth_finalizer_approvals" model="general.auth">
+            <field name="custom_user_id" ref="demo_approver_finalizer"/>
+            <field name="menu_id" ref="accounting.menu_accounting_approvals"/>
+            <field name="can_update" eval="True"/>
+        </record>
+
+        <!-- Approval matrix: 3-stage chain for each petty cash document -->
+        <record id="demo_matrix_expense_1" model="accounting.approval.matrix">
+            <field name="document_type">expense</field>
+            <field name="name" ref="demo_approver_checker"/>
+            <field name="sequence">1</field>
+            <field name="approved_as">checker</field>
+            <field name="approve" eval="True"/>
+            <field name="revise" eval="True"/>
+            <field name="receive_return" eval="True"/>
+        </record>
+        <record id="demo_matrix_expense_2" model="accounting.approval.matrix">
+            <field name="document_type">expense</field>
+            <field name="name" ref="demo_approver_approver"/>
+            <field name="sequence">2</field>
+            <field name="approved_as">approver</field>
+            <field name="approve" eval="True"/>
+            <field name="revise" eval="True"/>
+            <field name="reject" eval="True"/>
+        </record>
+        <record id="demo_matrix_expense_3" model="accounting.approval.matrix">
+            <field name="document_type">expense</field>
+            <field name="name" ref="demo_approver_finalizer"/>
+            <field name="sequence">3</field>
+            <field name="approved_as">finalizer</field>
+            <field name="approve" eval="True"/>
+            <field name="reject" eval="True"/>
+        </record>
+
+        <record id="demo_matrix_topup_1" model="accounting.approval.matrix">
+            <field name="document_type">topup</field>
+            <field name="name" ref="demo_approver_checker"/>
+            <field name="sequence">1</field>
+            <field name="approved_as">checker</field>
+            <field name="approve" eval="True"/>
+            <field name="revise" eval="True"/>
+            <field name="returned" eval="True"/>
+        </record>
+        <record id="demo_matrix_topup_2" model="accounting.approval.matrix">
+            <field name="document_type">topup</field>
+            <field name="name" ref="demo_approver_approver"/>
+            <field name="sequence">2</field>
+            <field name="approved_as">approver</field>
+            <field name="approve" eval="True"/>
+            <field name="reject" eval="True"/>
+        </record>
+        <record id="demo_matrix_topup_3" model="accounting.approval.matrix">
+            <field name="document_type">topup</field>
+            <field name="name" ref="demo_approver_finalizer"/>
+            <field name="sequence">3</field>
+            <field name="approved_as">finalizer</field>
+            <field name="approve" eval="True"/>
+            <field name="reject" eval="True"/>
+        </record>
+
+        <record id="demo_matrix_transfer_1" model="accounting.approval.matrix">
+            <field name="document_type">transfer</field>
+            <field name="name" ref="demo_approver_checker"/>
+            <field name="sequence">1</field>
+            <field name="approved_as">checker</field>
+            <field name="approve" eval="True"/>
+            <field name="revise" eval="True"/>
+        </record>
+        <record id="demo_matrix_transfer_2" model="accounting.approval.matrix">
+            <field name="document_type">transfer</field>
+            <field name="name" ref="demo_approver_approver"/>
+            <field name="sequence">2</field>
+            <field name="approved_as">approver</field>
+            <field name="approve" eval="True"/>
+            <field name="reject" eval="True"/>
+        </record>
+        <record id="demo_matrix_transfer_3" model="accounting.approval.matrix">
+            <field name="document_type">transfer</field>
+            <field name="name" ref="demo_approver_finalizer"/>
+            <field name="sequence">3</field>
+            <field name="approved_as">finalizer</field>
+            <field name="approve" eval="True"/>
+            <field name="reject" eval="True"/>
+        </record>
+
+        <record id="demo_matrix_settlement_1" model="accounting.approval.matrix">
+            <field name="document_type">settlement</field>
+            <field name="name" ref="demo_approver_checker"/>
+            <field name="sequence">1</field>
+            <field name="approved_as">checker</field>
+            <field name="approve" eval="True"/>
+            <field name="revise" eval="True"/>
+            <field name="returned" eval="True"/>
+        </record>
+        <record id="demo_matrix_settlement_2" model="accounting.approval.matrix">
+            <field name="document_type">settlement</field>
+            <field name="name" ref="demo_approver_approver"/>
+            <field name="sequence">2</field>
+            <field name="approved_as">approver</field>
+            <field name="approve" eval="True"/>
+            <field name="reject" eval="True"/>
+        </record>
+        <record id="demo_matrix_settlement_3" model="accounting.approval.matrix">
+            <field name="document_type">settlement</field>
+            <field name="name" ref="demo_approver_finalizer"/>
+            <field name="sequence">3</field>
+            <field name="approved_as">finalizer</field>
+            <field name="approve" eval="True"/>
+            <field name="reject" eval="True"/>
+        </record>
+    </data>
+</odoo>

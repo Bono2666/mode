@@ -1805,6 +1805,8 @@ class accounting_profit_loss_report(models.Model):
         """ % (self._table,))
 
 
+
+
 # ===================================================================
 # COMMISSION PLANS
 # ===================================================================
@@ -1978,6 +1980,16 @@ class accounting_commission_settlement(models.Model):
 class sales_delivery_accounting(models.Model):
     _inherit = 'sales.delivery'
 
+    accounting_move_id = fields.Many2one(
+        comodel_name='accounting.move', string='Accounting Entry',
+        readonly=True, copy=False, ondelete='set null', index=True)
+    accounting_move_count = fields.Integer(
+        string='Journal Entry Count', compute='_compute_accounting_move_count')
+
+    def _compute_accounting_move_count(self):
+        for record in self:
+            record.accounting_move_count = 1 if record.accounting_move_id else 0
+
     @api.model_create_multi
     def create(self, vals_list):
         deliveries = super(sales_delivery_accounting, self).create(vals_list)
@@ -1995,27 +2007,80 @@ class sales_delivery_accounting(models.Model):
                     delivery._create_cogs_accounting_move()
         return result
 
+    def _get_cogs_account(self):
+        """Return COGS/Expense account. Default: account code 500000."""
+        account = self.env['accounting.account'].search(
+            [('code', '=', '500000')], limit=1)
+        if not account:
+            account = self.env['accounting.account'].search(
+                [('type_id.code', '=', 'expense')], limit=1)
+        return account
+
+    def _get_stock_account(self):
+        """Return Stock/Inventory account. Default: account code 113100."""
+        account = self.env['accounting.account'].search(
+            [('code', '=', '113100')], limit=1)
+        if not account:
+            account = self.env['accounting.account'].search(
+                [('type_id.code', '=', 'current_asset')], limit=1)
+        return account
+
     def _create_cogs_accounting_move(self):
         self.ensure_one()
+        if self.accounting_move_id:
+            return self.accounting_move_id
         journal = self.env['accounting.journal'].search(
             [('type', '=', 'general')], limit=1)
         if not journal:
+            _logger.warning(
+                'COGS: No general journal found for delivery %s',
+                self.delivery_number)
             return
+
+        default_expense = self._get_cogs_account()
+        default_stock = self._get_stock_account()
 
         lines = []
         seq = 1
         for dline in self.line_ids:
-            if not dline.product_id or not dline.product_id.product_category:
+            if not dline.product_id:
+                _logger.warning(
+                    'COGS: Delivery line %s has no product, skipping',
+                    dline.id)
                 continue
+            if not dline.product_id.product_category:
+                _logger.warning(
+                    'COGS: Product %s on delivery %s has no category, '
+                    'skipping',
+                    dline.product_id.product_name,
+                    self.delivery_number)
+                continue
+
             cat = dline.product_id.product_category
-            if not cat.expense_account_id or not cat.stock_account_id:
+            expense_account = cat.expense_account_id or default_expense
+            stock_account = cat.stock_account_id or default_stock
+
+            if not expense_account or not stock_account:
+                _logger.warning(
+                    'COGS: No expense/stock account for product %s '
+                    '(category: %s) and no default available, skipping',
+                    dline.product_id.product_name,
+                    cat.category_name)
                 continue
+
             cogs_amount = (dline.quantity or 0) * dline.product_id.price
             if cogs_amount <= 0:
+                _logger.warning(
+                    'COGS: Zero amount for product %s on delivery %s '
+                    '(qty=%s, price=%s), skipping',
+                    dline.product_id.product_name,
+                    self.delivery_number,
+                    dline.quantity,
+                    dline.product_id.price)
                 continue
             lines.append((0, 0, {
                 'sequence': seq,
-                'account_id': cat.expense_account_id.id,
+                'account_id': expense_account.id,
                 'name': 'COGS: %s' % (dline.description or 'Delivery Line'),
                 'debit': cogs_amount,
                 'credit': 0.0,
@@ -2023,7 +2088,7 @@ class sales_delivery_accounting(models.Model):
             seq += 1
             lines.append((0, 0, {
                 'sequence': seq,
-                'account_id': cat.stock_account_id.id,
+                'account_id': stock_account.id,
                 'name': 'COGS: %s' % (dline.description or 'Delivery Line'),
                 'debit': 0.0,
                 'credit': cogs_amount,
@@ -2031,6 +2096,9 @@ class sales_delivery_accounting(models.Model):
             seq += 1
 
         if not lines:
+            _logger.warning(
+                'COGS: No journal lines generated for delivery %s '
+                '(all lines skipped)', self.delivery_number)
             return
 
         move = self.env['accounting.move'].create({
@@ -2044,6 +2112,13 @@ class sales_delivery_accounting(models.Model):
                 move.action_post()
             except UserError:
                 pass
+        self.accounting_move_id = move.id
+        _logger.info(
+            'COGS: Created journal entry %s for delivery %s '
+            '(amount: %s)',
+            move.name, self.delivery_number,
+            sum(l[2]['debit'] for l in lines))
+        return move
 
 
 class purchases_receipt_accounting(models.Model):
@@ -2241,6 +2316,133 @@ class purchases_bill_accounting_interim(models.Model):
         return move
 
 
+class purchases_service_category_accounting(models.Model):
+    _inherit = 'purchases.service_category'
+
+    expense_account_id = fields.Many2one(
+        comodel_name='accounting.account',
+        string='Expense Account',
+        required=True,
+    )
+
+
+class purchases_bill_accounting_service(models.Model):
+    """Service PO bill accounting: Dr Expense / Cr Accounts Payable.
+
+    Bypasses Stock Interim entirely — no receipt is involved. Dispatches to the
+    interim path for non-service (goods) bills.
+    """
+    _inherit = 'purchases.bill'
+
+    def _create_accounting_move(self):
+        """Route by order_type: service -> Dr Expense / Cr AP; else interim."""
+        if self.purchase_order_id.order_type != 'service':
+            return super(purchases_bill_accounting_service, self)._create_accounting_move()
+
+        self.ensure_one()
+        journal = self._get_purchase_journal()
+        payable_account = self._get_payable_account()
+
+        lines = []
+        seq = 1
+        total_expense = 0.0
+        total_tax = 0.0
+
+        vendor = self.vendor_id
+        partner = vendor.partner_id if vendor and vendor.partner_id else False
+
+        # --- 1. Expense lines (debit each line total, account from service category) ---
+        for line in self.line_ids.sorted('id'):
+            if not line.total:
+                continue
+            total_expense += line.sub_total
+            line_account = self._get_expense_account()
+            po_line = line.purchase_order_line_id
+            service_category = line.service_category_id or (
+                po_line.service_category_id if po_line else False)
+            if service_category and service_category.expense_account_id:
+                line_account = service_category.expense_account_id
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': line_account.id,
+                'partner_id': partner.id if partner else False,
+                'name': line.description or 'Service Bill Line',
+                'debit': line.sub_total,
+                'credit': 0.0,
+            }))
+            seq += 1
+
+        # --- 2. Tax lines (debit) ---
+        grouped_taxes = {}
+        for line in self.line_ids:
+            if not line.tax_amount:
+                continue
+            tax = line.tax_id
+            tax_key = tax.id if tax else 0
+            if tax_key not in grouped_taxes:
+                tax_account = self._get_tax_account(tax)
+                grouped_taxes[tax_key] = {
+                    'name': tax.name if tax else 'Tax',
+                    'amount': 0.0,
+                    'account_id': tax_account.id if tax_account else False,
+                }
+            grouped_taxes[tax_key]['amount'] += line.tax_amount
+            total_tax += line.tax_amount
+
+        for tax_data in grouped_taxes.values():
+            if not tax_data['amount'] or not tax_data['account_id']:
+                continue
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': tax_data['account_id'],
+                'partner_id': partner.id if partner else False,
+                'name': tax_data['name'],
+                'debit': tax_data['amount'],
+                'credit': 0.0,
+            }))
+            seq += 1
+
+        # --- 3. Payable line (credit) ---
+        total = total_expense + total_tax
+        if not total:
+            total = self.amount_total or 0.0
+
+        if total:
+            due_date = (
+                self.due_date
+                or (self.bill_date + timedelta(days=30) if self.bill_date
+                    else fields.Date.today())
+            )
+            lines.append((0, 0, {
+                'sequence': seq,
+                'account_id': payable_account.id,
+                'partner_id': partner.id if partner else False,
+                'name': 'Bill: %s' % self.bill_number,
+                'debit': 0.0,
+                'credit': total,
+                'date_maturity': due_date,
+            }))
+            seq += 1
+
+        if not lines:
+            return
+
+        move = self.env['accounting.move'].create({
+            'ref': 'Bill: %s' % (self.bill_number or ''),
+            'date': self.bill_date or fields.Date.today(),
+            'journal_id': journal.id,
+            'state': 'draft',
+            'line_ids': lines,
+        })
+        if move.is_balanced:
+            try:
+                move.action_post()
+            except UserError:
+                pass
+        self.accounting_move_id = move.id
+        return move
+
+
 class product_category_account(models.Model):
     _inherit = 'sales.product_category'
 
@@ -2301,6 +2503,648 @@ class sales_invoice_commission(models.Model):
             'domain': [('invoice_id', '=', self.id)],
             'target': 'current',
         }
+
+
+# =============================================================================
+# GROUP F1: ACCOUNTING APPROVAL (SALES-STYLE MULTI-LEVEL)
+# =============================================================================
+
+APPROVAL_DOC_TYPES = [
+    ('expense', 'Petty Cash Expense'),
+    ('topup', 'Petty Cash Top Up'),
+    ('transfer', 'Petty Cash Transfer'),
+    ('settlement', 'Petty Cash Settlement'),
+]
+
+APPROVAL_ROLES = [
+    ('proposer', 'Proposer'),
+    ('checker', 'Checker'),
+    ('approver', 'Approver'),
+    ('validator', 'Validator'),
+    ('finalizer', 'Finalizer'),
+]
+
+# Document type -> res_model names used by the wizards
+APPROVAL_DOC_MODELS = {
+    'expense': 'accounting.petty.cash.expense',
+    'topup': 'accounting.petty.cash.topup',
+    'transfer': 'accounting.petty.cash.transfer',
+    'settlement': 'accounting.petty.cash.settlement',
+}
+
+
+class accounting_approval_mixin(models.AbstractModel):
+    """Shared Sales-style approval workflow for petty cash documents.
+
+    Each concrete document (`expense`, `topup`, `transfer`, `settlement`)
+    inherits this mixin and must provide:
+      - an `approval_log_ids` One2many to `accounting.approval.log`
+      - `_get_document_type()` and `_approval_log_link_field()` overrides
+    """
+    _name = 'accounting.approval.mixin'
+    _description = 'Accounting Approval Mixin'
+
+    need_approval = fields.Boolean(
+        string='Needs Approval', compute='_compute_need_approval')
+    approval_status = fields.Selection([
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ], string='Approval Status', default='pending')
+    current_approver = fields.Integer(
+        string='Pending Approval From (User)', compute='_compute_current_approver',
+        store=True)
+    current_approver_name = fields.Char(
+        string='Pending Approval From', compute='_compute_current_approver',
+        store=True)
+    user_can_submit = fields.Boolean(
+        string='User Can Submit', compute='_compute_submit_permissions')
+    user_can_approve = fields.Boolean(
+        string='User Can Approve', compute='_compute_approval_permissions')
+    user_can_revise = fields.Boolean(
+        string='User Can Revise', compute='_compute_approval_permissions')
+    user_can_return = fields.Boolean(
+        string='User Can Return', compute='_compute_approval_permissions')
+    user_can_reject = fields.Boolean(
+        string='User Can Reject', compute='_compute_approval_permissions')
+
+    # ------------------------------------------------------------------
+    # Hooks to override in concrete models
+    # ------------------------------------------------------------------
+    def _get_document_type(self):
+        raise NotImplementedError(
+            'Each approval document must implement _get_document_type()')
+
+    def _approval_log_link_field(self):
+        raise NotImplementedError(
+            'Each approval document must implement _approval_log_link_field()')
+
+    def _get_approval_amount(self):
+        return getattr(self, 'amount', 0.0) or getattr(
+            self, 'total_amount', 0.0) or 0.0
+
+    # ------------------------------------------------------------------
+    # Approval matrix helpers
+    # ------------------------------------------------------------------
+    def _approval_matrix_domain(self):
+        return [('document_type', '=', self._get_document_type())]
+
+    def _approval_log_vals_from_matrix(self, matrix, state='pending', extra_vals=None):
+        """Build approval log values from a single matrix row."""
+        extra_vals = extra_vals or {}
+        vals = {
+            self._approval_log_link_field(): self.id,
+            'document_type': self._get_document_type(),
+            'user_id': matrix.name.user_id.id if matrix.name and matrix.name.user_id else None,
+            'approver': matrix.name.name if matrix.name else '',
+            'email': matrix.name.user_id.login if matrix.name and matrix.name.user_id else '',
+            'position': matrix.position.position_name if matrix.position else '',
+            'sequence': matrix.sequence,
+            'min_amount': matrix.min_amount,
+            'receive_return': matrix.receive_return,
+            'approve': matrix.approve,
+            'revise': matrix.revise,
+            'returned': matrix.returned,
+            'reject': matrix.reject,
+            'notify': matrix.notify,
+            'approved_as': matrix.approved_as,
+            'state': state,
+        }
+        vals.update(extra_vals)
+        return vals
+
+    def _check_approval_requirement(self):
+        """Build pending logs when total_amount exceeds the matrix threshold.
+
+        Only approvers in the sequence band that applies to the document
+        amount get logs (mirrors Purchases). State is not changed here.
+        """
+        matrix_model = self.env['accounting.approval.matrix'].sudo()
+        for record in self:
+            threshold = matrix_model.search(
+                record._approval_matrix_domain() + [
+                    ('min_amount', '<', record._get_approval_amount())],
+                order='sequence asc', limit=1)
+            if threshold:
+                existing_pending = record.approval_log_ids.filtered(
+                    lambda log: log.state == 'pending')
+                if existing_pending:
+                    existing_pending.unlink()
+
+                max_sequence = matrix_model.search(
+                    record._approval_matrix_domain() + [
+                        ('min_amount', '>', record._get_approval_amount())],
+                    order='sequence asc', limit=1)
+                max_seq = max_sequence.sequence if max_sequence else None
+
+                domain = record._approval_matrix_domain()
+                if max_seq:
+                    domain.append(('sequence', '<', max_seq))
+                approvers = matrix_model.search(domain, order='sequence asc')
+
+                log_lines = []
+                for index, matrix in enumerate(approvers):
+                    vals = record._approval_log_vals_from_matrix(matrix)
+                    if index == 0:
+                        vals['approval_reason'] = _(
+                            'Total amount %(total)s exceeds the minimum threshold of %(threshold)s for approval.'
+                        ) % {
+                            'total': f"{record._get_approval_amount():,.0f}",
+                            'threshold': f"{threshold.min_amount:,.0f}",
+                        }
+                    log_lines.append((0, 0, vals))
+
+                if log_lines:
+                    super(type(record), record).write({
+                        'approval_log_ids': log_lines,
+                        'approval_status': 'pending',
+                    })
+
+    def _rebuild_approval_logs_after_revise(self, reviser_sequence):
+        """Remove all pending logs, then rebuild from the reviser's sequence on."""
+        self.ensure_one()
+        matrix_model = self.env['accounting.approval.matrix'].sudo()
+        self.approval_log_ids.filtered(
+            lambda log: log.state == 'pending').unlink()
+
+        domain = self._approval_matrix_domain() + [('sequence', '>=', reviser_sequence)]
+        max_seq_rec = matrix_model.search(
+            self._approval_matrix_domain() + [
+                ('min_amount', '>', self._get_approval_amount())],
+            order='sequence asc', limit=1)
+        if max_seq_rec:
+            domain.append(('sequence', '<', max_seq_rec.sequence))
+
+        approvers = matrix_model.search(domain, order='sequence asc')
+        for approver in approvers:
+            self.approval_log_ids.create(
+                self._approval_log_vals_from_matrix(approver))
+
+        if approvers:
+            self._send_approval_notification()
+
+    # ------------------------------------------------------------------
+    # Computed fields
+    # ------------------------------------------------------------------
+    @api.depends()
+    def _compute_need_approval(self):
+        matrix_model = self.env['accounting.approval.matrix'].sudo()
+        for record in self:
+            threshold = matrix_model.search(
+                record._approval_matrix_domain() + [
+                    ('min_amount', '<', record._get_approval_amount())],
+                order='sequence asc', limit=1)
+            record.need_approval = bool(threshold)
+
+    @api.depends('approval_log_ids.state')
+    def _compute_current_approver(self):
+        for record in self:
+            pending = record.approval_log_ids.filtered(
+                lambda log: log.state == 'pending').sorted('sequence')
+            if pending:
+                record.current_approver = pending[0].user_id
+                record.current_approver_name = pending[0].approver
+            else:
+                record.current_approver = False
+                record.current_approver_name = False
+
+    def _compute_submit_permissions(self):
+        # The submitter is the document owner (already gated by navigation
+        # edit/create rights). Submission is available to whoever can edit.
+        for record in self:
+            record.user_can_submit = True
+
+    def _compute_approval_permissions(self):
+        self.user_can_approve = False
+        self.user_can_revise = False
+        self.user_can_return = False
+        self.user_can_reject = False
+        current_user = self.env['general.custom_users'].sudo().search(
+            [('user_id', '=', self.env.uid)], limit=1)
+        if not current_user:
+            return
+        matrix = self.env['accounting.approval.matrix'].sudo().search([
+            ('name', '=', current_user.id),
+            ('document_type', '=', self._get_document_type()),
+        ], limit=1)
+        if matrix:
+            self.user_can_approve = matrix.approve
+            self.user_can_revise = matrix.revise
+            self.user_can_return = matrix.returned
+            self.user_can_reject = matrix.reject
+
+    # ------------------------------------------------------------------
+    # Workflow actions
+    # ------------------------------------------------------------------
+    def action_submit_for_approval(self):
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_(
+                "Only documents in 'Draft' state can be submitted for approval."))
+        if not self.need_approval:
+            raise UserError(_("This document does not require approval."))
+        self._check_approval_requirement()
+        if not self.approval_log_ids:
+            raise UserError(_(
+                'No approval matrix is configured for this document type. '
+                'Please configure an approval matrix first.'))
+        self.state = 'wait_approval'
+        self._send_approval_notification()
+
+    def action_approve(self):
+        self.ensure_one()
+        if self.state != 'wait_approval':
+            raise UserError(_(
+                "Only documents in 'Waiting Approval' state can be approved."))
+        current_log = self.approval_log_ids.sudo().filtered(
+            lambda log: log.state == 'pending').sorted('sequence')
+        if not current_log or current_log[0].user_id != self.env.uid:
+            raise UserError(_(
+                "You are not authorized to approve this document at this stage."))
+        return {
+            'name': _('Confirmation of Approval'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.approve.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_document_type': self._get_document_type(),
+                'default_record_id': self.id,
+            },
+        }
+
+    def action_approve_final(self):
+        current_log = self.approval_log_ids.sudo().filtered(
+            lambda log: log.state == 'pending').sorted('sequence')
+        if current_log:
+            log = current_log[0]
+            if log.user_id == self.env.uid:
+                log.write({
+                    'state': 'approved',
+                    'action_date': fields.Datetime.now(),
+                })
+            else:
+                raise UserError(_(
+                    "You are not authorized to approve this document at this stage."))
+        remaining = self.approval_log_ids.sudo().filtered(
+            lambda log: log.state == 'pending')
+        if not remaining:
+            self.state = 'approved'
+            self.approval_status = 'approved'
+        else:
+            if self.state == 'wait_approval':
+                self._send_approval_notification()
+        return self.action_back_to_approvals()
+
+    def action_revise(self):
+        self.ensure_one()
+        if self.state != 'wait_approval':
+            raise UserError(_(
+                "Only documents in 'Waiting Approval' state can be revised."))
+        self.is_edit = True
+        return {
+            'type': 'ir.actions.act_window',
+            'name': self._description,
+            'res_model': self._name,
+            'view_mode': 'form',
+            'res_id': self.id,
+            'target': 'current',
+            'context': {'is_approval_view': True},
+        }
+
+    def action_save_revised(self):
+        self.ensure_one()
+        return {
+            'name': _('Revise Message'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.revise.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_document_type': self._get_document_type(),
+                'default_record_id': self.id,
+            },
+        }
+
+    def action_revise_final(self):
+        message = self.env.context.get('revise_message')
+        current_log = self.approval_log_ids.sudo().filtered(
+            lambda log: log.user_id == self.env.uid and log.state == 'pending')
+        if not current_log:
+            raise UserError(_("You are not authorized to revise this document."))
+        self.is_edit = False
+        reviser_sequence = current_log[0].sequence
+        current_log.write({
+            'state': 'revised',
+            'action_date': fields.Datetime.now(),
+            'note': message,
+        })
+        self._rebuild_approval_logs_after_revise(reviser_sequence)
+        return self.action_back_to_approvals()
+
+    def action_return(self):
+        self.ensure_one()
+        if self.state != 'wait_approval':
+            raise UserError(_(
+                "Only documents in 'Waiting Approval' state can be returned."))
+        return {
+            'name': _('Return Reason'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.return.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_document_type': self._get_document_type(),
+                'default_record_id': self.id,
+            },
+        }
+
+    def action_return_final(self):
+        reason = self.env.context.get('return_reason')
+        current_log = self.approval_log_ids.sudo().filtered(
+            lambda log: log.user_id == self.env.uid and log.state == 'pending')
+        if not current_log:
+            raise UserError(_("You are not authorized to return this document."))
+        returner_sequence = current_log[0].sequence
+        current_log.write({
+            'state': 'returned',
+            'action_date': fields.Datetime.now(),
+            'note': reason,
+        })
+        self.approval_log_ids.filtered(
+            lambda log: log.state == 'pending').unlink()
+
+        matrix_model = self.env['accounting.approval.matrix'].sudo()
+        return_matrix = matrix_model.search(
+            self._approval_matrix_domain() + [
+                ('receive_return', '=', True),
+                ('sequence', '<', returner_sequence),
+            ], order='sequence asc', limit=1)
+
+        if return_matrix:
+            domain = self._approval_matrix_domain() + [
+                ('sequence', '>=', return_matrix.sequence)]
+            max_seq_rec = matrix_model.search(
+                self._approval_matrix_domain() + [
+                    ('min_amount', '>', self._get_approval_amount())],
+                order='sequence asc', limit=1)
+            if max_seq_rec:
+                domain.append(('sequence', '<', max_seq_rec.sequence))
+            approvers = matrix_model.search(domain, order='sequence asc')
+            for approver in approvers:
+                self.approval_log_ids.create(
+                    self._approval_log_vals_from_matrix(approver))
+            self.write({
+                'state': 'wait_approval',
+                'approval_status': 'pending',
+            })
+            self._send_approval_notification()
+        else:
+            self.write({
+                'state': 'draft',
+                'approval_status': 'pending',
+            })
+        return self.action_back_to_approvals()
+
+    def action_reject(self):
+        self.ensure_one()
+        if self.state != 'wait_approval':
+            raise UserError(_(
+                "Only documents in 'Waiting Approval' state can be rejected."))
+        return {
+            'name': _('Reject Reason'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.reject.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_document_type': self._get_document_type(),
+                'default_record_id': self.id,
+            },
+        }
+
+    def action_reject_final(self):
+        reason = self.env.context.get('reject_reason')
+        current_log = self.approval_log_ids.sudo().filter(
+            lambda log: log.user_id == self.env.uid and log.state == 'pending')
+        if not current_log:
+            raise UserError(_("You are not authorized to reject this document."))
+        current_log.write({
+            'state': 'rejected',
+            'action_date': fields.Datetime.now(),
+            'note': reason,
+        })
+        self.write({
+            'state': 'cancelled',
+            'approval_status': 'rejected',
+        })
+        return self.action_back_to_approvals()
+
+    def action_back_to_approvals(self):
+        self.ensure_one()
+        return {
+            'name': 'Waiting My Approval',
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'view_mode': 'tree,form',
+            'views': [(False, 'tree'), (False, 'form')],
+            'target': 'main',
+            'domain': [('current_approver', '=', self.env.uid),
+                       ('state', 'in', ['wait_approval'])],
+            'context': {'is_approval_view': True, 'create': False,
+                        'search_default_filter_to_approve': 1},
+        }
+
+    # ------------------------------------------------------------------
+    # Notification
+    # ------------------------------------------------------------------
+    def _send_approval_notification(self):
+        self.ensure_one()
+        next_log = self.approval_log_ids.sudo().filtered(
+            lambda log: log.state == 'pending').sorted('id')
+        if not next_log or not next_log[0].email:
+            return
+        log = next_log[0]
+        amount = self._get_approval_amount()
+        body = (
+            'Hello <strong>%s</strong>%s,<br/>'
+            'A document (%s) has been submitted and is awaiting your approval.'
+            '<br/>Reference: <strong>%s</strong> '
+            '(<strong>%s</strong>).'
+            '<br/>Please review it in the Accounting module.'
+            % (log.approver or 'Approver',
+               (' (%s)' % log.position) if log.position else '',
+               self.name or self.id,
+               self.name or self.id,
+               amount,
+            )
+        )
+        mail = self.env['mail.mail'].sudo().create({
+            'subject': 'Approval Request: %s' % (self.name or self.id),
+            'email_to': log.email,
+            'body_html': body,
+        })
+        mail.sudo().send(raise_exception=False)
+        log.sudo().write({'mail_sent': True})
+
+
+class accounting_approval_matrix(models.Model):
+    _name = 'accounting.approval.matrix'
+    _inherit = ['navigation.mixin']
+    _description = 'Accounting Approval Matrix'
+    _rec_name = 'name'
+    _order = 'document_type, sequence, id'
+    _menu_code = 'accounting_approval_matrix'
+
+    document_type = fields.Selection(
+        APPROVAL_DOC_TYPES, string='Document Type', required=True)
+    name = fields.Many2one(
+        comodel_name='general.custom_users', string='Approver', index=True,
+        required=True)
+    sequence = fields.Integer(string='Sequence', default=1)
+    position = fields.Many2one(related='name.position', string='Job Position')
+    min_amount = fields.Float(string='Minimum Amount', digits=(16, 0), default=0)
+    receive_return = fields.Boolean(string='Receive Return')
+    approve = fields.Boolean(string='Allow Approve', default=False)
+    revise = fields.Boolean(string='Allow Revision', default=False)
+    returned = fields.Boolean(string='Allow Return', default=False)
+    reject = fields.Boolean(string='Allow Reject', default=False)
+    printed = fields.Boolean(string='Allow Print', default=False)
+    notify = fields.Boolean(string='Receive Notification', default=False)
+    approved_as = fields.Selection(
+        APPROVAL_ROLES, string='Role in Approval', default='approver')
+    is_edit = fields.Boolean(default=False)
+
+
+class accounting_approval_log(models.Model):
+    _name = 'accounting.approval.log'
+    _description = 'Accounting Approval Log'
+    _order = 'id asc'
+
+    document_type = fields.Selection(APPROVAL_DOC_TYPES, string='Document Type')
+    expense_id = fields.Many2one(
+        'accounting.petty.cash.expense', string='Expense',
+        ondelete='cascade', index=True)
+    topup_id = fields.Many2one(
+        'accounting.petty.cash.topup', string='Top Up',
+        ondelete='cascade', index=True)
+    transfer_id = fields.Many2one(
+        'accounting.petty.cash.transfer', string='Transfer',
+        ondelete='cascade', index=True)
+    settlement_id = fields.Many2one(
+        'accounting.petty.cash.settlement', string='Settlement',
+        ondelete='cascade', index=True)
+    user_id = fields.Integer(string='Approver User ID')
+    approver = fields.Char(string='Approver')
+    email = fields.Char(string='Approver Email')
+    position = fields.Char(string='Approver Position')
+    action_date = fields.Datetime(string='Action Date')
+    state = fields.Selection([
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('revised', 'Revised'),
+        ('returned', 'Returned'),
+        ('rejected', 'Rejected'),
+    ], string='Approval State', default='pending')
+    sequence = fields.Integer(string='Sequence', default=1)
+    min_amount = fields.Float(string='Minimum Amount', digits=(16, 0), default=0)
+    receive_return = fields.Boolean(string='Receive Return')
+    note = fields.Text(string='Comment')
+    approval_reason = fields.Text(string='Reason for Approval Decision')
+    mail_sent = fields.Boolean(string='Notification Sent', default=False)
+    approve = fields.Boolean(string='Approve', default=False)
+    revise = fields.Boolean(string='Revise', default=False)
+    returned = fields.Boolean(string='Return', default=False)
+    reject = fields.Boolean(string='Reject', default=False)
+    printed = fields.Boolean(string='Print', default=False)
+    notify = fields.Boolean(string='Notify', default=False)
+    approved_as = fields.Selection(APPROVAL_ROLES, string='Role in Approval')
+
+
+class accounting_approve_wizard(models.TransientModel):
+    _name = 'accounting.approve.wizard'
+    _description = 'Accounting Approve Wizard'
+
+    document_type = fields.Selection(APPROVAL_DOC_TYPES, string='Document Type')
+    record_id = fields.Integer(string='Record ID')
+    message = fields.Html(
+        default=lambda self: _(
+            '<p>Are you sure you want to approve this document?</p>'))
+
+    def _target_record(self):
+        self.ensure_one()
+        model = APPROVAL_DOC_MODELS.get(self.document_type)
+        if not model:
+            raise UserError(_('Unknown document type.'))
+        return self.env[model].browse(self.record_id)
+
+    def action_confirm(self):
+        self.ensure_one()
+        record = self._target_record()
+        return record.action_approve_final()
+
+
+class accounting_reject_wizard(models.TransientModel):
+    _name = 'accounting.reject.wizard'
+    _description = 'Accounting Reject Wizard'
+
+    document_type = fields.Selection(APPROVAL_DOC_TYPES, string='Document Type')
+    record_id = fields.Integer(string='Record ID')
+    reason = fields.Text(string='Reason', required=True)
+
+    def _target_record(self):
+        self.ensure_one()
+        model = APPROVAL_DOC_MODELS.get(self.document_type)
+        if not model:
+            raise UserError(_('Unknown document type.'))
+        return self.env[model].browse(self.record_id)
+
+    def action_reject_confirm(self):
+        self.ensure_one()
+        record = self._target_record()
+        return record.with_context(reject_reason=self.reason).action_reject_final()
+
+
+class accounting_return_wizard(models.TransientModel):
+    _name = 'accounting.return.wizard'
+    _description = 'Accounting Return Wizard'
+
+    document_type = fields.Selection(APPROVAL_DOC_TYPES, string='Document Type')
+    record_id = fields.Integer(string='Record ID')
+    reason = fields.Text(string='Reason', required=True)
+
+    def _target_record(self):
+        self.ensure_one()
+        model = APPROVAL_DOC_MODELS.get(self.document_type)
+        if not model:
+            raise UserError(_('Unknown document type.'))
+        return self.env[model].browse(self.record_id)
+
+    def action_return_confirm(self):
+        self.ensure_one()
+        record = self._target_record()
+        return record.with_context(return_reason=self.reason).action_return_final()
+
+
+class accounting_revise_wizard(models.TransientModel):
+    _name = 'accounting.revise.wizard'
+    _description = 'Accounting Revise Wizard'
+
+    def _target_record(self):
+        self.ensure_one()
+        model = APPROVAL_DOC_MODELS.get(self.document_type)
+        if not model:
+            raise UserError(_('Unknown document type.'))
+        return self.env[model].browse(self.record_id)
+
+    document_type = fields.Selection(APPROVAL_DOC_TYPES, string='Document Type')
+    record_id = fields.Integer(string='Record ID')
+    message = fields.Text(string='Message', required=True)
+
+    def action_revise_confirm(self):
+        self.ensure_one()
+        record = self._target_record()
+        return record.with_context(revise_message=self.message).action_revise_final()
 
 
 # =============================================================================
@@ -2439,7 +3283,7 @@ class accounting_petty_cash_category(models.Model):
 class accounting_petty_cash_expense(models.Model):
     """Cash expense or reimbursement paid from petty cash."""
     _name = 'accounting.petty.cash.expense'
-    _inherit = ['navigation.mixin']
+    _inherit = ['navigation.mixin', 'accounting.approval.mixin']
     _description = 'Petty Cash Expense'
     _rec_name = 'name'
     _order = 'date desc, id desc'
@@ -2459,6 +3303,11 @@ class accounting_petty_cash_expense(models.Model):
         comodel_name='general.custom_users', string='Employee',
         ondelete='set null', index=True,
         help='Employee who made the expense or requests reimbursement.')
+    sales_order_id = fields.Many2one(
+        comodel_name='sales.sales_order', string='Sales Order',
+        ondelete='set null', index=True,
+        help='Optional Sales Order this expense supports. Only tagged '
+             'expenses are included in the Sales Order Profitability Report.')
     description = fields.Char(
         string='Description', required=True,
         help='Summary of the expense.')
@@ -2470,15 +3319,23 @@ class accounting_petty_cash_expense(models.Model):
         store=True, digits=(16, 0))
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('submitted', 'Submitted'),
+        ('wait_approval', 'Waiting Approval'),
         ('approved', 'Approved'),
         ('posted', 'Posted'),
         ('cancelled', 'Cancelled'),
     ], string='Status', default='draft', required=True, tracking=True)
+    approval_log_ids = fields.One2many(
+        'accounting.approval.log', 'expense_id', string='Approval Logs')
     move_id = fields.Many2one(
         comodel_name='accounting.move', string='Journal Entry',
         readonly=True, copy=False)
     is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    def _get_document_type(self):
+        return 'expense'
+
+    def _approval_log_link_field(self):
+        return 'expense_id'
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -2494,40 +3351,26 @@ class accounting_petty_cash_expense(models.Model):
             record.total_amount = sum(
                 record.line_ids.mapped('amount') or [0.0])
 
-    def action_submit(self):
-        for record in self:
-            if record.state != 'draft':
-                raise UserError(_(
-                    'Only draft expenses can be submitted.'
-                ))
-            if not record.line_ids:
-                raise UserError(_(
-                    'Please add at least one expense line before submitting.'
-                ))
-            record.state = 'submitted'
-
-    def action_approve(self):
-        for record in self:
-            if record.state != 'submitted':
-                raise UserError(_(
-                    'Only submitted expenses can be approved.'
-                ))
-            record.state = 'approved'
-
-    def action_reject(self):
-        for record in self:
-            if record.state != 'submitted':
-                raise UserError(_(
-                    'Only submitted expenses can be rejected.'
-                ))
-            record.state = 'draft'
+    def action_submit_for_approval(self):
+        """Submit a draft expense to the approval chain."""
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_(
+                'Only draft expenses can be submitted for approval.'))
+        if not self.line_ids:
+            raise UserError(_(
+                'Please add at least one expense line before submitting.'))
+        super(accounting_petty_cash_expense,
+              self).action_submit_for_approval()
 
     def action_post(self):
         for record in self:
-            if record.state not in ('approved',):
+            if record.need_approval and record.state != 'approved':
                 raise UserError(_(
-                    'Only approved expenses can be posted.'
-                ))
+                    'Only approved expenses can be posted.'))
+            if not record.need_approval and record.state != 'draft':
+                raise UserError(_(
+                    'Only draft expenses can be posted.'))
             record._create_accounting_move()
             record.state = 'posted'
 
@@ -2539,7 +3382,7 @@ class accounting_petty_cash_expense(models.Model):
                 if record.move_id and record.move_id.state == 'posted':
                     record.move_id.action_cancel()
                 record.state = 'cancelled'
-            elif record.state in ('submitted', 'approved'):
+            elif record.state in ('wait_approval', 'approved'):
                 record.state = 'cancelled'
             else:
                 raise UserError(_(
@@ -2683,7 +3526,7 @@ class accounting_petty_cash_expense_line(models.Model):
 class accounting_petty_cash_topup(models.Model):
     """Top Up — transfer from bank to petty cash."""
     _name = 'accounting.petty.cash.topup'
-    _inherit = ['navigation.mixin']
+    _inherit = ['navigation.mixin', 'accounting.approval.mixin']
     _description = 'Petty Cash Top Up'
     _rec_name = 'name'
     _order = 'date desc, id desc'
@@ -2705,14 +3548,23 @@ class accounting_petty_cash_topup(models.Model):
     reference = fields.Char(string='Reference')
     state = fields.Selection([
         ('draft', 'Draft'),
+        ('wait_approval', 'Waiting Approval'),
         ('approved', 'Approved'),
         ('posted', 'Posted'),
         ('cancelled', 'Cancelled'),
     ], string='Status', default='draft', required=True)
+    approval_log_ids = fields.One2many(
+        'accounting.approval.log', 'topup_id', string='Approval Logs')
     move_id = fields.Many2one(
         comodel_name='accounting.move', string='Journal Entry',
         readonly=True, copy=False)
     is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    def _get_document_type(self):
+        return 'topup'
+
+    def _approval_log_link_field(self):
+        return 'topup_id'
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -2722,20 +3574,22 @@ class accounting_petty_cash_topup(models.Model):
                     'accounting.petty.cash.topup') or '/'
         return super(accounting_petty_cash_topup, self).create(vals_list)
 
-    def action_approve(self):
-        for record in self:
-            if record.state != 'draft':
-                raise UserError(_(
-                    'Only draft top ups can be approved.'
-                ))
-            record.state = 'approved'
+    def action_submit_for_approval(self):
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_(
+                'Only draft top ups can be submitted for approval.'))
+        super(accounting_petty_cash_topup,
+              self).action_submit_for_approval()
 
     def action_post(self):
         for record in self:
-            if record.state not in ('approved',):
+            if record.need_approval and record.state != 'approved':
                 raise UserError(_(
-                    'Only approved top ups can be posted.'
-                ))
+                    'Only approved top ups can be posted.'))
+            if not record.need_approval and record.state != 'draft':
+                raise UserError(_(
+                    'Only draft top ups can be posted.'))
             record._create_accounting_move()
             record.state = 'posted'
 
@@ -2747,7 +3601,7 @@ class accounting_petty_cash_topup(models.Model):
                 if record.move_id and record.move_id.state == 'posted':
                     record.move_id.action_cancel()
                 record.state = 'cancelled'
-            elif record.state == 'approved':
+            elif record.state in ('wait_approval', 'approved'):
                 record.state = 'cancelled'
             else:
                 raise UserError(_(
@@ -2828,7 +3682,7 @@ class accounting_petty_cash_topup(models.Model):
 class accounting_petty_cash_transfer(models.Model):
     """Transfer between two petty cash funds."""
     _name = 'accounting.petty.cash.transfer'
-    _inherit = ['navigation.mixin']
+    _inherit = ['navigation.mixin', 'accounting.approval.mixin']
     _description = 'Petty Cash Transfer'
     _rec_name = 'name'
     _order = 'date desc, id desc'
@@ -2848,13 +3702,23 @@ class accounting_petty_cash_transfer(models.Model):
     reference = fields.Char(string='Reference')
     state = fields.Selection([
         ('draft', 'Draft'),
+        ('wait_approval', 'Waiting Approval'),
+        ('approved', 'Approved'),
         ('posted', 'Posted'),
         ('cancelled', 'Cancelled'),
     ], string='Status', default='draft', required=True)
+    approval_log_ids = fields.One2many(
+        'accounting.approval.log', 'transfer_id', string='Approval Logs')
     move_id = fields.Many2one(
         comodel_name='accounting.move', string='Journal Entry',
         readonly=True, copy=False)
     is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    def _get_document_type(self):
+        return 'transfer'
+
+    def _approval_log_link_field(self):
+        return 'transfer_id'
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -2873,12 +3737,22 @@ class accounting_petty_cash_transfer(models.Model):
                     'Source and target funds must be different.'
                 ))
 
+    def action_submit_for_approval(self):
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_(
+                'Only draft transfers can be submitted for approval.'))
+        super(accounting_petty_cash_transfer,
+              self).action_submit_for_approval()
+
     def action_post(self):
         for record in self:
-            if record.state != 'draft':
+            if record.need_approval and record.state != 'approved':
                 raise UserError(_(
-                    'Only draft transfers can be posted.'
-                ))
+                    'Only approved transfers can be posted.'))
+            if not record.need_approval and record.state != 'draft':
+                raise UserError(_(
+                    'Only draft transfers can be posted.'))
             record._create_accounting_move()
             record.state = 'posted'
 
@@ -2889,6 +3763,8 @@ class accounting_petty_cash_transfer(models.Model):
             elif record.state == 'posted':
                 if record.move_id and record.move_id.state == 'posted':
                     record.move_id.action_cancel()
+                record.state = 'cancelled'
+            elif record.state in ('wait_approval', 'approved'):
                 record.state = 'cancelled'
             else:
                 raise UserError(_(
@@ -2982,7 +3858,7 @@ class accounting_petty_cash_transfer(models.Model):
 class accounting_petty_cash_settlement(models.Model):
     """Settlement — employee returns remaining advance to petty cash."""
     _name = 'accounting.petty.cash.settlement'
-    _inherit = ['navigation.mixin']
+    _inherit = ['navigation.mixin', 'accounting.approval.mixin']
     _description = 'Petty Cash Settlement'
     _rec_name = 'name'
     _order = 'date desc, id desc'
@@ -3009,14 +3885,23 @@ class accounting_petty_cash_settlement(models.Model):
     reference = fields.Char(string='Reference')
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('verified', 'Verified'),
+        ('wait_approval', 'Waiting Approval'),
+        ('approved', 'Approved'),
         ('posted', 'Posted'),
         ('cancelled', 'Cancelled'),
     ], string='Status', default='draft', required=True)
+    approval_log_ids = fields.One2many(
+        'accounting.approval.log', 'settlement_id', string='Approval Logs')
     move_id = fields.Many2one(
         comodel_name='accounting.move', string='Journal Entry',
         readonly=True, copy=False)
     is_edit = fields.Boolean(string='Is Edit', default=False)
+
+    def _get_document_type(self):
+        return 'settlement'
+
+    def _approval_log_link_field(self):
+        return 'settlement_id'
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -3026,20 +3911,22 @@ class accounting_petty_cash_settlement(models.Model):
                     'accounting.petty.cash.settlement') or '/'
         return super(accounting_petty_cash_settlement, self).create(vals_list)
 
-    def action_verify(self):
-        for record in self:
-            if record.state != 'draft':
-                raise UserError(_(
-                    'Only draft settlements can be verified.'
-                ))
-            record.state = 'verified'
+    def action_submit_for_approval(self):
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_(
+                'Only draft settlements can be submitted for approval.'))
+        super(accounting_petty_cash_settlement,
+              self).action_submit_for_approval()
 
     def action_post(self):
         for record in self:
-            if record.state not in ('verified',):
+            if record.need_approval and record.state != 'approved':
                 raise UserError(_(
-                    'Only verified settlements can be posted.'
-                ))
+                    'Only approved settlements can be posted.'))
+            if not record.need_approval and record.state != 'draft':
+                raise UserError(_(
+                    'Only draft settlements can be posted.'))
             record._create_accounting_move()
             record.state = 'posted'
 
@@ -3051,7 +3938,7 @@ class accounting_petty_cash_settlement(models.Model):
                 if record.move_id and record.move_id.state == 'posted':
                     record.move_id.action_cancel()
                 record.state = 'cancelled'
-            elif record.state == 'verified':
+            elif record.state in ('wait_approval', 'approved'):
                 record.state = 'cancelled'
             else:
                 raise UserError(_(
@@ -3134,3 +4021,217 @@ class accounting_petty_cash_settlement(models.Model):
                     'Cannot delete a posted settlement. Cancel it first.'
                 ))
         return super(accounting_petty_cash_settlement, self).unlink()
+
+
+# ===================================================================
+# SALES ORDER PROFITABILITY REPORT
+# ===================================================================
+
+class accounting_sales_profitability_report_wizard(models.TransientModel):
+    _name = 'accounting.sales_profitability_report.wizard'
+    _description = 'Sales Order Profitability Wizard'
+
+    date_from = fields.Date(string='Order Date From')
+    date_to = fields.Date(string='Order Date To')
+    customer_id = fields.Many2one(
+        comodel_name='sales.customer', string='Customer')
+    sale_order_ids = fields.Many2many(
+        comodel_name='sales.sales_order',
+        relation='accounting_sales_profit_wizard_so_rel',
+        string='Sales Orders')
+
+    def _get_report_domain(self):
+        self.ensure_one()
+        domain = []
+        if self.date_from:
+            domain.append(('sale_order_date', '>=', self.date_from))
+        if self.date_to:
+            domain.append(('sale_order_date', '<=', self.date_to))
+        if self.customer_id:
+            domain.append(('customer_id', '=', self.customer_id.id))
+        if self.sale_order_ids:
+            domain.append(('sale_order_id', 'in', self.sale_order_ids.ids))
+        return domain
+
+    def action_generate(self):
+        self.ensure_one()
+        return {
+            'name': _('Sales Order Profitability'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.sales_profitability_report',
+            'view_mode': 'tree',
+            'views': [(False, 'tree')],
+            'target': 'current',
+            'domain': self._get_report_domain(),
+            'context': {
+                'date_from': self.date_from,
+                'date_to': self.date_to,
+            },
+        }
+
+    def action_print(self):
+        self.ensure_one()
+        report_data = self.env['accounting.sales_profitability_report'].search(
+            self._get_report_domain())
+        report = self.env.ref(
+            'accounting.action_report_sales_profitability')
+        return report.with_context(
+            date_from=self.date_from,
+            date_to=self.date_to,
+        ).report_action(report_data)
+
+
+class accounting_sales_profitability_report(models.Model):
+    _name = 'accounting.sales_profitability_report'
+    _description = 'Sales Order Profitability Report'
+    _auto = False
+    _rec_name = 'sale_order_name'
+    _order = 'sale_order_date desc'
+
+    sale_order_id = fields.Many2one('sales.sales_order', readonly=True)
+    sale_order_name = fields.Char(readonly=True)
+    sale_order_date = fields.Date(readonly=True)
+    customer_id = fields.Many2one('sales.customer', readonly=True)
+    total_revenue = fields.Monetary(string='Total Revenue', readonly=True)
+    cost_cogs = fields.Monetary(string='COGS', readonly=True)
+    cost_commission = fields.Monetary(string='Commission Cost', readonly=True)
+    cost_supporting = fields.Monetary(
+        string='Supporting Cost', readonly=True)
+    total_cost = fields.Monetary(string='Total Cost', readonly=True)
+    margin_amount = fields.Monetary(string='Margin', readonly=True)
+    margin_percent = fields.Float(string='Margin (%)', readonly=True)
+    has_transaction = fields.Selection([
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    ], string='Has Transaction', readonly=True)
+    currency_id = fields.Many2one('res.currency', readonly=True)
+
+    def init(self):
+        self.env.cr.execute(
+            "DROP VIEW IF EXISTS %s CASCADE" % (self._table,))
+        self.env.cr.execute("""
+            CREATE OR REPLACE VIEW %s AS (
+                SELECT
+                    ROW_NUMBER() OVER (
+                        ORDER BY COALESCE(so.date_ordered, so.create_date::date)
+                                 DESC NULLS LAST, so.id
+                    ) AS id,
+                    so.id AS sale_order_id,
+                    so.sales_code AS sale_order_name,
+                    COALESCE(so.date_ordered, so.create_date::date)
+                        AS sale_order_date,
+                    so.customer_id AS customer_id,
+                    COALESCE(rev.total_revenue, 0.0) AS total_revenue,
+                    COALESCE(cogs.cost_amount, 0.0) AS cost_cogs,
+                    COALESCE(comm.cost_amount, 0.0) AS cost_commission,
+                    COALESCE(supp.cost_amount, 0.0) AS cost_supporting,
+                    COALESCE(cogs.cost_amount, 0.0)
+                        + COALESCE(comm.cost_amount, 0.0)
+                        + COALESCE(supp.cost_amount, 0.0) AS total_cost,
+                    COALESCE(rev.total_revenue, 0.0)
+                        - (COALESCE(cogs.cost_amount, 0.0)
+                           + COALESCE(comm.cost_amount, 0.0)
+                           + COALESCE(supp.cost_amount, 0.0)) AS margin_amount,
+                    CASE
+                        WHEN COALESCE(rev.total_revenue, 0.0) = 0 THEN 0.0
+                        ELSE ((COALESCE(rev.total_revenue, 0.0)
+                               - (COALESCE(cogs.cost_amount, 0.0)
+                                  + COALESCE(comm.cost_amount, 0.0)
+                                  + COALESCE(supp.cost_amount, 0.0)))
+                              / rev.total_revenue) * 100.0
+                    END AS margin_percent,
+                    CASE
+                        WHEN rev.total_revenue IS NOT NULL
+                          OR cogs.cost_amount IS NOT NULL
+                          OR comm.cost_amount IS NOT NULL
+                          OR supp.cost_amount IS NOT NULL THEN 'yes'
+                        ELSE 'no'
+                    END AS has_transaction,
+                    COALESCE(
+                        (SELECT currency_id FROM res_company
+                         ORDER BY id LIMIT 1),
+                        (SELECT id FROM res_currency ORDER BY id LIMIT 1)
+                    ) AS currency_id
+                FROM sales_sales_order so
+
+                -- Revenue: income lines on posted Invoice moves
+                LEFT JOIN (
+                    SELECT
+                        inv.sales_order_id AS sale_order_id,
+                        SUM(aml.credit - aml.debit) AS total_revenue
+                    FROM sales_invoice inv
+                    JOIN accounting_move am ON am.id = inv.accounting_move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    JOIN accounting_account_type at ON at.id = aa.type_id
+                    WHERE am.state = 'posted'
+                      AND at.code = 'income'
+                    GROUP BY inv.sales_order_id
+                ) rev ON rev.sale_order_id = so.id
+
+                -- COGS: expense lines on posted Delivery (COGS) moves
+                LEFT JOIN (
+                    SELECT
+                        dl.sales_order_id AS sale_order_id,
+                        SUM(aml.debit - aml.credit) AS cost_amount
+                    FROM sales_delivery dl
+                    JOIN accounting_move am ON am.id = dl.accounting_move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    JOIN accounting_account_type at ON at.id = aa.type_id
+                    WHERE am.state = 'posted'
+                      AND at.code = 'expense'
+                    GROUP BY dl.sales_order_id
+                ) cogs ON cogs.sale_order_id = so.id
+
+                -- Commission: expense lines on posted Invoice moves
+                -- (the commission line is the only expense line on the same
+                -- move as the invoice)
+                LEFT JOIN (
+                    SELECT
+                        inv.sales_order_id AS sale_order_id,
+                        SUM(aml.debit - aml.credit) AS cost_amount
+                    FROM sales_invoice inv
+                    JOIN accounting_move am ON am.id = inv.accounting_move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    JOIN accounting_account_type at ON at.id = aa.type_id
+                    WHERE am.state = 'posted'
+                      AND at.code = 'expense'
+                    GROUP BY inv.sales_order_id
+                ) comm ON comm.sale_order_id = so.id
+
+                -- Supporting cost: Petty Cash Expenses tagged to SO
+                -- + Purchases Service Bills tagged to SO via PO.sales_order_id
+                -- (see PRD.md: Appendix C "Purchases Service Bill" and Appendix D "Sales Order Profitability Report")
+                LEFT JOIN (
+                    -- Source 1: Petty Cash Expenses
+                    SELECT pce.sales_order_id AS sale_order_id,
+                           SUM(aml.debit - aml.credit) AS cost_amount
+                    FROM accounting_petty_cash_expense pce
+                    JOIN accounting_move am ON am.id = pce.move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    JOIN accounting_account_type at ON at.id = aa.type_id
+                    WHERE am.state = 'posted'
+                      AND at.code = 'expense'
+                      AND pce.sales_order_id IS NOT NULL
+                    GROUP BY pce.sales_order_id
+                    UNION ALL
+                    -- Source 2: Purchases Service Bills (linked via PO.sales_order_id)
+                    SELECT po.sales_order_id AS sale_order_id,
+                           SUM(aml.debit - aml.credit) AS cost_amount
+                    FROM purchases_bill pb
+                    JOIN purchases_purchase_order po ON po.id = pb.purchase_order_id
+                    JOIN accounting_move am ON am.id = pb.accounting_move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    JOIN accounting_account_type at ON at.id = aa.type_id
+                    WHERE am.state = 'posted'
+                      AND po.order_type = 'service'
+                      AND po.sales_order_id IS NOT NULL
+                      AND at.code = 'expense'
+                    GROUP BY po.sales_order_id
+                ) supp ON supp.sale_order_id = so.id
+            )
+        """ % (self._table,))

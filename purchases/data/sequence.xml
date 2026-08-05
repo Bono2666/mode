@@ -29,6 +29,13 @@
             <field name="padding">6</field>
             <field name="number_increment">1</field>
         </record>
+        <record id="seq_purchases_service_bill" model="ir.sequence">
+            <field name="name">Service Bill Sequence</field>
+            <field name="code">purchases.service.bill</field>
+            <field name="prefix">SBILL</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+        </record>
         <record id="seq_purchases_receipt" model="ir.sequence">
             <field name="name">Purchase Receipt Sequence</field>
             <field name="code">purchases.receipt</field>

@@ -198,6 +198,16 @@ Key models: `sales.customer`, `sales.products`, `sales.sales_order`, `sales.sale
 - Compute methods read margin from latest `sales.pricing_margin_config` record (`order='id desc'`)
 - `base_price` is used as `unit_price` in sales order lines and for tax string display
 
+**Product Price Hierarchy:**
+
+| Field | Tipe | Keterangan | Kapan Dipakai |
+|---|---|---|---|
+| `price` | Manual | **Harga Pokok (Cost Price)** — harga beli/modal produk | COGS journal entry (`delivery_line.quantity × product.price`), Purchase order unit_price |
+| `base_price` | Computed | **Harga Jual ke End User** — `price × (1 + sales_margin / 100)` | Sales Order unit_price (default) |
+| `reseller_price` | Computed | **Harga ke Reseller** — `price × (1 + reseller_margin / 100)` | Harga untuk channel reseller |
+
+**Prinsip:** `price` selalu merepresentasikan harga pokok/modal. Margin dihitung dari `price`, bukan sebaliknya. Semua jurnal akuntansi (COGS, Receipt Stock) menggunakan `price` sebagai dasar perhitungan biaya.
+
 **Product Form Conditional Visibility:**
 
 - When `sales_ok = False` (product is not for sale), the following fields are hidden:
@@ -208,13 +218,88 @@ Key models: `sales.customer`, `sales.products`, `sales.sales_order`, `sales.sale
 - Implemented via `invisible="not sales_ok"` on field, label, and div elements
 - Applied to both Sales and Purchases product forms
 
+**Sales Order States:**
+
+| State | Description | Action di state ini |
+|---|---|---|
+| `draft` | Quotation baru | Edit, Delete, Send by Email, Submit for Approval |
+| `sale_draft` | Sales Order draft (non-quotation) | Edit, Delete, Confirm |
+| `wait_approval` | Menunggu approval | Approve / Revise / Return / Reject |
+| `approved` | Sudah disetujui | Edit, Send by Email, Confirm |
+| `sent` | Quotation terkirim ke customer | **Confirm** (→ `sale`), Send by Email ulang, Edit |
+| `sale` | Sales Order terkunci | Create Invoice, Cancel Order |
+| `cancel` | Dibatalkan | Terminal state |
+
+**Send by Email (Quotation):**
+
+- Tombol "Send by Email" hanya tersedia pada state `draft`, `approved`, atau `sent` (untuk resend), dengan syarat user punya permission send dan quotation memiliki minimal satu baris produk.
+- Membuka wizard komposisi email dengan pemilih customer (email customer diambil dari master data, bukan alamat partner bebas).
+- Template email otomatis mengisi subject (`Quotation {sales_code} - {customer_name}`), body berbahasa Indonesia, dan melampirkan PDF quotation.
+- Setelah email terkirim, state berubah dari `draft`/`approved` menjadi `sent` — ditandai permanen bahwa quotation sudah dikirim. Ini terjadi otomatis saat pesan ter-post di chatter.
+- **Tidak ada** jurnal akuntansi yang dibuat dari pengiriman email. Pengiriman hanya mencatat chatter message.
+- Pada state `sent`, stok produk "di-reserve" (soft reservation via `qty_reserved_sale`): kuantitas dari SO berstatus `sent` ikut dihitung sebagai stok yang sudah dialokasikan.
+- Setelah di-`sent`, pengguna dapat **Confirm** untuk mengubah quotation menjadi Sales Order (`state = sale`), yang kemudian membuka tombol Create Invoice.
+
 ### Purchases Module
 
 **Flow:** RFQs → Purchase Orders → Bills + Receipts
 
-Key models: `purchases.vendor`, `purchases.purchase_order`, `purchases.purchase_order_line`, `purchases.bill`, `purchases.bill.line`, `purchases.receipt`, `purchases.receipt.line`, approval matrix and wizard models.
+Key models: `purchases.vendor`, `purchases.purchase_order`, `purchases.purchase_order_line`, `purchases.bill`, `purchases.bill.line`, `purchases.receipt`, `purchases.receipt.line`, `purchases.service_category`, approval matrix and wizard models.
 
-**Procurement** (`sales_procurement.py`): Auto-creates RFQs from SOs for products with insufficient stock. Products without a configured vendor are silently skipped (no UserError).
+**Service Purchase (order_type = service):**
+
+- `purchases.purchase_order.order_type` (Goods/Service, default Goods): locked to `draft` state, but can be changed until confirmed; all existing/auto-procurement POs stay Goods.
+- Service POs use line-level `service_category_id` (master data `purchases.service_category`: category + expense account) instead of `product_id`; `qty_received`/`qty_to_receive` are irrelevant (no receipt).
+- **No "Receive Products" button** for Service POs — `receipt_status` is forced to `no`.
+- **Create Bill** is available for Service POs once `state in [purchase, approved]` — Email send (`is_sent`) is **not** required (unlike Goods PO).
+- Service bills use a **separate sequence** `SBILL######` and post the journal **`Dr Expense (per service_category) / Cr Accounts Payable`** directly — bypassing Stock Interim entirely. Goods bills keep the interim path unchanged.
+- Service categories map to expense accounts (default: `530000 — Sales Support Service Expense`; note: `520000` is reserved by the Assets module for Depreciation Expense).
+- `sales_order_id` (single Many2one) is user-writable for Service POs (manual tagging to a Sales Order for profitability reporting); for Goods POs it stays auto-fill-only via Auto-Procurement.
+
+**Approval Process (reference pattern for Accounting):**
+
+- Trigger: On `action_confirm_order`, `_check_approval_requirement()` builds `purchases.purchase_approval_log` records **only when `total_amount` exceeds the matrix `min_amount` threshold**. The PO **state stays `purchase`** — it never auto-advances.
+- Submission: `action_submit_for_approval()` requires state `purchase` + `need_approval`; transitions the PO to `wait_approval`.
+- Per-user action permissions are computed from the matrix: `user_can_approve`, `user_can_revise`, `user_can_return`, `user_can_reject` (plus `user_can_submit`).
+- Actions go through dedicated wizards (`purchases.approve/revise/return/reject.wizard`) with reasons; approval is **sequential** — each log marked `approved` advances to the next pending approver.
+- Email notification is sent to the next pending approver on submit and after each action (`_send_approval_notification`).
+- When the last pending log is approved, the PO becomes `approved`. `action_reject` moves it to `cancel` with `approval_status='rejected'`.
+- Full audit trail lives in `purchases.purchase_approval_log`.
+
+**Procurement** (`sales_procurement.py`): Auto-creates RFQs from SOs for products with insufficient stock. Products without a configured vendor still generate RFQs (vendor field left empty). Vendor is validated on action: `action_submit_rfq()` and `action_confirm_order()` both raise UserError if `vendor_id` is empty. Shortage calculation is vendor-aware: quantities from other SOs are only counted against available stock if those SOs' products share the same vendor. Products without a vendor have no cross-SO stock sharing.
+
+**Purchase Order States:**
+
+| State | Description | Action di state ini |
+|---|---|---|
+| `draft` | Draft RFQ | Edit, Submit RFQ, Cancel |
+| `sent` | RFQ terkirim (belum dikonfirmasi) | Confirm Order, Cancel |
+| `purchase` | Purchase Order dikonfirmasi | Send by Email, Receive Products, Create Bill, Submit for Approval, Cancel |
+| `wait_approval` | Menunggu approval | Approve / Revise / Return / Reject |
+| `approved` | Sudah disetujui | Send by Email, Receive Products, Create Bill, Cancel |
+| `cancel` | Dibatalkan | Reset to Draft |
+
+**Send by Email (Purchase Order):**
+
+- Tombol "Send by Email" hanya tersedia pada state `purchase` atau `approved`, dengan syarat: user punya permission send, PO belum menerima barang (belum partial/received), dan tidak dalam proses approval (jika `need_approval`, harus sudah `approved`).
+- Flow pengiriman:
+  1. Validasi state dan permission `can_send`.
+  2. **Generate PDF PO** secara eksplisit (`PO - {po_code}.pdf`) dan lampirkan pada email; PDF lama dengan nama sama dihapus agar tidak duplikat.
+  3. Pengirim email di-resolve dari user buyer → user login → email company (fallback berurutan).
+  4. Email vendor di-sync ke `res.partner` terkait jika berbeda.
+  5. **`is_sent` di-set ke `True` secara permanen** (sebelum wizard email dibuka). State PO **tidak berubah**.
+  6. Membuka wizard komposisi email dengan pemilih vendor; template otomatis mengisi subject, body berbahasa Indonesia, dan melampirkan PDF.
+- Setelah terkirim, tercatat chatter message di PO.
+- **Tidak ada** jurnal akuntansi yang dibuat dari pengiriman email.
+
+**`is_sent` Flag (gate utama setelah PO dikirim):**
+
+- `is_sent` bersifat **permanen dan tidak bisa di-reverse** — menandakan PO sudah pernah dikirim ke vendor.
+- Saat `is_sent = True` (dan state `purchase`/`approved`):
+  - `bill_status` menjadi `to_bill` → tombol **Create Bill** muncul.
+  - `receipt_status` mulai dihitung (`to_receive`/`partial`/`received`) → tombol **Receive Products** muncul.
+- Saat `is_sent = False`: `bill_status` dan `receipt_status` keduanya `no`, sehingga tombol Create Bill dan Receive Products tersembunyi.
+- Dengan kata lain, PO **harus dikirim lewat email terlebih dahulu** sebelum bisa membuat receipt atau bill.
 
 ### Inventory Module
 
@@ -231,9 +316,16 @@ Uses `InventoryAccessMixin`. Models: `inventory.warehouse`, `inventory.location`
 - `purchases_bill_accounting` — Original expense-based bill move
 - `purchases_payment_register_accounting` — Dr AP / Cr Cash
 
+**Approval Process (matches Purchases):** Accounting documents that need approval (petty cash expense, top-up, transfer, settlement) reuse the exact Purchases approval pattern rather than the old Sales-style authoring. Details:
+
+- Shared `accounting.approval.mixin` provides `approval_log_ids`, `need_approval`, `approval_status`, `current_approver(_name)`, and the computed per-user flags `user_can_approve/revise/return/reject` (+ `user_can_submit`).
+- The approval chain is defined in `accounting.approval.matrix` (per `document_type`) and builds `accounting.approval.log` records. Entries that need approval submit from `draft` and transition through `wait_approval` → `approved` before posting.
+- Approve / Revise / Return / Reject run through `accounting.approval.wizard` (reason prompts), mirroring the Purchases wizard flow. Approval is sequential and email notification is sent to the next pending approver.
+- Full audit trail lives in `accounting.approval.log`, linked back to each document.
+
 **Report Wizards + SQL Views:** Trial Balance, General Ledger, Aged Receivable, Balance Sheet, Profit And Loss. Reports render as `qweb-html` with PDF printable via Odoo's Print button.
 
-**Chart of Accounts (17 accounts):**
+**Chart of Accounts (18 accounts):**
 | Code | Name | Type |
 |------|------|------|
 | 100000 | Cash / Bank | bank |
@@ -253,6 +345,7 @@ Uses `InventoryAccessMixin`. Models: `inventory.warehouse`, `inventory.location`
 | 410000 | Service Revenue | income |
 | 500000 | Cost of Goods Sold | expense |
 | 510000 | Operating Expenses | expense |
+| 530000 | Sales Support Service Expense | expense |
 
 **Menu structure:**
 
@@ -262,7 +355,7 @@ Accounting
 ├── Banking → Bank Statements
 ├── Petty Cash → Cash Expenses / Top Ups / Transfers / Settlements
 ├── Ledger → Trial Balance / General Ledger / Aged Receivable
-├── Reporting → Balance Sheet / Profit And Loss
+├── Reporting → Balance Sheet / Profit And Loss / Sales Order Profitability
 ├── Commissions → Commission Plans / Commission Settlements
 └── Accounting Configuration → COA / Account Types / Journals / Fiscal Years / Periods / Petty Cash Funds / Expense Categories
 ```
@@ -396,10 +489,10 @@ Settlement record auto-created, linked to the move, and marked posted.
 **Workflows:**
 | Type | States | Journal Entry |
 |------|--------|---------------|
-| Cash Expense | Draft → Submitted → Approved → Posted → Cancelled | `Dr Expense / Cr Petty Cash` |
-| Top Up | Draft → Approved → Posted | `Dr Petty Cash / Cr Bank` |
-| Transfer | Draft → Approved → Posted | `Dr Dest Fund / Cr Source Fund` |
-| Settlement | Draft → Verified → Posted | `Dr Petty Cash / Cr Employee Advance` |
+| Cash Expense | Draft → (Submit) → Wait Approval → Approved → Posted → Cancelled | `Dr Expense / Cr Petty Cash` |
+| Top Up | Draft → (Submit) → Wait Approval → Approved → Posted | `Dr Petty Cash / Cr Bank` |
+| Transfer | Draft → (Submit) → Wait Approval → Approved → Posted | `Dr Dest Fund / Cr Source Fund` |
+| Settlement | Draft → (Submit) → Wait Approval → Approved → Posted | `Dr Petty Cash / Cr Employee Advance` |
 
 **Integration:** Auto-creates `accounting.move` on Post. Smart button links to the move. Uses `navigation.mixin` for permissions.
 
@@ -430,7 +523,7 @@ Validation: if one of expense/stock is filled, the other becomes required.
 
 - `create()` and `write()` detect state transition to `'done'`
 - Creates COGS journal entry per delivery line: `Dr expense_account_id / Cr stock_account_id`
-- Amount: `delivery_line.quantity × product.price`
+- Amount: `delivery_line.quantity × product.price` (harga pokok produk)
 - Handles both manual Validate and auto-created (inventory transfer) paths
 
 ### Receipt Accounting (Stock Interim)
@@ -449,12 +542,63 @@ Validation: if one of expense/stock is filled, the other becomes required.
 - Journal: `Dr 113200 (Stock Interim Received) / Cr Accounts Payable (220000)`
 - Net effect after Receipt + Bill: `Dr Stock / Cr AP` (113200 nets to zero)
 
+### Bill Accounting (Service)
+
+`purchases_bill_accounting_service` (`_inherit='purchases.bill'`):
+
+- Overrides `action_post()` to dispatch on `purchase_order_id.order_type`
+- **Service PO:** `_create_service_accounting_move()` — `Dr service_category_id.expense_account_id (530000) / Cr Accounts Payable (220000)` directly, bypassing Stock Interim entirely
+- **Goods PO:** unchanged — interim path via `purchases_bill_accounting_interim`
+- Mutual exclusion guard: the two hooks are **never** active for the same Bill; `order_type` determines which runs
+- Service bills use a **separate sequence `SBILL######`** (6-digit padding, consistent with `BILL`)
+- See full PRD: §"Purchases Service Bill — PRD" in the Appendix at end of this file
+
 ### Balance Sheet & Profit And Loss
 
 - **Balance Sheet:** SQL view with Assets (Current/Fixed Asset sub-groups), Liabilities, Equity. Retained Earnings = account 310000 balance + Net Income.
 - **Profit And Loss:** SQL view with Revenue / Expenses sections, Net Profit/Loss.
 - Both use `qweb-html` report type; Odoo Print button generates PDF.
 - Wizards provide date filters (passed via context).
+
+### Sales Order Profitability Report
+
+SQL view report model (`_auto = False`) showing per-SO revenue, cost breakdown, and margin.
+
+**Model:** `accounting.sales_profitability_report`
+
+| Field | Type | Source |
+|-------|------|--------|
+| `sale_order_id` | Many2one → `sales.sales_order` | `so.id` |
+| `sale_order_name` | Char | `so.sales_code` |
+| `sale_order_date` | Date | `so.create_date` |
+| `customer_id` | Many2one → `sales.customer` | `so.customer_id` |
+| `total_revenue` | Monetary | Invoice lines with `account_type = 'income'` |
+| `cost_cogs` | Monetary | Delivery lines with `account_type = 'expense'` |
+| `cost_commission` | Monetary | Invoice expense lines (commission) |
+| `cost_supporting` | Monetary | Petty Cash tagged to SO + Purchases Service Bills tagged to SO |
+| `total_cost` | Monetary | `cost_cogs + cost_commission + cost_supporting` |
+| `margin_amount` | Monetary | `total_revenue - total_cost` |
+| `margin_percent` | Float | `(margin_amount / total_revenue) × 100` |
+
+**`cost_supporting` sourcing (v1):**
+
+1. **Petty Cash Expense** — `accounting_petty_cash_expense` where `sales_order_id IS NOT NULL` (manual tagging at input). Field `sales_order_id` added to `accounting.petty.cash.expense` for this purpose.
+2. **Purchases Service Bills** — `purchases_bill` where parent `purchase_order.order_type = 'service'` and `po.sales_order_id IS NOT NULL`. Uses `po.sales_order_id` (not the Bill itself).
+
+Filter `am.state = 'posted'` on all accounting moves. `account_type = 'expense'` filters expense lines; `account_type = 'income'` filters revenue lines.
+
+**Wizard:** `accounting.sales_profitability_report.wizard` (TransientModel)
+- Fields: `date_from`, `date_to`, `customer_id` (optional), `sale_order_ids` (optional)
+- Opens the report list view with domain filter passed via context.
+
+**Menu:** `Accounting → Reporting → Sales Order Profitability`
+- RBAC entry in `general.menu` with proper `ir_ui_menu_id`; read-only ACL.
+
+**Drill-down:** Click SO row → opens form view of the Sales Order.
+
+**PDF:** `qweb-html` report, Odoo Print button.
+
+See full PRD: §"Sales Order Profitability Report — PRD" in the Appendix at end of this file.
 
 ## Testing
 
@@ -571,6 +715,21 @@ Environment variables (optional):
 
 All master/transaction records use `ir.sequence`. Defined in each module's `data/sequence.xml`.
 
+### Form Title Styling
+
+All form `<div class="oe_title">` blocks must wrap the primary editable/display field in `<h1>` tags:
+
+```xml
+<div class="oe_title">
+  <field name="reference_code" readonly="1"/>
+  <h1>
+    <field name="name" placeholder="..." readonly="state != 'draft'"/>
+  </h1>
+</div>
+```
+
+The `<h1>` gives the title a large, prominent appearance consistent across all forms. Fields that are reference/ID codes (like `name` as reference number) stay outside `<h1>` as plain `<field>`. The primary descriptive field (user-editable name, description, reference) goes inside `<h1>`.
+
 ### Partner Synchronization
 
 `sales.customer` and `purchases.vendor` sync to `res.partner`. Changes propagate; deletion cascades.
@@ -624,3 +783,484 @@ The function parses the view XML via `lxml.etree`, finds all `<field>` tags whos
 **When writing new views:** Do NOT add `options="{'no_open': True, 'no_create': True}"` on individual `<field>` tags — it's redundant noise. The global default already covers it. Only add `options` when you need to opt a specific field back in (set to `False`).
 
 **When adding a new module with its own mixin/`get_views()`:** Copy the `_inject_m2o_no_open_create` helper function and add the injection loop (see existing mixins for the exact pattern).
+
+---
+
+# Appendix C: Purchases Service Bill — PRD
+
+**Modul:** `purchases` (perubahan arsitektur), dengan dampak turunan ke `accounting`
+**Status:** Confirmed — siap masuk tahap development
+**Author:** Bono (dirancang bersama Claude)
+**Tanggal:** 2026-07-31
+**Terkait:** Prasyarat untuk `cost_supporting` sumber Purchases pada PRD "Sales Order Profitability Report"
+
+## 1. Latar Belakang & Masalah
+
+Berdasarkan `PRODUCT_SPEC.md` §5.8, seluruh alur akuntansi Purchase Bill di sistem ini memakai **satu-satunya jalur: Interim Approach**:
+
+| Step | Journal Entry |
+|---|---|
+| Receipt | `Dr Stock Account / Cr 113200 (Stock Interim Received)` |
+| Bill | `Dr 113200 (Stock Interim Received) / Cr 220000 (AP)` |
+| Net Effect | `Dr Stock / Cr AP` (113200 nol lagi) |
+
+Alur ini dibangun di atas asumsi bahwa setiap pembelian adalah **barang fisik** yang masuk ke Stock lewat Receipt. Konsisten dengan itu, katalog produk (`sales.product_type`) hanya mendukung 3 tipe: **Raw Materials / Semifinished / Finished Products** — tidak ada tipe "Service".
+
+**Masalahnya:** saat perusahaan membeli **jasa** dari vendor eksternal untuk mendukung penjualan (mis. event organizer untuk acara peluncuran produk, freelance staff pameran, jasa logistik pihak ketiga di luar armada sendiri), tidak ada barang fisik yang bisa di-Receipt. Kalau dipaksakan lewat alur Purchase Order/Bill yang ada:
+
+- Bill tetap wajib melalui Receipt untuk nge-net akun 113200 — padahal tidak ada barang yang diterima.
+- Kalaupun di-skip, nilai Bill akan tersangkut selamanya di akun 113200/Stock — **tidak pernah tercatat sebagai expense**, karena mekanisme yang mengeluarkan nilai dari Stock ke expense (COGS) hanya terjadi saat barang itu **dijual dan di-deliver ke customer** (`sales_delivery_accounting`). Jasa tidak pernah "dijual dan dikirim" lewat mekanisme itu.
+
+Ini bukan gap kecil — ini keterbatasan desain akuntansi Purchases Module itu sendiri. Solusinya adalah menambahkan **jalur akuntansi kedua** yang tidak melalui Stock Interim sama sekali.
+
+## 2. Tujuan
+
+1. Memungkinkan pencatatan pembelian **jasa** dari vendor lewat Purchases Module dengan akuntansi yang benar: **`Dr Expense / Cr Accounts Payable`** langsung saat Bill di-post — tanpa Receipt, tanpa menyentuh Stock/Stock Interim.
+2. Tetap memakai infrastruktur yang sudah ada semaksimal mungkin: Approval Workflow, RBAC, Edit/Save Pattern, sequence, vendor management — supaya jasa vendor bernilai besar tetap melalui kontrol yang sama seperti pembelian barang.
+3. Menyediakan cara **eksplisit** untuk men-tag pembelian jasa ini ke Sales Order tertentu (memakai field yang **sudah ada**: `purchases.purchase_order.sales_order_id`), sehingga bisa menjadi sumber `cost_supporting` pada laporan Sales Order Profitability Report di masa depan.
+
+## 3. Non-Goals
+
+- **Tidak** menambahkan tipe "Service" ke katalog produk (`sales.products`/`sales.product_type`) — katalog itu dipakai bersama oleh Sales (untuk dijual ke customer) dan tidak semestinya diubah untuk kebutuhan internal Purchases. Sebagai gantinya, dipakai master data baru khusus Purchases (lihat §4).
+- **Tidak** membangun approval matrix terpisah untuk jasa — Service PO memakai `purchases.purchase_approval_matrix` yang sama dengan PO barang (berdasarkan `total_amount`).
+- **Tidak** mendukung PO campuran (sebagian baris barang, sebagian baris jasa) — **dikonfirmasi tetap tidak dibutuhkan** untuk bisnis Distributor Kompresor: pembelian inti (unit kompresor, spare part) hampir selalu Goods, sementara jasa pendukung (instalasi vendor ketiga, kalibrasi, freight forwarder, EO) secara akuntansi harus tetap terpisah dari Stock walau dari vendor yang sama. Kalau 1 vendor menyediakan keduanya, solusinya buat 2 PO terpisah (Goods + Service) ke vendor yang sama — tidak ada friksi proses tambahan karena vendor master sudah mendukung banyak PO per vendor.
+- **Tidak** menambahkan tracking "persentase jasa selesai" (partial service completion) — Bill jasa dibuat untuk nilai penuh PO, mirip pola Invoice "regular" (bukan DP%) di Sales.
+- **Tidak** mengubah alur Auto-Procurement (RFQ otomatis dari SO untuk stock shortage) — itu tetap khusus untuk PO tipe Goods, tidak pernah men-generate Service PO secara otomatis.
+
+## 4. Rancangan Data Model
+
+### 4.1 Field baru: `purchases.purchase_order.order_type`
+
+```python
+order_type = fields.Selection(
+    [('goods', 'Goods'), ('service', 'Service')],
+    string='Order Type',
+    default='goods',
+    required=True,
+)
+```
+
+- Default `'goods'` menjaga backward-compatibility — semua PO existing otomatis dianggap Goods, alur lama tidak berubah sama sekali.
+- Field ini **mengunci** alur bisnis PO: Goods → wajib lewat Receipt; Service → langsung ke Bill tanpa Receipt.
+- **Rekomendasi UX:** field ini hanya bisa diisi saat status `draft`, dikunci (`readonly`) setelah PO dikonfirmasi — supaya tidak ada PO yang "berubah pikiran" dari Goods jadi Service di tengah jalan (karena implikasi akuntansinya beda total).
+
+### 4.2 Model baru: `purchases.service_category`
+
+Mengikuti pola persis `accounting.petty.cash.category` (Expense Category) yang sudah ada:
+
+```python
+class PurchasesServiceCategory(models.Model):
+    _name = 'purchases.service_category'
+    _description = 'Purchases Service Category'
+
+    category_name = fields.Char(string='Category Name', required=True)
+    expense_account_id = fields.Many2one('accounting.account', string='Expense Account', required=True)
+)
+```
+
+Contoh data: "Event Organizer", "Freelance Staff", "Jasa Logistik Pihak Ketiga", "Jasa Konsultan" — masing-masing dipetakan ke akun expense yang sesuai.
+
+**Dikonfirmasi: pakai akun baru khusus**, bukan akun generik 510000 yang sama dengan Petty Cash — supaya biaya jasa vendor untuk mendukung penjualan bisa dipisah jelas di Chart of Accounts dari biaya operasional harian. Diusulkan kode akun **`530000 — Sales Support Service Expense`** (`account_type = expense`), mengikuti pola penomoran yang sudah ada (400000-an income, 500000-an expense; 500000 = COGS, 510000 = Petty Cash/Commission generic expense). Semua kategori jasa pada v1 bisa dipetakan ke satu akun ini dulu; kalau ke depan perlu granularitas per jenis jasa (mis. akun terpisah untuk Event Organizer vs Logistik), tinggal tambah akun baru dan arahkan `expense_account_id` masing-masing kategori ke situ — model `purchases.service_category` sudah dirancang fleksibel untuk itu tanpa perubahan kode.
+
+### 4.3 Perubahan `purchases.purchase_order_line`
+
+```python
+service_category_id = fields.Many2one('purchases.service_category', string='Service Category')
+description = fields.Char(string='Description')
+```
+
+- Saat `order_type = 'service'`: field `product_id` disembunyikan/`invisible`, `service_category_id` **wajib** diisi, `description` dipakai sebagai keterangan jasa. `qty_received`/`qty_to_receive` disembunyikan (tidak relevan, tidak ada Receipt).
+- Saat `order_type = 'goods'`: perilaku sama seperti sekarang, `service_category_id` disembunyikan.
+
+### 4.4 Link ke Sales Order — Field Sudah Ada, Tapi Perlu Dibuka untuk Input Manual
+
+`purchases.purchase_order.sales_order_id` (Many2one) dan `sales_order_ids` (Many2many) **sudah ada** di sistem, tapi **dikonfirmasi murni diisi otomatis oleh proses Auto-Procurement saja** — tidak ada jalur untuk user mengisinya manual dari form PO saat ini.
+
+**Perubahan yang dibutuhkan:** buka `sales_order_id` menjadi **writable** di form PO, khusus saat `order_type = 'service'` (untuk Goods PO, biarkan tetap readonly/auto-fill-only seperti sekarang, supaya tidak mengganggu perilaku Auto-Procurement yang sudah berjalan). Secara teknis:
+
+```python
+sales_order_id = fields.Many2one(
+    'sales.sales_order',
+    string='Sales Order',
+)
+```
+
+Di level view, gunakan `attrs`/`invisible-readonly` kondisional terhadap `order_type`, bukan mengubah `readonly` Python-level secara permanen — supaya jalur Auto-Procurement untuk Goods PO tidak perlu disentuh sama sekali (tetap 100% backward-compatible).
+
+## 5. Alur Bisnis
+
+### 5.1 Service PO Flow
+
+```
+[Draft RFQ, order_type=service] ──Submit──> [Sent] ──Confirm Order──> [Purchase Order]
+                                                                            │
+                                                                (if approval needed,
+                                                                 threshold sama dgn Goods PO)
+                                                                            │
+                                                                     [Wait Approval]
+                                                                            │
+                                                                    Approve/Revise/
+                                                                    Return/Reject
+                                                                            │
+                                                                     [Approved]
+                                                                            │
+                                                                    Create Bill
+                                                                    (TIDAK ada tombol
+                                                                     "Receive Products")
+                                                                            │
+                                                                     [Draft Bill]
+                                                                            │
+                                                                    Confirm & Post
+                                                                            │
+                                                                     [Posted Bill]
+                                                                    Dr Expense / Cr AP
+                                                                    (langsung, tanpa Interim)
+                                                                            │
+                                                                    Register Payment
+                                                                            │
+                                                                       [Paid Bill]
+```
+
+Perbedaan kunci dari Goods PO: **tombol "Receive Products" tidak muncul** untuk `order_type = 'service'` — hanya "Create Bill" yang tersedia begitu PO berstatus Approved.
+
+### 5.1a Sequence Terpisah untuk Service Bill
+
+**Dikonfirmasi: pakai seri terpisah**, bukan menyatu dengan seri `BILL` yang sudah ada, supaya lebih mudah dibedakan di ledger/rekap tanpa harus buka detail tiap baris. Format **`SBILL######`** (mengikuti pola padding 6 digit yang sama seperti sequence `BILL` existing, demi konsistensi tampilan). Perlu ditambahkan entry sequence baru di data XML/model sequence, dan `purchases_bill_accounting_service` memilih sequence `SBILL` alih-alih `BILL` saat generate nomor dokumen untuk Bill dengan `order_type = 'service'` pada PO induknya.
+
+### 5.2 Accounting Integration — `purchases_bill_accounting_service`
+
+Polam baru, `_inherit='purchases.bill'`, override `action_post()`:
+
+```python
+def action_post(self):
+    result = super().action_post()
+    for bill in self:
+        if bill.purchase_order_id.order_type == 'service':
+            bill._create_service_accounting_move()
+        # else: behavior lama (interim) tetap jalan lewat purchases_bill_accounting_interim
+    return result
+
+def _create_service_accounting_move(self):
+    # Dr line.service_category_id.expense_account_id (per baris, sesuai kategori)
+    # Cr 220000 (Accounts Payable) — total keseluruhan
+    ...
+```
+
+Ini menghasilkan `accounting.move` dengan baris `account_type = 'expense'` — **konsisten dengan pola yang sudah dipakai** di Petty Cash Expense dan Commission, sehingga bisa langsung diikutsertakan di query laporan profitabilitas.
+
+**Guard penting:** pastikan hook `purchases_bill_accounting_interim` (jalur lama) **tidak ikut jalan** untuk Bill dengan `order_type = 'service'` — kedua hook harus saling eksklusif berdasarkan `order_type`, supaya tidak terjadi double posting.
+
+### 5.3 Validasi
+
+- `order_type = 'service'` pada PO **wajib** semua baris punya `service_category_id` terisi (tidak boleh campur dengan `product_id`).
+- Bill untuk Service PO tidak mensyaratkan `receipt_ids` — validasi "Create Bill" untuk Goods PO yang mengecek status Receipt **dilewati** untuk Service PO.
+- Approval matrix tetap dievaluasi berdasarkan `total_amount`, sama seperti Goods PO — tidak ada perubahan logika approval.
+
+## 6. UI / Menu
+
+- **Form Purchase Order:** tambahkan field `order_type` di header (radio button atau selection dropdown), posisi awal form, `readonly` setelah `state != 'draft'`. Field `sales_order_id` dibuka writable **khusus saat `order_type = 'service'`** (lihat §4.4) — untuk Goods PO tetap readonly/auto-fill-only seperti perilaku sekarang.
+- **Form Purchase Order Line:** conditional visibility `product_id` vs `service_category_id` + `description` berdasarkan `order_type` milik PO induk.
+- **Tombol "Receive Products":** disembunyikan (`invisible`) untuk `order_type = 'service'`.
+- **List View Purchase Orders / Vendor Bills:** tambahkan kolom/filter `Order Type` (Goods/Service) supaya user bisa memfilter dan membedakan sekilas.
+- **Menu:** tidak perlu menu baru — Service PO dan Bill tetap muncul di menu yang sama (`Purchases → Orders → Purchase Orders`, `Purchases → Configuration → Vendor Bills`), cukup dibedakan lewat kolom/filter `Order Type`.
+- **Master Data baru:** `Purchases → Configuration → Service Categories` — list + form sederhana (nama + akun expense).
+
+## 7. RBAC
+
+- **Tidak perlu flag permission baru** — reuse `can_create`/`can_update`/`can_confirm`/`can_billing` yang sudah ada untuk `purchases.purchase_order` dan `purchases.bill`. Perbedaan `order_type` adalah data, bukan boundary akses baru.
+- **Master data `purchases.service_category`** butuh entry `general.menu` baru (untuk menu Configuration → Service Categories) dengan ACL CRUD standar.
+
+## 8. Dampak ke PRD "Sales Order Profitability Report"
+
+Setelah fitur ini diimplementasikan, query `cost_supporting` pada PRD tsb. perlu **ditambah satu sumber lagi**:
+
+```sql
+-- Purchases Service Bill yang di-tag ke SO (lewat PO.sales_order_id)
+SELECT
+    po.sales_order_id AS sale_order_id,
+    SUM(aml.debit - aml.credit) AS cost_amount
+FROM purchases_bill pb
+JOIN purchases_purchase_order po ON po.id = pb.purchase_order_id
+JOIN accounting_move am ON am.id = pb.move_id
+JOIN accounting_move_line aml ON aml.move_id = am.id
+JOIN accounting_account aa ON aa.id = aml.account_id
+WHERE am.state = 'posted'
+  AND po.order_type = 'service'
+  AND po.sales_order_id IS NOT NULL
+  AND aa.account_type = 'expense'
+GROUP BY po.sales_order_id
+```
+
+Filter `po.order_type = 'service'` di sini eksplisit (bukan cuma mengandalkan `account_type = 'expense'`) supaya query tetap benar walau di masa depan Goods PO entah bagaimana punya baris expense juga.
+
+Catatan: `sales_order_id` diambil dari **PO** (`po.sales_order_id`), bukan dari Bill. Untuk kasus `sales_order_ids` (M2M, multi-SO), v1 laporan ini **tidak mendukung alokasi proporsional otomatis** — kalau satu Service PO didukung untuk >1 SO, disarankan pakai `sales_order_id` (single).
+
+## 9. Pengujian
+
+| Kategori | Skenario |
+|---|---|
+| `happy_path` | Buat Service PO, isi `service_category_id` + `sales_order_id`, approve, Create Bill langsung tanpa Receipt, post → move `Dr Expense / Cr AP` benar |
+| `no_receipt_button` | Service PO Approved → tombol "Receive Products" tidak muncul; hanya "Create Bill" |
+| `goods_unaffected` | Goods PO (order_type default) → alur lama (Receipt → Bill interim) tidak berubah sama sekali |
+| `validation` | Service PO line tanpa `service_category_id` → gagal validasi/tidak bisa submit |
+| `no_double_post` | Bill service tidak memicu hook interim — hanya satu move yang dibuat |
+| `tagging` | `sales_order_id` di Service PO ter-propagate benar ke Bill lewat `purchase_order_id` |
+| `rbac_master_data` | User tanpa akses menu Service Categories tidak bisa CRUD `purchases.service_category` |
+
+## 10. Ringkasan Perubahan Teknis
+
+| File/Area | Perubahan |
+|---|---|
+| `purchases/models/purchase_order.py` | Tambah field `order_type` (Selection, default 'goods'); buka `sales_order_id` writable kondisional untuk `order_type='service'` |
+| `purchases/models/purchase_order_line.py` | Tambah field `service_category_id`, conditional terhadap `product_id` |
+| `purchases/models/service_category.py` | Model baru `purchases.service_category` |
+| `purchases/models/bill.py` | Override `action_post()` untuk jalur akuntansi service (`Dr Expense / Cr AP`) dengan guard; pilih sequence `SBILL` |
+| `purchases/data/` | Sequence baru `SBILL######` |
+| `accounting/data/` | Akun baru `530000 — Sales Support Service Expense` |
+| `purchases/views/` | Update form PO (field `order_type`, `sales_order_id` writable kondisional, visibility `service_category_id`/`product_id`), sembunyikan tombol Receive untuk service, form + list view `purchases.service_category` |
+| `purchases/security/ir.model.access.csv` | ACL untuk `purchases.service_category` |
+| `general/data/` | Entry `general.menu` baru untuk `Purchases → Configuration → Service Categories` |
+| `tests/` | Test suite sesuai §9 |
+
+## 11. Status
+
+**Siap masuk tahap development.**
+
+---
+
+# Appendix D: Sales Order Profitability Report — PRD
+
+**Modul:** `accounting` (report utama), dengan perubahan field pendukung di `accounting` (Petty Cash Expense)
+**Status:** Confirmed
+**Author:** Bono (dirancang bersama Claude)
+**Tanggal:** 2026-07-30
+
+## 1. Latar Belakang & Masalah
+
+Sistem saat ini mencatat Pendapatan dan Biaya (COGS) secara otomatis ke `accounting.move`:
+
+- **Pendapatan** — dibuat oleh `sales_invoice_accounting._create_accounting_move()` saat Sales Invoice di-post: `Dr AR / Cr Sales Revenue / Cr Tax + Commission`.
+- **Biaya (COGS)** — dibuat oleh `sales_delivery_accounting` saat Delivery mencapai state `done`: `Dr expense_account_id / Cr stock_account_id`.
+
+Laporan yang tersedia sekarang (**Profit And Loss**, SQL view di modul `accounting`) hanya agregat perusahaan pada rentang tanggal tertentu — **tidak bisa di-breakdown per Sales Order**. Untuk mengetahui profitabilitas satu proyek penjualan (satu SO), user harus membuka SO → buka Invoice terkait → buka Journal Entry-nya → lakukan hal yang sama untuk Delivery → jumlahkan manual. Proses ini tidak scalable dan rawan salah hitung ketika satu SO punya banyak Invoice/Delivery parsial.
+
+## 2. Tujuan
+
+Menyediakan laporan **"Sales Order Profitability"** yang menampilkan, per Sales Order:
+
+- Total Pendapatan (dari seluruh Invoice yang sudah posted terkait SO tsb.)
+- Total Biaya (COGS produk + biaya komisi + biaya pendukung penjualan via Petty Cash yang di-tag + Purchases Service Bills yang di-tag — lihat §5.1)
+- Margin (Rp) dan Margin (%)
+
+Laporan mengikuti pola **SQL View Report Model** yang sudah dipakai untuk Trial Balance / General Ledger / Balance Sheet / Profit And Loss.
+
+## 3. Non-Goals
+
+- Biaya operasional/overhead umum (mis. Office Supplies, biaya kantor rutin) **tetap tidak masuk** margin per SO — hanya masuk P&L perusahaan. Biaya pendukung penjualan (entertainment, transportasi klien, dll.) **hanya ikut terhitung jika secara eksplisit di-tag ke SO tsb.** oleh user saat input Petty Cash Expense. Biaya jasa vendor eksternal lewat Purchases **hanya masuk jika di-tag lewat Sales Order ID di PO Service** (lihat PRD "Purchases Service Bill").
+- Tidak mengganti laporan Profit And Loss yang sudah ada; ini laporan tambahan yang lebih granular.
+- Tidak menghitung profitabilitas per baris produk (line-level) pada versi pertama — scope awal per SO (header-level).
+
+## 4. Konfirmasi Data Model
+
+- `sales.invoice.sales_order_id` dan `sales.delivery.sales_order_id` **sudah ada** di source code — tidak perlu field baru/migrasi.
+- Margin per SO **wajib memasukkan biaya komisi** (`accounting.commission.plan` / `accounting.commission.settlement`).
+- Sistem ini adalah proyek **Odoo 17 custom modules (Bonoworx)** — terpisah dari pekerjaan WordPress GINDING/Sahabat Aqiqah.
+
+**Gap yang ditemukan:** `accounting.petty.cash.expense` **tidak punya field yang menghubungkannya ke Sales Order**. Supaya biaya semacam ini bisa ikut masuk margin per SO, perlu ditambahkan field baru:
+
+- `accounting.petty.cash.expense.sales_order_id` — Many2one → `sales.sales_order`, **opsional** (nullable). Saat user mengisi expense yang memang untuk mendukung penjualan tertentu, field ini diisi. Expense yang murni overhead kantor dibiarkan kosong.
+
+**`purchases.purchase_order` sudah punya `sales_order_id`** dan sudah didukung oleh PRD "Purchases Service Bill" yang menambahkan jalur `Dr Expense / Cr AP` langsung. `cost_supporting` v1 bersumber dari **Petty Cash Expense yang di-tag + Purchases Service Bills yang di-tag**.
+
+## 5. Rancangan Data Model
+
+### 5.1 Model baru: `accounting.sales_profitability_report`
+
+```python
+class AccountingSalesProfitabilityReport(models.Model):
+    _name = 'accounting.sales_profitability_report'
+    _description = 'Sales Order Profitability Report'
+    _auto = False
+    _order = 'sale_order_date desc'
+
+    sale_order_id = fields.Many2one('sales.sales_order', string='Sales Order', readonly=True)
+    sale_order_name = fields.Char(string='SO Number', readonly=True)
+    sale_order_date = fields.Date(string='Order Date', readonly=True)
+    customer_id = fields.Many2one('sales.customer', string='Customer', readonly=True)
+    total_revenue = fields.Monetary(string='Total Revenue', readonly=True)
+    cost_cogs = fields.Monetary(string='COGS', readonly=True)
+    cost_commission = fields.Monetary(string='Commission Cost', readonly=True)
+    cost_supporting = fields.Monetary(string='Supporting Cost', readonly=True)
+    total_cost = fields.Monetary(string='Total Cost', readonly=True)
+    margin_amount = fields.Monetary(string='Margin', readonly=True)
+    margin_percent = fields.Float(string='Margin (%)', readonly=True)
+    currency_id = fields.Many2one('res.currency', readonly=True)
+
+    def init(self):
+        tools.drop_view_if_exists(self.env.cr, self._table)
+        self.env.cr.execute(f"""
+            CREATE OR REPLACE VIEW {self._table} AS (
+                SELECT
+                    so.id AS id,
+                    so.id AS sale_order_id,
+                    so.sales_code AS sale_order_name,
+                    so.create_date AS sale_order_date,
+                    so.customer_id AS customer_id,
+                    COALESCE(rev.total_revenue, 0) AS total_revenue,
+                    COALESCE(cogs.cost_amount, 0) AS cost_cogs,
+                    COALESCE(comm.cost_amount, 0) AS cost_commission,
+                    COALESCE(supp.cost_amount, 0) AS cost_supporting,
+                    COALESCE(cogs.cost_amount, 0) + COALESCE(comm.cost_amount, 0)
+                        + COALESCE(supp.cost_amount, 0) AS total_cost,
+                    COALESCE(rev.total_revenue, 0)
+                        - (COALESCE(cogs.cost_amount, 0) + COALESCE(comm.cost_amount, 0)
+                           + COALESCE(supp.cost_amount, 0)) AS margin_amount,
+                    CASE
+                        WHEN COALESCE(rev.total_revenue, 0) = 0 THEN 0
+                        ELSE ((COALESCE(rev.total_revenue, 0)
+                               - (COALESCE(cogs.cost_amount, 0) + COALESCE(comm.cost_amount, 0)
+                                  + COALESCE(supp.cost_amount, 0)))
+                              / rev.total_revenue) * 100
+                    END AS margin_percent,
+                    (SELECT id FROM res_currency LIMIT 1) AS currency_id
+                FROM sales_sales_order so
+
+                -- Revenue: baris income pada move Invoice
+                LEFT JOIN (
+                    SELECT inv.sales_order_id AS sale_order_id,
+                           SUM(aml.credit - aml.debit) AS total_revenue
+                    FROM sales_invoice inv
+                    JOIN accounting_move am ON am.id = inv.move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    WHERE am.state = 'posted'
+                      AND aa.account_type = 'income'
+                    GROUP BY inv.sales_order_id
+                ) rev ON rev.sale_order_id = so.id
+
+                -- COGS: baris expense pada move Delivery
+                LEFT JOIN (
+                    SELECT dl.sales_order_id AS sale_order_id,
+                           SUM(aml.debit - aml.credit) AS cost_amount
+                    FROM sales_delivery dl
+                    JOIN accounting_move am ON am.id = dl.move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    WHERE am.state = 'posted'
+                      AND aa.account_type = 'expense'
+                    GROUP BY dl.sales_order_id
+                ) cogs ON cogs.sale_order_id = so.id
+
+                -- Komisi: baris expense pada move Invoice
+                LEFT JOIN (
+                    SELECT inv.sales_order_id AS sale_order_id,
+                           SUM(aml.debit - aml.credit) AS cost_amount
+                    FROM sales_invoice inv
+                    JOIN accounting_move am ON am.id = inv.move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    WHERE am.state = 'posted'
+                      AND aa.account_type = 'expense'
+                    GROUP BY inv.sales_order_id
+                ) comm ON comm.sale_order_id = so.id
+
+                -- Biaya Pendukung Penjualan: Petty Cash Expense yang di-tag + Purchases Service Bills yang di-tag
+                LEFT JOIN (
+                    -- Source 1: Petty Cash Expenses
+                    SELECT pce.sales_order_id AS sale_order_id,
+                           SUM(aml.debit - aml.credit) AS cost_amount
+                    FROM accounting_petty_cash_expense pce
+                    JOIN accounting_move am ON am.id = pce.move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    WHERE am.state = 'posted'
+                      AND aa.account_type = 'expense'
+                      AND pce.sales_order_id IS NOT NULL
+                    GROUP BY pce.sales_order_id
+                    UNION ALL
+                    -- Source 2: Purchases Service Bills (linked via PO.sales_order_id)
+                    SELECT po.sales_order_id AS sale_order_id,
+                           SUM(aml.debit - aml.credit) AS cost_amount
+                    FROM purchases_bill pb
+                    JOIN purchases_purchase_order po ON po.id = pb.purchase_order_id
+                    JOIN accounting_move am ON am.id = pb.move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    WHERE am.state = 'posted'
+                      AND po.order_type = 'service'
+                      AND po.sales_order_id IS NOT NULL
+                      AND aa.account_type = 'expense'
+                    GROUP BY po.sales_order_id
+                ) supp ON supp.sale_order_id = so.id
+            )
+        """)
+```
+
+> **Catatan:** nama tabel/kolom tetap perlu disesuaikan dengan nama kolom exact di source code. Filter `am.state = 'posted'`, `account_type = 'income'`/`expense`, dan `po.order_type = 'service'` adalah bagian stabil dari desain.
+
+### 5.2 Filter status
+
+- Hanya SO dengan invoice **posted** dan delivery **done** yang dihitung — SO yang masih draft/tanpa transaksi tampil dengan Revenue/Cost = 0.
+
+## 6. Wizard — Filter Laporan
+
+**Model:** `accounting.sales_profitability_report.wizard` (TransientModel)
+
+| Field | Tipe | Keterangan |
+|---|---|---|
+| `date_from` | Date | Filter tanggal order dari |
+| `date_to` | Date | Filter tanggal order sampai |
+| `customer_id` | Many2one → `sales.customer` | Opsional, filter per customer |
+| `sale_order_ids` | Many2many → `sales.sales_order` | Opsional, filter SO tertentu |
+
+Tombol **"Tampilkan"** membuka list view dengan domain filter via context.
+
+## 7. UI / Menu
+
+- **Menu:** `Accounting → Reporting → Sales Order Profitability`
+- **List View:** kolom SO Number, Customer, Order Date, Total Revenue, COGS, Commission Cost, Supporting Cost, Total Cost, Margin, Margin %.
+- **Drill-down:** klik baris SO → buka form Sales Order terkait.
+- **Cetak PDF:** `qweb-html`, tombol Print bawaan Odoo.
+- **Form Petty Cash Expense:** tambahkan field `sales_order_id` (Many2one, opsional) di form `accounting.petty.cash.expense`.
+
+## 8. Integrasi RBAC
+
+1. Entry baru di `general.menu` — `sales_profitability_report` dengan `ir_ui_menu_id` ter-set.
+2. ACL read-only (`ir.model.access.csv`) untuk model `accounting.sales_profitability_report` dan wizard-nya.
+
+## 9. Fase Berikutnya (Out of Scope v1)
+
+- **Line-level breakdown**: profitabilitas per produk dalam satu SO.
+- **Export Excel** selain PDF.
+- **Dashboard/grafik** trend margin per bulan.
+
+## 10. Pengujian
+
+| Kategori | Skenario |
+|---|---|
+| `happy_path` | SO dengan 1 invoice posted + 1 delivery done → revenue/cost/margin benar |
+| `partial` | SO dengan invoice/delivery parsial → sum benar |
+| `no_transaction` | SO draft tanpa invoice/delivery → revenue/cost = 0 |
+| `edge_case` | Invoice/delivery dibatalkan → tidak ikut terhitung |
+| `supporting_cost_tagged` | Petty Cash Expense di-tag ke SO + posted → masuk cost_supporting |
+| `supporting_cost_service_bill` | Service Bill di-tag ke SO (lewat PO.sales_order_id) + posted → masuk cost_supporting |
+| `supporting_cost_untagged` | Petty Cash Expense tanpa sales_order_id → tidak muncul di SO manapun |
+| `rbac` | User tanpa general.auth untuk menu ini → menu tidak muncul |
+| `filter_wizard` | Filter by date range / customer menghasilkan subset yang benar |
+
+## 11. Ringkasan Perubahan Teknis
+
+| File/Area | Perubahan |
+|---|---|
+| `accounting/models/` | Model baru `accounting.sales_profitability_report` (SQL view) |
+| `accounting/models/` | Tambah field `sales_order_id` di `accounting.petty.cash.expense` |
+| `accounting/views/` | Tambah field `sales_order_id` di form view `accounting.petty.cash.expense` |
+| `accounting/wizard/` | Wizard baru `accounting.sales_profitability_report.wizard` |
+| `accounting/views/` | List view report + wizard form view |
+| `accounting/security/ir.model.access.csv` | ACL read-only untuk model & wizard baru |
+| `general/data/` | Entry baru di `general.menu` dengan `ir_ui_menu_id` ter-set |
+| `tests/` | Test suite sesuai §10 |
+
+---
+
+**Status:** Siap masuk tahap development. `cost_supporting` v1 mencakup Petty Cash Expense + Purchases Service Bills (PRD "Purchases Service Bill"). Langkah pertama: verifikasi nama kolom exact langsung dari source code sebelum menulis `init()` final.

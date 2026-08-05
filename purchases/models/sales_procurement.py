@@ -1,5 +1,14 @@
+import logging
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
+
+# SO states that reserve stock (booking) while the order is open.
+RESERVED_SO_STATES = (
+    'draft', 'sale_draft', 'wait_approval', 'approved', 'sent', 'sale',
+)
 
 
 class SalesProductsVendor(models.Model):
@@ -156,11 +165,26 @@ class SalesOrderProcurement(models.Model):
 
     def _sync_procurement_rfq(self):
         """Sinkronkan RFQ dengan kekurangan stok saat SO dibuat/diupdate.
-        Produk tanpa vendor diabaikan (tidak dibuatkan RFQ)."""
+        RFQ dibuat untuk semua produk yang kekurangan stok, meskipun tanpa vendor.
+        Penjumlahan quantity antar SO hanya dilakukan jika produk memiliki
+        vendor yang sama dan tidak kosong."""
         po_ctx = {'skip_purchase_order_create_auth_check': True}
 
         for order in self.filtered(lambda o: o.state != 'cancel'):
-            shortages = order._get_shortage_product_quantities()
+            shortages = {}
+            vendor_ids = set()
+            for line in order.order_line_ids:
+                if not line.product_id:
+                    continue
+                vendor_ids.add(
+                    line.product_id.vendor_id.id
+                    if line.product_id.vendor_id else None)
+
+            for vendor_id in vendor_ids:
+                shortages.update(
+                    order._get_shortage_product_quantities(
+                        vendor_id=vendor_id))
+
             linked_rfqs = order.purchase_order_ids.filtered(
                 lambda p: p.state in ('draft', 'sent'))
 
@@ -175,58 +199,77 @@ class SalesOrderProcurement(models.Model):
                         line.unlink()
 
             for product, qty in shortages.items():
-                if not product.vendor_id:
-                    continue
                 if linked_rfqs.filtered(
                         lambda r: product in r.order_line_ids.product_id):
                     continue
-                rfq = order._find_active_rfq_for_product(product)
+                vendor_id = (
+                    product.vendor_id.id if product.vendor_id else None)
+                rfq = order._find_active_rfq_for_product(
+                    product, vendor_id=vendor_id)
                 if rfq:
                     order._set_rfq_line_qty(rfq, product, qty)
                 else:
                     order.with_context(**po_ctx)._create_rfq_for_product(
                         product, qty)
 
-    def _get_shortage_product_quantities(self):
-        """Kekurangan per produk: kebutuhan SO vs stok fisik dikurangi booking SO lain."""
+    def _get_shortage_product_quantities(self, vendor_id=None):
+        """Kekurangan per produk untuk satu vendor tertentu.
+        - Jika vendor_id diberikan: quantity dari SO lain yang dipesan dihitung
+          hanya jika produk pada SO lain memiliki vendor yang sama.
+        - Jika vendor_id None (produk tanpa vendor): quantity antar SO tidak
+          dijumlahkan, kekurangan dihitung hanya dari stok fisik produk."""
         self.ensure_one()
         need_per_product = {}
         for line in self.order_line_ids:
             if not line.product_id:
                 continue
             p = line.product_id
+            if vendor_id is not None:
+                if p.vendor_id.id != vendor_id:
+                    continue
+            else:
+                if p.vendor_id:
+                    continue
             need_per_product[p] = need_per_product.get(p, 0) + line.quantity
 
         if not need_per_product:
             return {}
 
-        products = self.env['sales.products'].browse(
-            [p.id for p in need_per_product])
-        products.invalidate_recordset(['qty_reserved_sale'])
-
         product_qty = {}
         for product, need in need_per_product.items():
-            r_all = product.qty_reserved_sale
-            r_other = r_all - need
+            if vendor_id is not None:
+                other_lines = self.env['sales.sales_order_line'].search([
+                    ('sales_order_id', '!=', self.id),
+                    ('sales_order_id.state', 'in', RESERVED_SO_STATES),
+                    ('product_id', '=', product.id),
+                    ('product_id.vendor_id', '=', vendor_id),
+                ])
+                r_other = sum(other_lines.mapped('quantity'))
+            else:
+                r_other = 0
             available = product.stock - r_other
             shortage = max(0, need - available)
             if shortage > 0:
                 product_qty[product] = shortage
         return product_qty
 
-    def _find_active_rfq_for_product(self, product):
+    def _find_active_rfq_for_product(self, product, vendor_id=None):
         self.ensure_one()
+        vendor_domain = [
+            ('vendor_id', '=', vendor_id) if vendor_id
+            else ('vendor_id', '=', False),
+        ]
         rfq = self.env['purchases.purchase_order'].search([
             ('sales_order_ids', 'in', self.id),
             ('state', 'in', ['draft', 'sent']),
             ('order_line_ids.product_id', '=', product.id),
-        ], order='id desc', limit=1)
+        ] + vendor_domain, order='id desc', limit=1)
         if rfq:
             return rfq
         return self.env['purchases.purchase_order'].search([
             ('state', 'in', ['draft', 'sent']),
             ('order_line_ids.product_id', '=', product.id),
-        ], order='id desc', limit=1)
+        ] + vendor_domain, order='id desc', limit=1)
 
     def _prepare_rfq_line_vals(self, product, quantity):
         default_tax = self.env['sales.taxes'].sudo().search(
@@ -254,13 +297,18 @@ class SalesOrderProcurement(models.Model):
     def _create_rfq_for_product(self, product, quantity):
         self.ensure_one()
         vendor = product.vendor_id
+        if not vendor:
+            _logger.info(
+                '[procurement] SO %s: produk %s kekurangan %s unit '
+                'tanpa vendor — RFQ dibuat, vendor perlu diisi manual.',
+                self.sales_code, product.product_name, quantity)
         rfq = self.env['purchases.purchase_order'].create({
-            'vendor_id': vendor.id,
+            'vendor_id': vendor.id if vendor else False,
             'entry_menu_code': 'rfq',
             'state': 'draft',
             'sales_order_id': self.id,
             'sales_order_ids': [(6, 0, [self.id])],
-            'payment_terms': vendor.payment_terms.id if vendor.payment_terms else False,
+            'payment_terms': vendor.payment_terms.id if vendor and vendor.payment_terms else False,
             'order_line_ids': [(0, 0, self._prepare_rfq_line_vals(product, quantity))],
         })
         return rfq

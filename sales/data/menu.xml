@@ -121,6 +121,18 @@
                 <field name="menu_name">Pricing Margin</field>
                 <field name="parent_menu">master_data</field>
             </record>
+            <record id="delivery_orders_data_menu" model="general.menu">
+                <field name="menu_id">delivery_orders</field>
+                <field name="menu_name">Delivery Orders</field>
+                <field name="parent_menu">orders</field>
+                <field name="ir_ui_menu_id" ref="sales.delivery_orders_menu"/>
+            </record>
+            <record id="product_import_data_menu" model="general.menu">
+                <field name="menu_id">product_import</field>
+                <field name="menu_name">Import Products</field>
+                <field name="parent_menu">sales</field>
+                <field name="ir_ui_menu_id" ref="sales.product_import_menu"/>
+            </record>
         </data>
 
 </odoo>

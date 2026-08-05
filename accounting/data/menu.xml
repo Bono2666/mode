@@ -184,5 +184,18 @@
             <field name="menu_name">Expense Categories</field>
             <field name="parent_menu">accounting_config</field>
         </record>
+
+        <record id="menu_accounting_approvals" model="general.menu">
+            <field name="menu_id">accounting_approvals</field>
+            <field name="menu_name">Approval</field>
+            <field name="parent_menu">approvals</field>
+            <field name="is_parent" eval="True"/>
+        </record>
+
+        <record id="menu_accounting_approval_matrix" model="general.menu">
+            <field name="menu_id">accounting_approval_matrix</field>
+            <field name="menu_name">Accounting Matrix</field>
+            <field name="parent_menu">approvals_config</field>
+        </record>
     </data>
 </odoo>

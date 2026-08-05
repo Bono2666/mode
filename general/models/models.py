@@ -770,32 +770,44 @@ class ResUsers(models.Model):
             while repeated:
                 repeated = False
                 for menu in all_menus:
-                    if menu.id in existing_menu_ids:
-                        parent_menu_id = menu.parent_menu
-                        if parent_menu_id:
-                            parent_menu = general_menu_model.search(
-                                [('menu_id', '=', parent_menu_id)], limit=1)
-                            parent_menu_id = parent_menu.id if parent_menu else False
-                        if parent_menu_id and parent_menu_id not in existing_menu_ids:
+                    if menu.id not in existing_menu_ids or not menu.ir_ui_menu_id:
+                        continue
+                    # Walk up the real Odoo menu hierarchy (ir.ui.menu parent_id)
+                    # so every ancestor on the path to this menu stays visible.
+                    # This is required because general.menu's parent_menu can
+                    # diverge from the actual ir.ui.menu tree (e.g. Petty Cash is
+                    # a child of Transactions in ir.ui.menu, while its general.menu
+                    # parent_menu points straight to Accounting). Following the
+                    # general.menu chain alone would skip Transactions and the
+                    # whole Petty Cash subtree would then be pruned as hidden.
+                    # Only the menus actually on the path are created -- never
+                    # sibling folders the user has no access under.
+                    current_ir = menu.ir_ui_menu_id
+                    while current_ir and current_ir.parent_id:
+                        parent_ir = current_ir.parent_id
+                        parent_gm = general_menu_model.search(
+                            [('ir_ui_menu_id', '=', parent_ir.id)], limit=1)
+                        if parent_gm and parent_gm.id not in existing_menu_ids:
                             existing_parent = auth_model.search([
                                 ('custom_user_id.user_id', '=', user.id),
-                                ('menu_id', '=', parent_menu_id)
+                                ('menu_id', '=', parent_gm.id)
                             ], limit=1)
                             if not existing_parent:
                                 repeated = True
                                 auth_model.with_context(skip_menu_refresh=True).create({
                                     'custom_user_id': custom_user_model.search(
                                         [('user_id', '=', user.id)], limit=1).id,
-                                    'menu_id': parent_menu_id,
+                                    'menu_id': parent_gm.id,
                                     'is_parent': True,
                                     'can_create': False,
                                     'can_update': False,
                                     'can_delete': False,
                                 })
                                 _logger.info(
-                                    '[menu-refresh] Created auto-parent for user %s: menu_id=%s',
-                                    user.login, parent_menu_id,
+                                    '[menu-refresh] Created auto-parent for user %s: menu_id=%s (menu %s)',
+                                    user.login, parent_gm.id, parent_gm.menu_name,
                                 )
+                        current_ir = parent_ir
 
                 menu_obj = auth_model.search(
                     [('custom_user_id.user_id', '=', user.id)])

@@ -82,6 +82,7 @@
       <field name="arch" type="xml">
         <tree>
           <field name="po_code"/>
+          <field name="order_type" string="Type"/>
           <field name="po_date"/>
           <field name="vendor_id"/>
           <field name="buyer_id" widget="many2one_avatar"/>
@@ -112,6 +113,7 @@
       <field name="arch" type="xml">
         <tree>
           <field name="po_code"/>
+          <field name="order_type" string="Type"/>
           <field name="based_on_so" string="Base On" optional="show"/>
           <field name="po_date"/>
           <field name="vendor_id"/>
@@ -143,6 +145,7 @@
       <field name="arch" type="xml">
         <tree>
           <field name="po_code"/>
+          <field name="order_type" string="Type"/>
           <field name="po_date"/>
           <field name="vendor_id"/>
           <field name="buyer_id" widget="many2one_avatar"/>
@@ -172,6 +175,7 @@
       <field name="arch" type="xml">
         <tree create="0">
           <field name="bill_number"/>
+          <field name="order_type" string="Type"/>
           <field name="bill_date"/>
           <field name="purchase_order_id"/>
           <field name="vendor_id"/>
@@ -252,6 +256,34 @@
           <field name="vendor_id" options="{'no_open': True, 'no_create': True}"
                  readonly="not is_edit and id"/>
         </field>
+      </field>
+    </record>
+
+    <record id="purchases.products_view_search" model="ir.ui.view">
+      <field name="name">sales.products.view.search</field>
+      <field name="model">sales.products</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="product_name"/>
+          <field name="product_id"/>
+          <field name="vendor_id"/>
+          <field name="reseller_price"/>
+          <field name="base_price"/>
+        </search>
+      </field>
+    </record>
+
+    <record id="purchases.products_view_list" model="ir.ui.view">
+      <field name="name">sales.products.view.list</field>
+      <field name="model">sales.products</field>
+      <field name="arch" type="xml">
+        <tree string="Products">
+          <field name="product_name"/>
+          <field name="product_id"/>
+          <field name="vendor_id"/>
+          <field name="reseller_price"/>
+          <field name="base_price"/>
+        </tree>
       </field>
     </record>
 
@@ -394,10 +426,10 @@
       <field name="model">purchases.purchase_order</field>
       <field name="arch" type="xml">
         <form string="Purchase Order">
+          <field name="order_type" invisible="1"/>
           <header>
             <field name="id" invisible="1"/>
             <field name="entry_menu_code" invisible="1"/>
-            <field name="sales_order_id" invisible="1"/>
             <field name="sales_order_ids" invisible="1"/>
             <field name="is_edit" invisible="1"/>
             <field name="state" invisible="1"/>
@@ -463,7 +495,7 @@
                     invisible="not id or is_edit or not user_can_reject or not context.get('is_approval_view')"/>
             <button string="Receive Products" name="action_create_receipt" type="object"
                     class="btn-primary"
-                    invisible="receipt_status not in ['to_receive', 'partial'] or is_edit or not is_sent or not user_can_receive or state in ['wait_approval']"/>
+                    invisible="order_type == 'service' or receipt_status not in ['to_receive', 'partial'] or is_edit or not is_sent or not user_can_receive or state in ['wait_approval']"/>
             <button string="Receipts" name="action_view_receipts" type="object"
                     class="btn-secondary"
                     invisible="receipt_count == 0"/>
@@ -493,6 +525,15 @@
             </div>
             <group>
               <group>
+                <field name="order_type"
+                       readonly="state != 'draft' or (not is_edit and id)"
+                       options="{'horizontal': True}"/>
+                <field name="sales_order_id"
+                       domain="[('state', '=', 'sale')]"
+                       readonly="order_type == 'goods' or state != 'draft' or (not is_edit and id)"
+                       invisible="order_type == 'goods'"
+                       options="{'no_create': True, 'no_open': True}"
+                       placeholder="Pilih Sales Order untuk tagging jasa (Service PO)"/>
                 <field name="vendor_id" options="{'no_create': True, 'no_open': True}"
                        readonly="state in ['cancel'] or (not is_edit and id)"/>
                 <field name="vendor_address" widget="res_partner_address" readonly="1" string=""/>
@@ -511,12 +552,18 @@
                 <field name="order_line_ids"
                        readonly="state in ['cancel', 'wait_approval'] or (not is_edit and id)">
                   <tree editable="bottom">
-                    <field name="product_id" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="product_id" options="{'no_open': True, 'no_create': True}"
+                           column_invisible="parent.order_type == 'service'"/>
+                    <field name="service_category_id" options="{'no_open': True, 'no_create': True}"
+                           column_invisible="parent.order_type == 'goods'"/>
                     <field name="description"/>
                     <field name="quantity"/>
-                    <field name="qty_received" readonly="1"/>
-                    <field name="qty_to_receive" readonly="1"/>
-                    <field name="product_unit" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="qty_received" readonly="1"
+                           column_invisible="parent.order_type == 'service'"/>
+                    <field name="qty_to_receive" readonly="1"
+                           column_invisible="parent.order_type == 'service'"/>
+                    <field name="product_unit" options="{'no_open': True, 'no_create': True}"
+                           column_invisible="parent.order_type == 'service'"/>
                     <field name="unit_price"/>
                     <field name="taxes" options="{'no_open': True, 'no_create': True}"/>
                     <field name="tax_amount" readonly="1"/>
@@ -569,6 +616,7 @@
       <field name="model">purchases.bill</field>
       <field name="arch" type="xml">
         <form string="Vendor Bill">
+          <field name="order_type" invisible="1"/>
           <header>
             <field name="state" invisible="1"/>
             <field name="payment_state" invisible="1"/>
@@ -610,7 +658,10 @@
               <page string="Bill Lines" name="bill_lines">
                 <field name="line_ids" readonly="state != 'draft'">
                   <tree editable="bottom">
-                    <field name="product_id"/>
+                    <field name="product_id"
+                           column_invisible="parent.order_type == 'service'"/>
+                    <field name="service_category_id"
+                           column_invisible="parent.order_type != 'service'"/>
                     <field name="description"/>
                     <field name="quantity"/>
                     <field name="unit_price"/>
@@ -934,6 +985,74 @@
     <!-- Master Data under Configuration -->
     <menuitem name="Purchase Matrix" id="purchases.purchase_approval_matrix_menu_act" parent="sales.approval_matrix_menu" action="purchases_approval_matrix_action" sequence="2"/>
     <menuitem name="Purchase Approval" id="purchases.purchase_approval_menu_act" parent="sales.menu_approvals_root" action="purchases_purchase_approval_action" sequence="2"/>
+
+    <!-- ✓✓ SERVICE CATEGORY MASTER DATA ✓✓ -->
+    <record id="purchases_service_category_tree" model="ir.ui.view">
+      <field name="name">purchases.service_category.tree</field>
+      <field name="model">purchases.service_category</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="category_name"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="purchases_service_category_form" model="ir.ui.view">
+      <field name="name">purchases.service_category.form</field>
+      <field name="model">purchases.service_category</field>
+      <field name="arch" type="xml">
+        <form string="">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object"
+                    invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object"
+                    invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none"
+                    invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object"
+                    invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight"
+                    confirm="Are you sure you want to delete this data permanently?"
+                    invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none"
+                    invisible="not id or is_edit or user_can_delete"/>
+            <span class="min-w-0 text-truncate mt-1">
+              <field name="model_description"/>
+            </span>
+            <style>.o_control_panel { display: none !important; }</style>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <label for="category_name" string="Service Category"/>
+              <h1>
+                <div class="d-flex">
+                  <field class="text-break" name="category_name"
+                         options="{'line_breaks': False}" widget="text"
+                         placeholder="e.g. Event Organizer"
+                         readonly="not is_edit and id"/>
+                </div>
+              </h1>
+            </div>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="action_purchases_service_category" model="ir.actions.act_window">
+      <field name="name">Service Categories</field>
+      <field name="res_model">purchases.service_category</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem name="Service Categories" id="purchases.service_categories_menu_act"
+              parent="sales.product_menu"
+              action="action_purchases_service_category" sequence="4"/>
 
   </data>
 </odoo>

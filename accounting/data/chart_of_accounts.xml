@@ -101,6 +101,12 @@
             <field name="type_id" ref="account_type_expense"/>
             <field name="reconcile" eval="False"/>
         </record>
+        <record id="account_530000" model="accounting.account">
+            <field name="code">530000</field>
+            <field name="name">Sales Support Service Expense</field>
+            <field name="type_id" ref="account_type_expense"/>
+            <field name="reconcile" eval="False"/>
+        </record>
 
         <!-- Petty Cash & Employee Advances -->
         <record id="account_100500" model="accounting.account">

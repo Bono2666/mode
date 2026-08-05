@@ -25,6 +25,8 @@ Sales Payments, and Vendor Bills.
         'views/views.xml',
         'views/templates.xml',
     ],
-    'demo': [],
+    'demo': [
+        'demo/demo.xml',
+    ],
     'license': 'LGPL-3',
 }

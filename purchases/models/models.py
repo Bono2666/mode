@@ -244,9 +244,13 @@ class purchase_order(models.Model):
 
     po_code = fields.Char(string="PO Number", readonly=True)
     entry_menu_code = fields.Char(string="Entry Menu Code", copy=False)
+    order_type = fields.Selection([
+        ('goods', 'Goods'),
+        ('service', 'Service'),
+    ], string='Order Type', default='goods', required=True)
     vendor_id = fields.Many2one(
         comodel_name='purchases.vendor', string='Vendor',
-        index=True, required=True)
+        index=True, required=False)
     vendor_address = fields.Text(
         compute='_compute_vendor_address', string="Vendor Address")
     po_date = fields.Date(
@@ -513,14 +517,15 @@ class purchase_order(models.Model):
             record.bill_count = len(record.bill_ids.filtered(
                 lambda b: b.state != 'cancel'))
 
-    @api.depends('state', 'is_sent', 'bill_ids.state', 'receipt_status')
+    @api.depends('state', 'is_sent', 'order_type', 'bill_ids.state', 'receipt_status')
     def _compute_bill_status(self):
         for record in self:
             active_bills = record.bill_ids.filtered(
                 lambda b: b.state != 'cancel')
             if active_bills.filtered(lambda b: b.state == 'posted'):
                 record.bill_status = 'billed'
-            elif record.state in ['purchase', 'approved'] and record.is_sent:
+            elif record.state in ['purchase', 'approved'] and (
+                    record.is_sent or record.order_type == 'service'):
                 record.bill_status = 'to_bill'
             else:
                 record.bill_status = 'no'
@@ -531,9 +536,12 @@ class purchase_order(models.Model):
             record.receipt_count = len(record.receipt_ids.filtered(
                 lambda r: r.state != 'cancel'))
 
-    @api.depends('state', 'is_sent', 'order_line_ids.qty_received', 'order_line_ids.quantity', 'receipt_ids.state')
+    @api.depends('state', 'is_sent', 'order_type', 'order_line_ids.qty_received', 'order_line_ids.quantity', 'receipt_ids.state')
     def _compute_receipt_status(self):
         for record in self:
+            if record.order_type == 'service':
+                record.receipt_status = 'no'
+                continue
             active_receipts = record.receipt_ids.filtered(
                 lambda r: r.state == 'received')
             if record.state not in ['purchase', 'approved'] or not record.is_sent:
@@ -928,6 +936,15 @@ class purchase_order(models.Model):
         if not self.order_line_ids:
             raise UserError(
                 _("Please add at least one order line before confirming the order."))
+        if not self.vendor_id:
+            raise UserError(
+                _("Please set a vendor before confirming the order."))
+        if self.order_type == 'service':
+            missing = self.order_line_ids.filtered(
+                lambda l: not l.service_category_id)
+            if missing:
+                raise UserError(
+                    _("Service Category is required on every line for a Service PO."))
         self.write({
             'state': 'purchase',
             'entry_menu_code': 'purchase_order',
@@ -943,6 +960,15 @@ class purchase_order(models.Model):
         if not self.order_line_ids:
             raise UserError(
                 _("Please add at least one order line before submitting."))
+        if not self.vendor_id:
+            raise UserError(
+                _("Please set a vendor before submitting the RFQ."))
+        if self.order_type == 'service':
+            missing = self.order_line_ids.filtered(
+                lambda l: not l.service_category_id)
+            if missing:
+                raise UserError(
+                    _("Service Category is required on every line for a Service PO."))
         self.state = 'sent'
         return {
             'type': 'ir.actions.act_window',
@@ -1318,6 +1344,17 @@ class purchase_order(models.Model):
         line_vals = []
         for line in self.order_line_ids:
             tax_pct = line.taxes.tax_percentage if line.taxes else 0.0
+            if self.order_type == 'service':
+                line_vals.append((0, 0, {
+                    'purchase_order_line_id': line.id,
+                    'service_category_id': line.service_category_id.id,
+                    'description': line.description or self.po_code,
+                    'quantity': line.quantity,
+                    'unit_price': line.unit_price,
+                    'tax_id': line.taxes.id if line.taxes else False,
+                    'tax_percentage': tax_pct,
+                }))
+                continue
             line_vals.append((0, 0, {
                 'purchase_order_line_id': line.id,
                 'product_id': line.product_id.id,
@@ -1353,6 +1390,9 @@ class purchase_order(models.Model):
 
     def action_create_receipt(self):
         self.ensure_one()
+        if self.order_type == 'service':
+            raise UserError(
+                _("Cannot receive products for a Service PO."))
         if self.state not in ['purchase', 'approved']:
             raise UserError(
                 _("Receipt can only be created from a confirmed purchase order."))
@@ -1492,6 +1532,9 @@ class purchase_order_line(models.Model):
         comodel_name='sales.products', string='Product',
         ondelete='set null', index=True,
         domain=[('purchase_ok', '=', True)])
+    service_category_id = fields.Many2one(
+        comodel_name='purchases.service_category', string='Service Category',
+        ondelete='set null', index=True)
     description = fields.Char(string="Description")
     quantity = fields.Float(string="Quantity", default=1.0)
     product_unit = fields.Many2one(
@@ -1569,6 +1612,9 @@ class bill(models.Model):
     purchase_order_id = fields.Many2one(
         comodel_name='purchases.purchase_order', string='Purchase Order',
         ondelete='restrict', index=True, required=True)
+    order_type = fields.Selection(
+        related='purchase_order_id.order_type',
+        string='Order Type', store=True)
     vendor_id = fields.Many2one(
         comodel_name='purchases.vendor', string='Vendor',
         ondelete='restrict', index=True, required=True)
@@ -1665,8 +1711,14 @@ class bill(models.Model):
                         _("You do not have access rights to create vendor bills."))
         for vals in vals_list:
             if not vals.get('bill_number'):
+                seq_code = 'purchases.bill'
+                po_id = vals.get('purchase_order_id')
+                if po_id:
+                    po = self.env['purchases.purchase_order'].browse(po_id)
+                    if po.exists() and po.order_type == 'service':
+                        seq_code = 'purchases.service.bill'
                 vals['bill_number'] = self.env['ir.sequence'].next_by_code(
-                    'purchases.bill') or '/'
+                    seq_code) or '/'
         return super(bill, self).create(vals_list)
 
     @api.depends('line_ids.sub_total', 'line_ids.tax_amount')
@@ -1841,6 +1893,9 @@ class bill_line(models.Model):
         ondelete='set null', index=True)
     product_id = fields.Many2one(
         comodel_name='sales.products', string='Product',
+        ondelete='set null', index=True)
+    service_category_id = fields.Many2one(
+        comodel_name='purchases.service_category', string='Service Category',
         ondelete='set null', index=True)
     description = fields.Char(string="Description", required=True)
     quantity = fields.Float(string="Quantity", default=1.0)

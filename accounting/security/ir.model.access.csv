@@ -18,6 +18,8 @@ access_accounting_balance_sheet_wizard,accounting.balance.sheet.wizard,model_acc
 access_accounting_profit_loss_wizard,accounting.profit.loss.wizard,model_accounting_profit_loss_wizard,,1,1,1,1
 access_accounting_balance_sheet_report,accounting.balance.sheet.report,model_accounting_balance_sheet_report,,1,0,0,0
 access_accounting_profit_loss_report,accounting.profit.loss.report,model_accounting_profit_loss_report,,1,0,0,0
+access_accounting_sales_profitability_report,accounting.sales_profitability_report,model_accounting_sales_profitability_report,,1,0,0,0
+access_accounting_sales_profitability_wizard,accounting.sales_profitability_report.wizard,model_accounting_sales_profitability_report_wizard,,1,1,1,1
 access_accounting_commission_plan,accounting.commission.plan,model_accounting_commission_plan,,1,1,1,1
 access_accounting_commission_settlement,accounting.commission.settlement,model_accounting_commission_settlement,,1,1,1,1
 access_accounting_petty_cash,accounting.petty.cash,model_accounting_petty_cash,,1,1,1,1
@@ -27,3 +29,9 @@ access_accounting_petty_cash_expense_line,accounting.petty.cash.expense.line,mod
 access_accounting_petty_cash_topup,accounting.petty.cash.topup,model_accounting_petty_cash_topup,,1,1,1,1
 access_accounting_petty_cash_transfer,accounting.petty.cash.transfer,model_accounting_petty_cash_transfer,,1,1,1,1
 access_accounting_petty_cash_settlement,accounting.petty.cash.settlement,model_accounting_petty_cash_settlement,,1,1,1,1
+access_accounting_approval_matrix,accounting.approval.matrix,model_accounting_approval_matrix,,1,1,1,1
+access_accounting_approval_log,accounting.approval.log,model_accounting_approval_log,,1,1,1,1
+access_accounting_approve_wizard,accounting.approve.wizard,model_accounting_approve_wizard,,1,1,1,1
+access_accounting_reject_wizard,accounting.reject.wizard,model_accounting_reject_wizard,,1,1,1,1
+access_accounting_return_wizard,accounting.return.wizard,model_accounting_return_wizard,,1,1,1,1
+access_accounting_revise_wizard,accounting.revise.wizard,model_accounting_revise_wizard,,1,1,1,1

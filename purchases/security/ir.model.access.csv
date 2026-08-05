@@ -14,3 +14,4 @@ access_purchases_approve_wizard,purchases.approve.wizard,model_purchases_approve
 access_purchases_reject_wizard,purchases.reject.wizard,model_purchases_reject_wizard,,1,1,1,1
 access_purchases_return_wizard,purchases.return.wizard,model_purchases_return_wizard,,1,1,1,1
 access_purchases_revise_wizard,purchases.revise.wizard,model_purchases_revise_wizard,,1,1,1,1
+access_purchases_service_category,purchases.service_category,model_purchases_service_category,,1,1,1,1

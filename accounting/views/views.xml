@@ -273,13 +273,13 @@
           <field name="user_can_delete" invisible="1"/>
           <field name="state" invisible="1"/>
           <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or state == 'closed' or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or state == 'closed' or user_can_update"/>
           <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
           <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
-          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or state == 'closed' or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or state == 'closed' or user_can_delete"/>
           <button string="Close Year" name="action_close_year" type="object" class="btn-warning" invisible="state != 'open'"/>
           <button string="Open Year" name="action_open_year" type="object" class="btn-primary" invisible="state != 'closed'"/>
           <span class="min-w-0 text-truncate mt-1">
@@ -355,13 +355,13 @@
           <field name="user_can_delete" invisible="1"/>
           <field name="state" invisible="1"/>
           <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or state == 'closed' or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or state == 'closed' or user_can_update"/>
           <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
           <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
-          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or state == 'closed' or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or state == 'closed' or user_can_delete"/>
           <button string="Close Period" name="action_close_period" type="object" class="btn-warning" invisible="state != 'open'"/>
           <button string="Open Period" name="action_open_period" type="object" class="btn-primary" invisible="state != 'closed'"/>
           <span class="min-w-0 text-truncate mt-1">
@@ -441,13 +441,13 @@
           <field name="user_can_update" invisible="1"/>
           <field name="user_can_delete" invisible="1"/>
           <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or state == 'posted' or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_update"/>
           <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
           <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this journal entry?" invisible="not id or is_edit or not user_can_delete"/>
-          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this journal entry?" invisible="not id or is_edit or state == 'posted' or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_delete"/>
           <button string="Post" name="action_post" type="object" class="btn-primary" invisible="state != 'draft' or is_edit"/>
           <button string="Cancel Entry" name="action_cancel" type="object" class="btn-warning" invisible="state != 'posted'"/>
           <button string="Reset to Draft" name="action_reset_to_draft" type="object" class="btn-secondary" invisible="state != 'cancel'"/>
@@ -463,22 +463,24 @@
         <sheet>
           <div class="oe_title">
             <field name="name" readonly="1"/>
-            <field name="ref" placeholder="e.g. January Rent" readonly="state != 'draft'"/>
+            <h1>
+              <field name="ref" placeholder="e.g. January Rent" readonly="not is_edit and id"/>
+            </h1>
           </div>
           <group>
             <group>
-              <field name="journal_id" readonly="state != 'draft'"/>
-              <field name="date" readonly="state != 'draft'"/>
+              <field name="journal_id" readonly="not is_edit and id"/>
+              <field name="date" readonly="not is_edit and id"/>
             </group>
             <group>
-              <field name="currency_id" readonly="state != 'draft'"/>
+              <field name="currency_id" readonly="not is_edit and id"/>
               <field name="state" readonly="1"/>
               <field name="posted_date" readonly="1"/>
             </group>
           </group>
           <notebook>
             <page string="Journal Items">
-              <field name="line_ids" readonly="state != 'draft'">
+              <field name="line_ids" readonly="not is_edit and id">
                 <tree editable="bottom">
                   <field name="sequence" widget="handle"/>
                   <field name="account_id" options="{'no_open': True, 'no_create': True}" required="1"/>
@@ -555,13 +557,13 @@
           <field name="user_can_delete" invisible="1"/>
           <field name="state" invisible="1"/>
           <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or state == 'closed' or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or state == 'closed' or user_can_update"/>
           <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
           <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this bank statement?" invisible="not id or is_edit or not user_can_delete"/>
-          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this bank statement?" invisible="not id or is_edit or state == 'closed' or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or state == 'closed' or user_can_delete"/>
           <button string="Close" name="action_close_statement" type="object" class="btn-primary" invisible="state != 'open'"/>
           <button string="Reopen" name="action_open_statement" type="object" class="btn-secondary" invisible="state != 'closed'"/>
           <span class="min-w-0 text-truncate mt-1">
@@ -575,7 +577,9 @@
         </header>
         <sheet>
           <div class="oe_title">
-            <field name="name" readonly="1"/>
+            <h1>
+              <field name="name" readonly="1"/>
+            </h1>
           </div>
           <group>
             <group>
@@ -736,6 +740,31 @@
       </field>
     </record>
 
+    <!-- Sales Order Profitability Wizard -->
+    <record id="view_accounting_sales_profitability_wizard_form" model="ir.ui.view">
+      <field name="name">Sales Order Profitability Wizard</field>
+      <field name="model">accounting.sales_profitability_report.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Sales Order Profitability">
+          <group>
+            <group>
+              <field name="date_from"/>
+              <field name="date_to"/>
+            </group>
+            <group>
+              <field name="customer_id"/>
+              <field name="sale_order_ids" widget="many2many_tags"/>
+            </group>
+          </group>
+          <footer>
+            <button string="Tampilkan" name="action_generate" type="object" class="btn-primary"/>
+            <button string="Cetak PDF" name="action_print" type="object" class="btn-secondary"/>
+            <button string="Cancel" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
     <!-- ================================================================= -->
     <!-- REPORT VIEWS                                                      -->
     <!-- ================================================================= -->
@@ -815,6 +844,28 @@
           <field name="account_name"/>
           <field name="type_name"/>
           <field name="balance" sum="Net Total"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- Sales Order Profitability Report Tree -->
+    <record model="ir.ui.view" id="view_accounting_sales_profitability_report_tree">
+      <field name="name">Sales Order Profitability Report</field>
+      <field name="model">accounting.sales_profitability_report</field>
+      <field name="arch" type="xml">
+        <tree create="false" delete="false" edit="false">
+          <field name="sale_order_id"/>
+          <field name="sale_order_date"/>
+          <field name="customer_id"/>
+          <field name="has_transaction" widget="badge" decoration-success="has_transaction == 'yes'" decoration-muted="has_transaction == 'no'"/>
+          <field name="total_revenue" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Revenue"/>
+          <field name="cost_cogs" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total COGS"/>
+          <field name="cost_commission" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Commission"/>
+          <field name="cost_supporting" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Supporting"/>
+          <field name="total_cost" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Cost"/>
+          <field name="margin_amount" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Margin" decoration-danger="margin_amount &lt; 0"/>
+          <field name="margin_percent" decoration-danger="margin_percent &lt; 0"/>
+          <field name="currency_id" invisible="1"/>
         </tree>
       </field>
     </record>
@@ -908,6 +959,13 @@
       <field name="target">new</field>
     </record>
 
+    <record model="ir.actions.act_window" id="action_sales_profitability_wizard">
+      <field name="name">Sales Order Profitability</field>
+      <field name="res_model">accounting.sales_profitability_report.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
     <!-- ================================================================= -->
     <!-- MENU ITEMS                                                        -->
     <!-- ================================================================= -->
@@ -933,6 +991,19 @@
     <menuitem name="Reporting" id="menu_accounting_reports_parent" parent="accounting_root_menu" sequence="4"/>
     <menuitem name="Balance Sheet" id="menu_balance_sheet_act" parent="menu_accounting_reports_parent" action="action_balance_sheet_wizard" sequence="1"/>
     <menuitem name="Profit And Loss" id="menu_profit_loss_act" parent="menu_accounting_reports_parent" action="action_profit_loss_wizard" sequence="2"/>
+    <menuitem name="Sales Order Profitability" id="menu_sales_profitability_report_act" parent="menu_accounting_reports_parent" action="action_sales_profitability_wizard" sequence="3"/>
+
+    <!-- RBAC: general.menu entry for Sales Order Profitability.
+         The ir_ui_menu_id MUST point to the exact ir.ui.menu record above
+         (record ref, not name match), so users without a general.auth entry
+         for this menu are restricted from seeing it. Placed here (after the
+         <menuitem>) so the ref resolves regardless of manifest load order. -->
+    <record id="menu_sales_profitability_report" model="general.menu">
+      <field name="menu_id">sales_profitability_report</field>
+      <field name="menu_name">Sales Order Profitability</field>
+      <field name="parent_menu">accounting_reports</field>
+      <field name="ir_ui_menu_id" ref="accounting.menu_sales_profitability_report_act"/>
+    </record>
 
     <!-- Accounting config under main Configuration -->
     <menuitem name="Accounting Configuration" id="menu_accounting_config_parent" parent="general.menu_master_menu" sequence="4"/>
@@ -1054,14 +1125,15 @@
       <field name="name">Commission Plan Form</field>
       <field name="model">accounting.commission.plan</field>
       <field name="arch" type="xml">
-        <form>
+        <form create="false">
           <header>
+            <field name="id" invisible="1"/>
             <field name="is_edit" invisible="1"/>
             <field name="user_can_update" invisible="1"/>
             <field name="user_can_delete" invisible="1"/>
             <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
             <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
             <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
             <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
@@ -1214,6 +1286,15 @@
       <field name="report_name">accounting.report_profit_loss_template</field>
       <field name="report_file">accounting.report_profit_loss_template</field>
       <field name="print_report_name">'P&amp;L - %s s/d %s' % (context.get('date_from', '') or '', context.get('date_to', '') or '')</field>
+    </record>
+
+    <record id="action_report_sales_profitability" model="ir.actions.report">
+      <field name="name">Sales Order Profitability</field>
+      <field name="model">accounting.sales_profitability_report</field>
+      <field name="report_type">qweb-html</field>
+      <field name="report_name">accounting.report_sales_profitability_template</field>
+      <field name="report_file">accounting.report_sales_profitability_template</field>
+      <field name="print_report_name">'Sales Order Profitability - %s s/d %s' % (context.get('date_from', '') or '', context.get('date_to', '') or '')</field>
     </record>
 
     <!-- ================================================================= -->
@@ -1403,8 +1484,9 @@
           <field name="fund_id"/>
           <field name="type"/>
           <field name="employee_id"/>
+          <field name="sales_order_id"/>
           <field name="total_amount" widget="monetary" sum="Total"/>
-          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state in ('draft','submitted','approved')" decoration-danger="state == 'cancelled'"/>
+          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state in ('draft','wait_approval','approved')" decoration-danger="state == 'cancelled'"/>
         </tree>
       </field>
     </record>
@@ -1422,24 +1504,37 @@
           <field name="user_can_delete" invisible="1"/>
           <field name="state" invisible="1"/>
           <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
-          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or state == 'posted' or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit or context.get('is_approval_view')" class="oe_highlight"/>
+          <button string="Save" name="action_save_revised" type="object" invisible="id and not is_edit or not context.get('is_approval_view')" class="oe_highlight"/>
           <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this expense permanently?" invisible="not id or is_edit or not user_can_delete"/>
-          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <button string="Submit" name="action_submit" type="object" class="btn-primary" invisible="state != 'draft' or is_edit"/>
-          <button string="Approve" name="action_approve" type="object" class="btn-primary" invisible="state != 'submitted'"/>
-          <button string="Reject" name="action_reject" type="object" class="btn-secondary" invisible="state != 'submitted'"/>
-          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="state != 'approved'"/>
-          <button string="Cancel Expense" name="action_cancel" type="object" class="btn-warning" invisible="state not in ('draft','submitted','approved','posted') or is_edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this expense permanently?" invisible="not id or is_edit or state == 'posted' or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_delete"/>
+          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="not id or ((state != 'draft' or need_approval or is_edit) and (state != 'approved' or not need_approval))"/>
+          <button string="Post" class="opacity-50 pe-none" invisible="not id or not ((state != 'draft' or need_approval or is_edit) and (state != 'approved' or not need_approval))"/>
+          <button string="Submit" name="action_submit_for_approval" type="object" class="btn-primary" invisible="state != 'draft' or not need_approval or is_edit or not user_can_submit"/>
+          <button string="Approve" name="action_approve" type="object" class="btn-primary" invisible="not id or is_edit or not user_can_approve or not context.get('is_approval_view')"/>
+          <button string="Revise" name="action_revise" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_revise or not context.get('is_approval_view')"/>
+          <button string="Return" name="action_return" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_return or not context.get('is_approval_view')"/>
+          <button string="Reject" name="action_reject" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_reject or not context.get('is_approval_view')"/>
+          <button string="Cancel Expense" name="action_cancel" type="object" class="btn-warning" invisible="not id or state != 'posted' or is_edit"/>
           <button string="Reset to Draft" name="action_reset_to_draft" type="object" class="btn-secondary" invisible="state != 'cancelled'"/>
           <button string="Journal Entry" name="action_view_move" type="object" class="btn-secondary" invisible="not move_id"/>
-          <field name="state" widget="statusbar" statusbar_visible="draft,submitted,approved,posted"/>
+          <field name="state" widget="statusbar" statusbar_visible="draft,wait_approval,approved,posted"/>
           <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
+          <field name="need_approval" invisible="1"/>
+          <field name="approval_status" invisible="1"/>
+          <field name="current_approver" invisible="1"/>
+          <field name="current_approver_name" invisible="1"/>
+          <field name="user_can_approve" invisible="1"/>
+          <field name="user_can_revise" invisible="1"/>
+          <field name="user_can_return" invisible="1"/>
+          <field name="user_can_reject" invisible="1"/>
+          <field name="user_can_submit" invisible="1"/>
           <style>
             .o_control_panel {
               display: none !important;
@@ -1449,29 +1544,57 @@
         <sheet>
           <div class="oe_title">
             <field name="name" readonly="1"/>
-            <field name="description" placeholder="e.g. Pembelian ATK Januari" readonly="state != 'draft'"/>
+            <h1>
+              <field name="description" placeholder="e.g. Pembelian ATK Januari" readonly="not is_edit and id"/>
+            </h1>
           </div>
           <group>
             <group>
-              <field name="date" readonly="state != 'draft'"/>
-              <field name="fund_id" readonly="state != 'draft'"/>
-              <field name="type" readonly="state != 'draft'"/>
+              <field name="date" readonly="not is_edit and id"/>
+              <field name="fund_id" readonly="not is_edit and id"/>
+              <field name="type" readonly="not is_edit and id"/>
+              <field name="sales_order_id" readonly="not is_edit and id"/>
             </group>
             <group>
-              <field name="employee_id" readonly="state != 'draft'"/>
+              <field name="employee_id" readonly="not is_edit and id"/>
               <field name="total_amount" widget="monetary" readonly="1"/>
               <field name="move_id" invisible="1"/>
             </group>
           </group>
           <notebook>
             <page string="Expense Lines">
-              <field name="line_ids" readonly="state != 'draft'">
+              <field name="line_ids" readonly="not is_edit and id">
                 <tree editable="bottom">
                   <field name="sequence" widget="handle"/>
                   <field name="category_id" options="{'no_open': True, 'no_create': True}" required="1"/>
                   <field name="description"/>
                   <field name="amount" widget="monetary" sum="Total"/>
                 </tree>
+              </field>
+            </page>
+            <page string="Approval Logs" name="approval_logs" invisible="not approval_log_ids">
+              <field name="approval_log_ids" readonly="1">
+                <tree default_order="sequence asc, id asc">
+                  <field name="sequence" widget="handle"/>
+                  <field name="approver" string="Approver Name"/>
+                  <field name="position" string="Position/Role"/>
+                  <field name="action_date" string="Date"/>
+                  <field name="state" decoration-danger="state == 'rejected'" decoration-info="state == 'revised'" decoration-primary="state == 'approved'" decoration-warning="state == 'returned'" widget="badge" string="Status"/>
+                  <field name="note" string="Notes/Feedback"/>
+                  <field name="approval_reason" string="Approval Reason"/>
+                </tree>
+                <form string="Approval Log Detail">
+                  <group>
+                    <field name="approver"/>
+                    <field name="position"/>
+                    <field name="action_date"/>
+                    <field name="state" widget="badge"/>
+                  </group>
+                  <separator string="Approval Reason"/>
+                  <field name="approval_reason" readonly="1"/>
+                  <separator string="Notes"/>
+                  <field name="note" readonly="1"/>
+                </form>
               </field>
             </page>
           </notebook>
@@ -1491,7 +1614,8 @@
           <field name="employee_id"/>
           <field name="description"/>
           <filter string="Draft" name="draft" domain="[('state','=','draft')]"/>
-          <filter string="Submitted" name="submitted" domain="[('state','=','submitted')]"/>
+          <filter string="Waiting Approval" name="wait_approval" domain="[('state','=','wait_approval')]"/>
+          <filter string="To Approve" name="filter_to_approve" domain="[('current_approver','=',uid),('state','=','wait_approval')]"/>
           <filter string="Approved" name="approved" domain="[('state','=','approved')]"/>
           <filter string="Posted" name="posted" domain="[('state','=','posted')]"/>
           <filter string="Cancelled" name="cancelled" domain="[('state','=','cancelled')]"/>
@@ -1514,7 +1638,7 @@
           <field name="fund_id"/>
           <field name="source_account_id"/>
           <field name="amount" widget="monetary" sum="Total"/>
-          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state in ('draft','approved')" decoration-danger="state == 'cancelled'"/>
+          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state in ('draft','wait_approval','approved')" decoration-danger="state == 'cancelled'"/>
         </tree>
       </field>
     </record>
@@ -1532,21 +1656,36 @@
           <field name="user_can_delete" invisible="1"/>
           <field name="state" invisible="1"/>
           <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
-          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or state == 'posted' or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit or context.get('is_approval_view')" class="oe_highlight"/>
+          <button string="Save" name="action_save_revised" type="object" invisible="id and not is_edit or not context.get('is_approval_view')" class="oe_highlight"/>
           <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this top up permanently?" invisible="not id or is_edit or not user_can_delete"/>
-          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <button string="Approve" name="action_approve" type="object" class="btn-primary" invisible="state != 'draft' or is_edit"/>
-          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="state != 'approved'"/>
-          <button string="Cancel Top Up" name="action_cancel" type="object" class="btn-warning" invisible="state not in ('draft','approved','posted') or is_edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this top up permanently?" invisible="not id or is_edit or state == 'posted' or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_delete"/>
+          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="not id or ((state != 'draft' or need_approval or is_edit) and (state != 'approved' or not need_approval))"/>
+          <button string="Post" class="opacity-50 pe-none" invisible="not id or not ((state != 'draft' or need_approval or is_edit) and (state != 'approved' or not need_approval))"/>
+          <button string="Submit" name="action_submit_for_approval" type="object" class="btn-primary" invisible="state != 'draft' or not need_approval or is_edit or not user_can_submit"/>
+          <button string="Approve" name="action_approve" type="object" class="btn-primary" invisible="not id or is_edit or not user_can_approve or not context.get('is_approval_view')"/>
+          <button string="Revise" name="action_revise" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_revise or not context.get('is_approval_view')"/>
+          <button string="Return" name="action_return" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_return or not context.get('is_approval_view')"/>
+          <button string="Reject" name="action_reject" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_reject or not context.get('is_approval_view')"/>
+          <button string="Cancel Top Up" name="action_cancel" type="object" class="btn-warning" invisible="not id or state != 'posted' or is_edit"/>
           <button string="Journal Entry" name="action_view_move" type="object" class="btn-secondary" invisible="not move_id"/>
-          <field name="state" widget="statusbar" statusbar_visible="draft,approved,posted"/>
+          <field name="state" widget="statusbar" statusbar_visible="draft,wait_approval,approved,posted"/>
           <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
+          <field name="need_approval" invisible="1"/>
+          <field name="approval_status" invisible="1"/>
+          <field name="current_approver" invisible="1"/>
+          <field name="current_approver_name" invisible="1"/>
+          <field name="user_can_approve" invisible="1"/>
+          <field name="user_can_revise" invisible="1"/>
+          <field name="user_can_return" invisible="1"/>
+          <field name="user_can_reject" invisible="1"/>
+          <field name="user_can_submit" invisible="1"/>
           <style>
             .o_control_panel {
               display: none !important;
@@ -1556,19 +1695,45 @@
         <sheet>
           <div class="oe_title">
             <field name="name" readonly="1"/>
-            <field name="reference" placeholder="e.g. Transfer dari BCA" readonly="state != 'draft'"/>
+            <h1>
+              <field name="reference" placeholder="e.g. Transfer dari BCA" readonly="not is_edit and id"/>
+            </h1>
           </div>
           <group>
             <group>
-              <field name="date" readonly="state != 'draft'"/>
-              <field name="fund_id" readonly="state != 'draft'"/>
-              <field name="source_account_id" readonly="state != 'draft'"/>
+              <field name="date" readonly="not is_edit and id"/>
+              <field name="fund_id" readonly="not is_edit and id"/>
+              <field name="source_account_id" readonly="not is_edit and id"/>
             </group>
             <group>
-              <field name="amount" widget="monetary" readonly="state != 'draft'"/>
+              <field name="amount" widget="monetary" readonly="not is_edit and id"/>
               <field name="move_id" invisible="1"/>
             </group>
           </group>
+          <notebook>
+            <page string="Approval Logs" name="approval_logs" invisible="not approval_log_ids">
+              <field name="approval_log_ids" readonly="1">
+                <tree default_order="sequence asc, id asc">
+                  <field name="sequence" widget="handle"/>
+                  <field name="approver" string="Approver Name"/>
+                  <field name="position" string="Position/Role"/>
+                  <field name="action_date" string="Date"/>
+                  <field name="state" decoration-danger="state == 'rejected'" decoration-info="state == 'revised'" decoration-primary="state == 'approved'" decoration-warning="state == 'returned'" widget="badge" string="Status"/>
+                  <field name="note" string="Notes/Feedback"/>
+                </tree>
+                <form string="Approval Log Detail">
+                  <group>
+                    <field name="approver"/>
+                    <field name="position"/>
+                    <field name="action_date"/>
+                    <field name="state" widget="badge"/>
+                  </group>
+                  <separator string="Notes"/>
+                  <field name="note" readonly="1"/>
+                </form>
+              </field>
+            </page>
+          </notebook>
         </sheet>
       </form>
       </field>
@@ -1583,6 +1748,8 @@
           <field name="date"/>
           <field name="fund_id"/>
           <filter string="Draft" name="draft" domain="[('state','=','draft')]"/>
+          <filter string="Waiting Approval" name="wait_approval" domain="[('state','=','wait_approval')]"/>
+          <filter string="To Approve" name="filter_to_approve" domain="[('current_approver','=',uid),('state','=','wait_approval')]"/>
           <filter string="Approved" name="approved" domain="[('state','=','approved')]"/>
           <filter string="Posted" name="posted" domain="[('state','=','posted')]"/>
           <separator/>
@@ -1602,7 +1769,7 @@
           <field name="source_fund_id"/>
           <field name="target_fund_id"/>
           <field name="amount" widget="monetary" sum="Total"/>
-          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state == 'draft'" decoration-danger="state == 'cancelled'"/>
+          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state in ('draft','wait_approval','approved')" decoration-danger="state == 'cancelled'"/>
         </tree>
       </field>
     </record>
@@ -1620,20 +1787,36 @@
           <field name="user_can_delete" invisible="1"/>
           <field name="state" invisible="1"/>
           <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
-          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or state == 'posted' or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit or context.get('is_approval_view')" class="oe_highlight"/>
+          <button string="Save" name="action_save_revised" type="object" invisible="id and not is_edit or not context.get('is_approval_view')" class="oe_highlight"/>
           <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this transfer permanently?" invisible="not id or is_edit or not user_can_delete"/>
-          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="state != 'draft'"/>
-          <button string="Cancel Transfer" name="action_cancel" type="object" class="btn-warning" invisible="state not in ('draft','posted') or is_edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this transfer permanently?" invisible="not id or is_edit or state == 'posted' or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_delete"/>
+          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="not id or ((state != 'draft' or need_approval or is_edit) and (state != 'approved' or not need_approval))"/>
+          <button string="Post" class="opacity-50 pe-none" invisible="not id or not ((state != 'draft' or need_approval or is_edit) and (state != 'approved' or not need_approval))"/>
+          <button string="Submit" name="action_submit_for_approval" type="object" class="btn-primary" invisible="state != 'draft' or not need_approval or is_edit or not user_can_submit"/>
+          <button string="Approve" name="action_approve" type="object" class="btn-primary" invisible="not id or is_edit or not user_can_approve or not context.get('is_approval_view')"/>
+          <button string="Revise" name="action_revise" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_revise or not context.get('is_approval_view')"/>
+          <button string="Return" name="action_return" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_return or not context.get('is_approval_view')"/>
+          <button string="Reject" name="action_reject" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_reject or not context.get('is_approval_view')"/>
+          <button string="Cancel Transfer" name="action_cancel" type="object" class="btn-warning" invisible="not id or state != 'posted' or is_edit"/>
           <button string="Journal Entry" name="action_view_move" type="object" class="btn-secondary" invisible="not move_id"/>
-          <field name="state" widget="statusbar" statusbar_visible="draft,posted"/>
+          <field name="state" widget="statusbar" statusbar_visible="draft,wait_approval,approved,posted"/>
           <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
+          <field name="need_approval" invisible="1"/>
+          <field name="approval_status" invisible="1"/>
+          <field name="current_approver" invisible="1"/>
+          <field name="current_approver_name" invisible="1"/>
+          <field name="user_can_approve" invisible="1"/>
+          <field name="user_can_revise" invisible="1"/>
+          <field name="user_can_return" invisible="1"/>
+          <field name="user_can_reject" invisible="1"/>
+          <field name="user_can_submit" invisible="1"/>
           <style>
             .o_control_panel {
               display: none !important;
@@ -1643,19 +1826,45 @@
         <sheet>
           <div class="oe_title">
             <field name="name" readonly="1"/>
-            <field name="reference" placeholder="e.g. Transfer saldo ke cabang" readonly="state != 'draft'"/>
+            <h1>
+              <field name="reference" placeholder="e.g. Transfer saldo ke cabang" readonly="not is_edit and id"/>
+            </h1>
           </div>
           <group>
             <group>
-              <field name="date" readonly="state != 'draft'"/>
-              <field name="source_fund_id" readonly="state != 'draft'"/>
-              <field name="target_fund_id" readonly="state != 'draft'"/>
+              <field name="date" readonly="not is_edit and id"/>
+              <field name="source_fund_id" readonly="not is_edit and id"/>
+              <field name="target_fund_id" readonly="not is_edit and id"/>
             </group>
             <group>
-              <field name="amount" widget="monetary" readonly="state != 'draft'"/>
+              <field name="amount" widget="monetary" readonly="not is_edit and id"/>
               <field name="move_id" invisible="1"/>
             </group>
           </group>
+          <notebook>
+            <page string="Approval Logs" name="approval_logs" invisible="not approval_log_ids">
+              <field name="approval_log_ids" readonly="1">
+                <tree default_order="sequence asc, id asc">
+                  <field name="sequence" widget="handle"/>
+                  <field name="approver" string="Approver Name"/>
+                  <field name="position" string="Position/Role"/>
+                  <field name="action_date" string="Date"/>
+                  <field name="state" decoration-danger="state == 'rejected'" decoration-info="state == 'revised'" decoration-primary="state == 'approved'" decoration-warning="state == 'returned'" widget="badge" string="Status"/>
+                  <field name="note" string="Notes/Feedback"/>
+                </tree>
+                <form string="Approval Log Detail">
+                  <group>
+                    <field name="approver"/>
+                    <field name="position"/>
+                    <field name="action_date"/>
+                    <field name="state" widget="badge"/>
+                  </group>
+                  <separator string="Notes"/>
+                  <field name="note" readonly="1"/>
+                </form>
+              </field>
+            </page>
+          </notebook>
         </sheet>
       </form>
       </field>
@@ -1670,6 +1879,10 @@
           <field name="date"/>
           <field name="source_fund_id"/>
           <field name="target_fund_id"/>
+          <filter string="Draft" name="draft" domain="[('state','=','draft')]"/>
+          <filter string="Waiting Approval" name="wait_approval" domain="[('state','=','wait_approval')]"/>
+          <filter string="To Approve" name="filter_to_approve" domain="[('current_approver','=',uid),('state','=','wait_approval')]"/>
+          <filter string="Approved" name="approved" domain="[('state','=','approved')]"/>
           <filter string="Posted" name="posted" domain="[('state','=','posted')]"/>
           <separator/>
           <filter string="Today" name="today" date="date"/>
@@ -1689,7 +1902,7 @@
           <field name="employee_id"/>
           <field name="advance_account_id"/>
           <field name="amount" widget="monetary" sum="Total"/>
-          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state in ('draft','verified')" decoration-danger="state == 'cancelled'"/>
+          <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-warning="state in ('draft','wait_approval','approved')" decoration-danger="state == 'cancelled'"/>
         </tree>
       </field>
     </record>
@@ -1707,21 +1920,36 @@
           <field name="user_can_delete" invisible="1"/>
           <field name="state" invisible="1"/>
           <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
-          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
-          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
-          <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+          <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or state == 'posted' or not user_can_update"/>
+          <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_update"/>
+          <button string="Save" name="action_save" type="object" invisible="id and not is_edit or context.get('is_approval_view')" class="oe_highlight"/>
+          <button string="Save" name="action_save_revised" type="object" invisible="id and not is_edit or not context.get('is_approval_view')" class="oe_highlight"/>
           <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
           <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
-          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this settlement permanently?" invisible="not id or is_edit or not user_can_delete"/>
-          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
-          <button string="Verify" name="action_verify" type="object" class="btn-primary" invisible="state != 'draft' or is_edit"/>
-          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="state != 'verified'"/>
-          <button string="Cancel Settlement" name="action_cancel" type="object" class="btn-warning" invisible="state not in ('draft','verified','posted') or is_edit"/>
+          <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this settlement permanently?" invisible="not id or is_edit or state == 'posted' or not user_can_delete"/>
+          <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or state == 'posted' or user_can_delete"/>
+          <button string="Post" name="action_post" type="object" class="btn-primary" invisible="not id or ((state != 'draft' or need_approval or is_edit) and (state != 'approved' or not need_approval))"/>
+          <button string="Post" class="opacity-50 pe-none" invisible="not id or not ((state != 'draft' or need_approval or is_edit) and (state != 'approved' or not need_approval))"/>
+          <button string="Submit" name="action_submit_for_approval" type="object" class="btn-primary" invisible="state != 'draft' or not need_approval or is_edit or not user_can_submit"/>
+          <button string="Approve" name="action_approve" type="object" class="btn-primary" invisible="not id or is_edit or not user_can_approve or not context.get('is_approval_view')"/>
+          <button string="Revise" name="action_revise" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_revise or not context.get('is_approval_view')"/>
+          <button string="Return" name="action_return" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_return or not context.get('is_approval_view')"/>
+          <button string="Reject" name="action_reject" type="object" class="btn-secondary" invisible="not id or is_edit or not user_can_reject or not context.get('is_approval_view')"/>
+          <button string="Cancel Settlement" name="action_cancel" type="object" class="btn-warning" invisible="not id or state != 'posted' or is_edit"/>
           <button string="Journal Entry" name="action_view_move" type="object" class="btn-secondary" invisible="not move_id"/>
-          <field name="state" widget="statusbar" statusbar_visible="draft,verified,posted"/>
+          <field name="state" widget="statusbar" statusbar_visible="draft,wait_approval,approved,posted"/>
           <span class="min-w-0 text-truncate mt-1">
             <field name="model_description"/>
           </span>
+          <field name="need_approval" invisible="1"/>
+          <field name="approval_status" invisible="1"/>
+          <field name="current_approver" invisible="1"/>
+          <field name="current_approver_name" invisible="1"/>
+          <field name="user_can_approve" invisible="1"/>
+          <field name="user_can_revise" invisible="1"/>
+          <field name="user_can_return" invisible="1"/>
+          <field name="user_can_reject" invisible="1"/>
+          <field name="user_can_submit" invisible="1"/>
           <style>
             .o_control_panel {
               display: none !important;
@@ -1731,20 +1959,46 @@
         <sheet>
           <div class="oe_title">
             <field name="name" readonly="1"/>
-            <field name="reference" placeholder="e.g. Pengembalian sisa dana" readonly="state != 'draft'"/>
+            <h1>
+              <field name="reference" placeholder="e.g. Pengembalian sisa dana" readonly="not is_edit and id"/>
+            </h1>
           </div>
           <group>
             <group>
-              <field name="date" readonly="state != 'draft'"/>
-              <field name="fund_id" readonly="state != 'draft'"/>
-              <field name="employee_id" readonly="state != 'draft'"/>
+              <field name="date" readonly="not is_edit and id"/>
+              <field name="fund_id" readonly="not is_edit and id"/>
+              <field name="employee_id" readonly="not is_edit and id"/>
             </group>
             <group>
-              <field name="advance_account_id" readonly="state != 'draft'"/>
-              <field name="amount" widget="monetary" readonly="state != 'draft'"/>
+              <field name="advance_account_id" readonly="not is_edit and id"/>
+              <field name="amount" widget="monetary" readonly="not is_edit and id"/>
               <field name="move_id" invisible="1"/>
             </group>
           </group>
+          <notebook>
+            <page string="Approval Logs" name="approval_logs" invisible="not approval_log_ids">
+              <field name="approval_log_ids" readonly="1">
+                <tree default_order="sequence asc, id asc">
+                  <field name="sequence" widget="handle"/>
+                  <field name="approver" string="Approver Name"/>
+                  <field name="position" string="Position/Role"/>
+                  <field name="action_date" string="Date"/>
+                  <field name="state" decoration-danger="state == 'rejected'" decoration-info="state == 'revised'" decoration-primary="state == 'approved'" decoration-warning="state == 'returned'" widget="badge" string="Status"/>
+                  <field name="note" string="Notes/Feedback"/>
+                </tree>
+                <form string="Approval Log Detail">
+                  <group>
+                    <field name="approver"/>
+                    <field name="position"/>
+                    <field name="action_date"/>
+                    <field name="state" widget="badge"/>
+                  </group>
+                  <separator string="Notes"/>
+                  <field name="note" readonly="1"/>
+                </form>
+              </field>
+            </page>
+          </notebook>
         </sheet>
       </form>
       </field>
@@ -1760,7 +2014,9 @@
           <field name="fund_id"/>
           <field name="employee_id"/>
           <filter string="Draft" name="draft" domain="[('state','=','draft')]"/>
-          <filter string="Verified" name="verified" domain="[('state','=','verified')]"/>
+          <filter string="Waiting Approval" name="wait_approval" domain="[('state','=','wait_approval')]"/>
+          <filter string="To Approve" name="filter_to_approve" domain="[('current_approver','=',uid),('state','=','wait_approval')]"/>
+          <filter string="Approved" name="approved" domain="[('state','=','approved')]"/>
           <filter string="Posted" name="posted" domain="[('state','=','posted')]"/>
           <separator/>
           <filter string="Today" name="today" date="date"/>
@@ -1826,6 +2082,303 @@
 
     <menuitem name="Petty Cash Funds" id="menu_petty_cash_funds_act" parent="menu_accounting_config_parent" action="action_petty_cash" sequence="6"/>
     <menuitem name="Expense Categories" id="menu_pc_categories_act" parent="menu_accounting_config_parent" action="action_pc_category" sequence="7"/>
+
+    <!-- ================================================================= -->
+    <!-- APPROVAL WIZARD                                                    -->
+    <!-- ================================================================= -->
+
+    <record id="view_accounting_approve_wizard_form" model="ir.ui.view">
+      <field name="name">accounting.approve.wizard.form</field>
+      <field name="model">accounting.approve.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Approval Confirmation">
+          <field name="document_type" invisible="1"/>
+          <field name="record_id" invisible="1"/>
+          <div class="alert alert-info" role="alert" style="margin-bottom:0px;">
+            <field name="message"/>
+          </div>
+          <footer>
+            <button name="action_confirm" string="Yes, Approved" type="object"
+                    class="btn-primary"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_accounting_reject_wizard_form" model="ir.ui.view">
+      <field name="name">accounting.reject.wizard.form</field>
+      <field name="model">accounting.reject.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Reject Confirmation">
+          <field name="document_type" invisible="1"/>
+          <field name="record_id" invisible="1"/>
+          <label for="reason" string="Reason"/>
+          <field name="reason"
+                 placeholder="Please provide a reason for rejection..."/>
+          <footer>
+            <button name="action_reject_confirm" string="Confirm Reject" type="object"
+                    class="btn-primary"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_accounting_return_wizard_form" model="ir.ui.view">
+      <field name="name">accounting.return.wizard.form</field>
+      <field name="model">accounting.return.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Return Reason">
+          <field name="document_type" invisible="1"/>
+          <field name="record_id" invisible="1"/>
+          <label for="reason" string="Reason"/>
+          <field name="reason"
+                 placeholder="Please provide a reason for returning this document..."/>
+          <footer>
+            <button name="action_return_confirm" string="Confirm Return" type="object"
+                    class="btn-primary"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_accounting_revise_wizard_form" model="ir.ui.view">
+      <field name="name">accounting.revise.wizard.form</field>
+      <field name="model">accounting.revise.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Revise Message">
+          <field name="document_type" invisible="1"/>
+          <field name="record_id" invisible="1"/>
+          <label for="message" string="Message"/>
+          <field name="message"
+                 placeholder="Please provide a message for the revision..."/>
+          <footer>
+            <button name="action_revise_confirm" string="Confirm Revise" type="object"
+                    class="btn-primary"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <!-- ===================================================================== -->
+    <!-- APPROVAL MATRIX                                                      -->
+    <!-- ===================================================================== -->
+
+    <record model="ir.ui.view" id="view_accounting_approval_matrix_tree">
+      <field name="name">Accounting Approval Matrix Tree</field>
+      <field name="model">accounting.approval.matrix</field>
+      <field name="arch" type="xml">
+        <tree string="Approval Matrix">
+          <field name="document_type" widget="badge"/>
+          <field name="sequence" widget="handle"/>
+          <field name="name"/>
+          <field name="position"/>
+          <field name="min_amount" widget="monetary"/>
+          <field name="receive_return" invisible="1"/>
+          <field name="approve"/>
+          <field name="revise"/>
+          <field name="returned"/>
+          <field name="reject"/>
+          <field name="notify"/>
+        </tree>
+      </field>
+    </record>
+
+    <record model="ir.ui.view" id="view_accounting_approval_matrix_form">
+      <field name="name">Accounting Approval Matrix Form</field>
+      <field name="model">accounting.approval.matrix</field>
+      <field name="arch" type="xml">
+        <form string="Approval Matrix" create="false">
+          <header>
+            <field name="id" invisible="1"/>
+            <field name="is_edit" invisible="1"/>
+            <field name="user_can_update" invisible="1"/>
+            <field name="user_can_delete" invisible="1"/>
+            <button string="Back" name="action_back" type="object" invisible="is_edit or not id"/>
+            <button string="Edit" name="action_edit" type="object" invisible="not id or is_edit or not user_can_update"/>
+            <button string="Edit" class="opacity-50 pe-none" invisible="not id or is_edit or user_can_update"/>
+            <button string="Save" name="action_save" type="object" invisible="id and not is_edit" class="oe_highlight"/>
+            <button string="Cancel" invisible="id" special="cancel" class="discard-new"/>
+            <button string="Cancel" invisible="not is_edit" special="cancel" class="discard-edit"/>
+            <button name="action_delete" string="Delete" type="object" class="oe_highlight" confirm="Are you sure you want to delete this data permanently?" invisible="not id or is_edit or not user_can_delete"/>
+            <button string="Delete" class="oe_highlight opacity-50 pe-none" invisible="not id or is_edit or user_can_delete"/>
+            <style>
+              .o_control_panel {
+                display: none !important;
+              }
+            </style>
+          </header>
+          <sheet>
+            <group>
+              <group>
+                <field name="document_type" required="1" readonly="not is_edit and id"/>
+                <field name="name" required="1" readonly="not is_edit and id"/>
+                <field name="position" readonly="1"/>
+                <field name="sequence" readonly="not is_edit and id"/>
+              </group>
+              <group>
+                <field name="min_amount" readonly="not is_edit and id"/>
+                <field name="approved_as" readonly="not is_edit and id"/>
+                <field name="receive_return" readonly="not is_edit and id"/>
+              </group>
+            </group>
+            <group string="Permissions">
+              <group>
+                <field name="approve" readonly="not is_edit and id"/>
+                <field name="revise" readonly="not is_edit and id"/>
+                <field name="printed" readonly="not is_edit and id"/>
+              </group>
+              <group>
+                <field name="returned" readonly="not is_edit and id"/>
+                <field name="reject" readonly="not is_edit and id"/>
+                <field name="notify" readonly="not is_edit and id"/>
+              </group>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_accounting_approval_matrix">
+      <field name="name">Accounting Approval Matrix</field>
+      <field name="res_model">accounting.approval.matrix</field>
+      <field name="view_mode">tree,form</field>
+      <field name="target">main</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">Create your first Accounting Approval Matrix</p>
+        <p>Define the approver roster and their allowed actions for each petty cash document.</p>
+      </field>
+    </record>
+
+    <menuitem name="Accounting Matrix" id="menu_accounting_approval_matrix_act" parent="sales.approval_matrix_menu" action="action_accounting_approval_matrix" sequence="3"/>
+
+    <!-- ===================================================================== -->
+    <!-- WAITING FOR APPROVAL (per document type)                             -->
+    <!-- ===================================================================== -->
+
+    <record id="action_waiting_approval_expense" model="ir.actions.act_window">
+      <field name="name">Waiting My Approval</field>
+      <field name="res_model">accounting.petty.cash.expense</field>
+      <field name="view_mode">tree,form</field>
+      <field name="domain">[('current_approver','=',uid),('state','=','wait_approval')]</field>
+      <field name="context">{'search_default_filter_to_approve': 1, 'create': False, 'is_approval_view': True}</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No documents waiting for your approval.</p>
+      </field>
+    </record>
+
+    <record id="action_waiting_approval_topup" model="ir.actions.act_window">
+      <field name="name">Waiting for My Approval</field>
+      <field name="res_model">accounting.petty.cash.topup</field>
+      <field name="view_mode">tree,form</field>
+      <field name="domain">[('current_approver','=',uid),('state','=','wait_approval')]</field>
+      <field name="context">{'search_default_filter_to_approve': 1, 'create': False, 'is_approval_view': True}</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No documents waiting for your approval.</p>
+      </field>
+    </record>
+
+    <record id="action_waiting_approval_transfer" model="ir.actions.act_window">
+      <field name="name">Waiting for My Approval</field>
+      <field name="res_model">accounting.petty.cash.transfer</field>
+      <field name="view_mode">tree,form</field>
+      <field name="domain">[('current_approver','=',uid),('state','=','wait_approval')]</field>
+      <field name="context">{'search_default_filter_to_approve': 1, 'create': False, 'is_approval_view': True}</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No documents waiting for your approval.</p>
+      </field>
+    </record>
+
+    <record id="action_waiting_approval_settlement" model="ir.actions.act_window">
+      <field name="name">Waiting for My Approval</field>
+      <field name="res_model">accounting.petty.cash.settlement</field>
+      <field name="view_mode">tree,form</field>
+      <field name="domain">[('current_approver','=',uid),('state','=','wait_approval')]</field>
+      <field name="context">{'search_default_filter_to_approve': 1, 'create': False, 'is_approval_view': True}</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No documents waiting for your approval.</p>
+      </field>
+    </record>
+
+    <!-- Approval submenu under Approvals -->
+    <menuitem name="Accounting" id="menu_accounting_approval_parent" parent="sales.menu_approvals_root" sequence="3"/>
+    <menuitem name="Expenses to Approve" id="menu_wait_approval_expense" parent="menu_accounting_approval_parent" action="action_waiting_approval_expense" sequence="1"/>
+    <menuitem name="Top Ups to Approve" id="menu_wait_approval_topup" parent="menu_accounting_approval_parent" action="action_waiting_approval_topup" sequence="2"/>
+    <menuitem name="Transfers to Approve" id="menu_wait_approval_transfer" parent="menu_accounting_approval_parent" action="action_waiting_approval_transfer" sequence="3"/>
+    <menuitem name="Settlements to Approve" id="menu_wait_approval_settlement" parent="menu_accounting_approval_parent" action="action_waiting_approval_settlement" sequence="4"/>
+
+    <!-- RBAC: general.menu entries for the accounting "to Approve" menus.
+         The ir_ui_menu_id MUST point to the exact ir.ui.menu record above
+         (record ref, not name match), so users without a general.auth entry
+         for these menus are restricted from seeing them. Placed here (after
+         the <menuitem> records) so the refs resolve regardless of the
+         manifest data load order (data/menu.xml is loaded before views.xml). -->
+    <record id="accounting.menu_accounting_approvals" model="general.menu">
+      <field name="menu_name">Accounting</field>
+      <field name="ir_ui_menu_id" ref="accounting.menu_accounting_approval_parent"/>
+    </record>
+    <record id="menu_wait_approval_expense_menu" model="general.menu">
+      <field name="menu_id">pc_approval_expense</field>
+      <field name="menu_name">Expenses to Approve</field>
+      <field name="parent_menu">accounting_approvals</field>
+      <field name="ir_ui_menu_id" ref="accounting.menu_wait_approval_expense"/>
+    </record>
+    <record id="menu_wait_approval_topup_menu" model="general.menu">
+      <field name="menu_id">pc_approval_topup</field>
+      <field name="menu_name">Top Ups to Approve</field>
+      <field name="parent_menu">accounting_approvals</field>
+      <field name="ir_ui_menu_id" ref="accounting.menu_wait_approval_topup"/>
+    </record>
+    <record id="menu_wait_approval_transfer_menu" model="general.menu">
+      <field name="menu_id">pc_approval_transfer</field>
+      <field name="menu_name">Transfers to Approve</field>
+      <field name="parent_menu">accounting_approvals</field>
+      <field name="ir_ui_menu_id" ref="accounting.menu_wait_approval_transfer"/>
+    </record>
+    <record id="menu_wait_approval_settlement_menu" model="general.menu">
+      <field name="menu_id">pc_approval_settlement</field>
+      <field name="menu_name">Settlements to Approve</field>
+      <field name="parent_menu">accounting_approvals</field>
+      <field name="ir_ui_menu_id" ref="accounting.menu_wait_approval_settlement"/>
+    </record>
+
+    <!-- RBAC: link the Accounting Matrix menu (record created in data/menu.xml)
+         to its exact ir.ui.menu record so it can be granted/restricted too. -->
+    <record id="accounting.menu_accounting_approval_matrix" model="general.menu">
+      <field name="ir_ui_menu_id" ref="accounting.menu_accounting_approval_matrix_act"/>
+    </record>
+
+    <!-- SERVICE CATEGORY: inject expense_account_id via inheritance -->
+    <record id="purchases_service_category_tree_inherit" model="ir.ui.view">
+      <field name="name">purchases.service_category.tree.inherit</field>
+      <field name="model">purchases.service_category</field>
+      <field name="inherit_id" ref="purchases.purchases_service_category_tree"/>
+      <field name="arch" type="xml">
+        <field name="category_name" position="after">
+          <field name="expense_account_id"/>
+        </field>
+      </field>
+    </record>
+
+    <record id="purchases_service_category_form_inherit" model="ir.ui.view">
+      <field name="name">purchases.service_category.form.inherit</field>
+      <field name="model">purchases.service_category</field>
+      <field name="inherit_id" ref="purchases.purchases_service_category_form"/>
+      <field name="arch" type="xml">
+        <form>
+          <sheet>
+            <group>
+              <group>
+                <field name="expense_account_id"/>
+              </group>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
 
   </data>
 </odoo>
