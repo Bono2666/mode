@@ -870,6 +870,66 @@
       </field>
     </record>
 
+    <!-- Sales Order Profitability Report Form (read-only, per-row drill-down) -->
+    <record model="ir.ui.view" id="view_accounting_sales_profitability_report_form">
+      <field name="name">Sales Order Profitability Report Form</field>
+      <field name="model">accounting.sales_profitability_report</field>
+      <field name="arch" type="xml">
+        <form create="false" edit="false">
+          <header>
+            <button name="action_view_transactions" string="View Transactions"
+                    type="object" class="btn-primary"
+                    invisible="not sale_order_id"/>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <label for="sale_order_name"/>
+              <h1><field name="sale_order_name" readonly="1"/></h1>
+            </div>
+            <group>
+              <group string="Order">
+                <field name="sale_order_id" readonly="1"/>
+                <field name="sale_order_date" readonly="1"/>
+                <field name="customer_id" readonly="1"/>
+                <field name="has_transaction" readonly="1"/>
+              </group>
+              <group string="Financials">
+                <field name="total_revenue" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                <field name="cost_cogs" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                <field name="cost_commission" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                <field name="cost_supporting" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+              </group>
+              <group string="Result">
+                <field name="total_cost" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                <field name="margin_amount" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                <field name="margin_percent" readonly="1"/>
+              </group>
+            </group>
+            <field name="currency_id" invisible="1"/>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Sales Order Profitability Transaction Detail Tree -->
+    <record model="ir.ui.view" id="view_accounting_sales_profitability_transaction_tree">
+      <field name="name">Sales Order Profitability Transaction Detail</field>
+      <field name="model">accounting.sales_profitability_transaction</field>
+      <field name="arch" type="xml">
+        <tree create="false" delete="false" edit="false" default_order="sale_order_name, doc_date desc">
+          <field name="sale_order_name" readonly="1"/>
+          <field name="transaction_type" readonly="1"/>
+          <field name="category" readonly="1"/>
+          <field name="doc_number" readonly="1"/>
+          <field name="doc_date" readonly="1"/>
+          <field name="doc_state" readonly="1"/>
+          <field name="amount" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+          <field name="move_id" readonly="1"/>
+          <field name="currency_id" invisible="1"/>
+        </tree>
+      </field>
+    </record>
+
     <!-- ================================================================= -->
     <!-- ACTIONS                                                           -->
     <!-- ================================================================= -->
@@ -964,6 +1024,14 @@
       <field name="res_model">accounting.sales_profitability_report.wizard</field>
       <field name="view_mode">form</field>
       <field name="target">new</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_sales_profitability_transactions">
+      <field name="name">Sales Order Transactions</field>
+      <field name="res_model">accounting.sales_profitability_transaction</field>
+      <field name="view_mode">tree</field>
+      <field name="views">[(False, 'tree')]</field>
+      <field name="target">current</field>
     </record>
 
     <!-- ================================================================= -->

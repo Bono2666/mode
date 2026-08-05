@@ -323,6 +323,52 @@
                             </tr>
                         </table>
 
+                        <!-- Per-SO Transaction Breakdown -->
+                        <t t-foreach="data" t-as="line">
+                            <t t-if="line.has_transaction == 'yes'">
+                                <t t-set="txns" t-value="docs.env['accounting.sales_profitability_transaction'].search([('sale_order_id', '=', line.sale_order_id.id)])"/>
+                                <t t-if="txns">
+                                    <div class="mt-4 page-break-inside-avoid">
+                                        <h5 class="mb-1">Transaction Details — <t t-esc="line.sale_order_name"/></h5>
+                                        <p class="text-muted mb-2"><t t-esc="line.customer_id.customer_name if line.customer_id else ''"/> — Margin: <t t-esc="'{:,.0f}'.format(line.margin_amount)"/></p>
+                                        <table class="table table-sm table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 14%;">Type</th>
+                                                    <th style="width: 12%;">Category</th>
+                                                    <th style="width: 16%;">Document</th>
+                                                    <th style="width: 12%;">Date</th>
+                                                    <th style="width: 10%;">Status</th>
+                                                    <th class="text-end" style="width: 14%;">Amount</th>
+                                                    <th style="width: 12%;">Journal Entry</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="txns" t-as="txn">
+                                                    <tr>
+                                                        <td><t t-esc="dict(txns._fields['transaction_type'].selection).get(txn.transaction_type, txn.transaction_type)"/></td>
+                                                        <td><t t-esc="dict(txns._fields['category'].selection).get(txn.category, txn.category)"/></td>
+                                                        <td><t t-esc="txn.doc_number or ''"/></td>
+                                                        <td><t t-esc="txn.doc_date or ''"/></td>
+                                                        <td><t t-esc="txn.doc_state or ''"/></td>
+                                                        <td class="text-end"><t t-esc="'{:,.0f}'.format(txn.amount)"/></td>
+                                                        <td><t t-esc="txn.move_id.name if txn.move_id else ''"/></td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                            <tfoot>
+                                                <tr class="table-light">
+                                                    <td colspan="5"><strong>Subtotal — <t t-esc="line.sale_order_name"/></strong></td>
+                                                    <td class="text-end"><strong><t t-esc="'{:,.0f}'.format(line.total_cost)"/></strong></td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </t>
+                            </t>
+                        </t>
+
                     </div>
                 </t>
             </t>

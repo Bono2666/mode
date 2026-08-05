@@ -1102,7 +1102,7 @@ Employees
 | **Aged Receivable** | date_as_of, period_length | Partner balances bucketed by 0-30, 31-60, 61-90, 90+ days |
 | **Balance Sheet** | date_as_of, target_move | Assets (Current/Fixed), Liabilities, Equity with auto-computed net income |
 | **Profit and Loss** | date_from, date_to, target_move | Revenue vs Expenses with Net Profit/Loss |
-| **Sales Order Profitability** | date_from, date_to, customer_id, sale_order_ids | Per-SO Revenue, COGS, Commission, Supporting Cost, Margin (Rs & %) — SQL view (`_auto = False`); `cost_supporting` sources: Petty Cash expenses tagged to SO + Purchases Service Bills tagged to SO |
+| **Sales Order Profitability** | date_from, date_to, customer_id, sale_order_ids | Per-SO Revenue, COGS, Commission, Supporting Cost, Margin (Rs & %) — SQL view (`_auto = False`); `cost_supporting` sources: Petty Cash expenses tagged to SO + Purchases Service Bills tagged to SO; per-row drill-down via `sales_profitability_transaction` (per-document detail: Invoice, Delivery, Payment, Petty Cash, Service Bill) |
 
 All reports use `qweb-html` rendering. Odoo's Print button generates PDF.
 
@@ -1371,6 +1371,40 @@ class AccountingSalesProfitabilityReport(models.Model):
 
 **Query `cost_supporting`:** UNION ALL dari Petty Cash Expense (tagged) + Purchases Service Bills (via PO.sales_order_id, order_type=service). Filter `am.state = 'posted'` + `account_type = 'expense'`.
 
+**Drill-down method:** `action_view_transactions()` — returns `act_window` for `accounting.sales_profitability_transaction` filtered by current SO.
+
+### 5a. Model: `accounting.sales_profitability_transaction` (SQL View, Detail)
+
+Per-document transaction detail — one row per source document, accessed via "View Transactions" button on the profitability report form (per-row click). Also rendered in the PDF report per-SO.
+
+```python
+class AccountingSalesProfitabilityTransaction(models.Model):
+    _name = 'accounting.sales_profitability_transaction'
+    _auto = False
+
+    sale_order_id = fields.Many2one('sales.sales_order')
+    sale_order_name = fields.Char()
+    sale_order_date = fields.Date()
+    transaction_type = fields.Selection([
+        ('invoice', 'Invoice'), ('delivery', 'Delivery'),
+        ('payment', 'Payment'), ('petty_cash', 'Petty Cash'),
+        ('service_bill', 'Service Bill'),
+    ])
+    category = fields.Selection([
+        ('revenue', 'Revenue'), ('cogs', 'COGS'),
+        ('commission', 'Commission'), ('supporting', 'Supporting Cost'),
+        ('payment', 'Payment'),
+    ])
+    doc_number = fields.Char()
+    doc_date = fields.Date()
+    doc_state = fields.Char()
+    amount = fields.Monetary()
+    move_id = fields.Many2one('accounting.move')
+    currency_id = fields.Many2one('res.currency')
+```
+
+**UNION ALL sources:** Invoice (posted) → revenue; Delivery (COGS move) → cogs; Invoice commission lines → commission; Payment (via invoice) → payment; Petty Cash (posted, tagged) → supporting; Service Bill (posted, service PO, tagged) → supporting. No menu entry — accessed via drill-down from the profitability report.
+
 ### 6. Wizard
 
 `accounting.sales_profitability_report.wizard` — `date_from`, `date_to`, `customer_id` (optional), `sale_order_ids` (optional).
@@ -1379,9 +1413,9 @@ class AccountingSalesProfitabilityReport(models.Model):
 
 - **Menu:** `Accounting → Reporting → Sales Order Profitability`
 - **List View:** kolom SO Number, Customer, Order Date, Revenue, COGS, Commission, Supporting Cost, Total Cost, Margin, Margin %.
-- **Drill-down:** klik → buka form SO.
-- **PDF:** `qweb-html` via Print button.
-- **RBAC:** `general.menu` entry + read-only ACL.
+- **Drill-down:** klik baris SO → form view profitability (read-only) → tombol "View Transactions" → list `accounting.sales_profitability_transaction` per SO (Invoice, Delivery, Payment, Petty Cash, Service Bill).
+- **PDF:** `qweb-html` — termasuk tabel rincian transaksi per SO di bawah setiap baris.
+- **RBAC:** `general.menu` entry + read-only ACL untuk `sales_profitability_report`, `sales_profitability_transaction`, dan wizard.
 
 ### 8. Pengujian
 
@@ -1400,11 +1434,13 @@ class AccountingSalesProfitabilityReport(models.Model):
 
 | File/Area | Perubahan |
 |---|---|
-| `accounting/models/` | Model baru `accounting.sales_profitability_report` (SQL view) |
+| `accounting/models/` | Model baru `accounting.sales_profitability_report` (SQL view) + `accounting.sales_profitability_transaction` (SQL view, detail per-document) |
 | `accounting/models/` | Tambah `sales_order_id` di `accounting.petty.cash.expense` |
 | `accounting/views/` | Tambah `sales_order_id` di form petty cash expense |
+| `accounting/views/` | Form view + tree view baru untuk profitability report (drill-down button) + tree view untuk transaction detail |
+| `accounting/views/templates.xml` | PDF report: tambahkan tabel rincian transaksi per SO |
 | `accounting/wizard/` | Wizard baru |
-| `accounting/security/` | ACL read-only |
+| `accounting/security/` | ACL read-only untuk report, transaction detail, dan wizard |
 | `general/data/` | Entry `general.menu` baru |
 | `tests/` | Test suite |
 

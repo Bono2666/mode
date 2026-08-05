@@ -4235,3 +4235,195 @@ class accounting_sales_profitability_report(models.Model):
                 ) supp ON supp.sale_order_id = so.id
             )
         """ % (self._table,))
+
+    def action_view_transactions(self):
+        self.ensure_one()
+        return {
+            'name': 'Transactions — %s' % self.sale_order_name,
+            'type': 'ir.actions.act_window',
+            'res_model': 'accounting.sales_profitability_transaction',
+            'view_mode': 'tree',
+            'views': [(False, 'tree')],
+            'target': 'current',
+            'domain': [('sale_order_id', '=', self.sale_order_id.id)],
+            'context': {'default_sale_order_id': self.sale_order_id.id},
+        }
+
+
+class accounting_sales_profitability_transaction(models.Model):
+    _name = 'accounting.sales_profitability_transaction'
+    _description = 'Sales Order Profitability Transaction Detail'
+    _auto = False
+    _rec_name = 'doc_number'
+    _order = 'sale_order_name, doc_date desc'
+
+    sale_order_id = fields.Many2one('sales.sales_order', readonly=True)
+    sale_order_name = fields.Char(readonly=True)
+    sale_order_date = fields.Date(readonly=True)
+    transaction_type = fields.Selection([
+        ('invoice', 'Invoice'),
+        ('delivery', 'Delivery'),
+        ('payment', 'Payment'),
+        ('petty_cash', 'Petty Cash Expense'),
+        ('service_bill', 'Service Bill'),
+    ], string='Type', readonly=True)
+    category = fields.Selection([
+        ('revenue', 'Revenue'),
+        ('cogs', 'COGS'),
+        ('commission', 'Commission'),
+        ('supporting', 'Supporting Cost'),
+        ('payment', 'Payment'),
+    ], string='Category', readonly=True)
+    doc_number = fields.Char(string='Document Number', readonly=True)
+    doc_date = fields.Date(string='Date', readonly=True)
+    doc_state = fields.Char(string='Status', readonly=True)
+    amount = fields.Monetary(string='Amount', readonly=True)
+    move_id = fields.Many2one('accounting.move', string='Journal Entry', readonly=True)
+    currency_id = fields.Many2one('res.currency', readonly=True)
+
+    def init(self):
+        self.env.cr.execute(
+            "DROP VIEW IF EXISTS %s CASCADE" % (self._table,))
+        self.env.cr.execute("""
+            CREATE OR REPLACE VIEW %s AS (
+                SELECT ROW_NUMBER() OVER (
+                    ORDER BY sub.sale_order_name, sub.doc_date DESC NULLS LAST, sub.transaction_type
+                ) AS id, sub.* FROM (
+
+                    -- Revenue: posted invoices
+                    SELECT
+                        so.id AS sale_order_id,
+                        so.sales_code AS sale_order_name,
+                        COALESCE(so.date_ordered, so.create_date::date) AS sale_order_date,
+                        'invoice' AS transaction_type,
+                        'revenue' AS category,
+                        inv.invoice_number AS doc_number,
+                        inv.invoice_date AS doc_date,
+                        inv.state AS doc_state,
+                        inv.amount_total AS amount,
+                        inv.accounting_move_id AS move_id,
+                        (SELECT id FROM res_currency ORDER BY id LIMIT 1) AS currency_id
+                    FROM sales_invoice inv
+                    JOIN sales_sales_order so ON so.id = inv.sales_order_id
+                    JOIN accounting_move am ON am.id = inv.accounting_move_id
+                    WHERE am.state = 'posted'
+
+                    UNION ALL
+
+                    -- COGS: posted delivery expense lines
+                    SELECT
+                        so.id AS sale_order_id,
+                        so.sales_code AS sale_order_name,
+                        COALESCE(so.date_ordered, so.create_date::date) AS sale_order_date,
+                        'delivery' AS transaction_type,
+                        'cogs' AS category,
+                        dl.delivery_number AS doc_number,
+                        dl.delivery_date AS doc_date,
+                        dl.state AS doc_state,
+                        SUM(aml.debit - aml.credit) AS amount,
+                        dl.accounting_move_id AS move_id,
+                        (SELECT id FROM res_currency ORDER BY id LIMIT 1) AS currency_id
+                    FROM sales_delivery dl
+                    JOIN sales_sales_order so ON so.id = dl.sales_order_id
+                    JOIN accounting_move am ON am.id = dl.accounting_move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    JOIN accounting_account_type at ON at.id = aa.type_id
+                    WHERE am.state = 'posted' AND at.code = 'expense'
+                    GROUP BY so.id, so.sales_code, so.date_ordered, so.create_date,
+                             dl.id, dl.delivery_number, dl.delivery_date,
+                             dl.state, dl.accounting_move_id
+
+                    UNION ALL
+
+                    -- Commission: expense lines on invoice moves
+                    SELECT
+                        so.id AS sale_order_id,
+                        so.sales_code AS sale_order_name,
+                        COALESCE(so.date_ordered, so.create_date::date) AS sale_order_date,
+                        'invoice' AS transaction_type,
+                        'commission' AS category,
+                        inv.invoice_number AS doc_number,
+                        inv.invoice_date AS doc_date,
+                        inv.state AS doc_state,
+                        SUM(aml.debit - aml.credit) AS amount,
+                        inv.accounting_move_id AS move_id,
+                        (SELECT id FROM res_currency ORDER BY id LIMIT 1) AS currency_id
+                    FROM sales_invoice inv
+                    JOIN sales_sales_order so ON so.id = inv.sales_order_id
+                    JOIN accounting_move am ON am.id = inv.accounting_move_id
+                    JOIN accounting_move_line aml ON aml.move_id = am.id
+                    JOIN accounting_account aa ON aa.id = aml.account_id
+                    JOIN accounting_account_type at ON at.id = aa.type_id
+                    WHERE am.state = 'posted' AND at.code = 'expense'
+                    GROUP BY so.id, so.sales_code, so.date_ordered, so.create_date,
+                             inv.id, inv.invoice_number, inv.invoice_date,
+                             inv.state, inv.accounting_move_id
+
+                    UNION ALL
+
+                    -- Payments: posted payments linked to invoice's SO
+                    SELECT
+                        so.id AS sale_order_id,
+                        so.sales_code AS sale_order_name,
+                        COALESCE(so.date_ordered, so.create_date::date) AS sale_order_date,
+                        'payment' AS transaction_type,
+                        'payment' AS category,
+                        pay.payment_number AS doc_number,
+                        pay.payment_date AS doc_date,
+                        pay.state AS doc_state,
+                        pay.amount AS amount,
+                        pay.accounting_move_id AS move_id,
+                        (SELECT id FROM res_currency ORDER BY id LIMIT 1) AS currency_id
+                    FROM sales_payment pay
+                    JOIN sales_invoice inv ON inv.id = pay.invoice_id
+                    JOIN sales_sales_order so ON so.id = inv.sales_order_id
+                    JOIN accounting_move am ON am.id = pay.accounting_move_id
+                    WHERE am.state = 'posted'
+
+                    UNION ALL
+
+                    -- Petty Cash: posted expenses tagged to SO
+                    SELECT
+                        so.id AS sale_order_id,
+                        so.sales_code AS sale_order_name,
+                        COALESCE(so.date_ordered, so.create_date::date) AS sale_order_date,
+                        'petty_cash' AS transaction_type,
+                        'supporting' AS category,
+                        pce.name AS doc_number,
+                        pce.date AS doc_date,
+                        pce.state AS doc_state,
+                        pce.total_amount AS amount,
+                        pce.move_id AS move_id,
+                        (SELECT id FROM res_currency ORDER BY id LIMIT 1) AS currency_id
+                    FROM accounting_petty_cash_expense pce
+                    JOIN sales_sales_order so ON so.id = pce.sales_order_id
+                    JOIN accounting_move am ON am.id = pce.move_id
+                    WHERE am.state = 'posted'
+
+                    UNION ALL
+
+                    -- Service Bills: posted bills from service POs tagged to SO
+                    SELECT
+                        so.id AS sale_order_id,
+                        so.sales_code AS sale_order_name,
+                        COALESCE(so.date_ordered, so.create_date::date) AS sale_order_date,
+                        'service_bill' AS transaction_type,
+                        'supporting' AS category,
+                        pb.bill_number AS doc_number,
+                        pb.bill_date AS doc_date,
+                        pb.state AS doc_state,
+                        pb.amount_total AS amount,
+                        pb.accounting_move_id AS move_id,
+                        (SELECT id FROM res_currency ORDER BY id LIMIT 1) AS currency_id
+                    FROM purchases_bill pb
+                    JOIN purchases_purchase_order po ON po.id = pb.purchase_order_id
+                    JOIN sales_sales_order so ON so.id = po.sales_order_id
+                    JOIN accounting_move am ON am.id = pb.accounting_move_id
+                    WHERE am.state = 'posted'
+                      AND po.order_type = 'service'
+                      AND po.sales_order_id IS NOT NULL
+
+                ) sub
+            )
+        """ % (self._table,))

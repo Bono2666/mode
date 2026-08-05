@@ -594,9 +594,22 @@ Filter `am.state = 'posted'` on all accounting moves. `account_type = 'expense'`
 **Menu:** `Accounting → Reporting → Sales Order Profitability`
 - RBAC entry in `general.menu` with proper `ir_ui_menu_id`; read-only ACL.
 
-**Drill-down:** Click SO row → opens form view of the Sales Order.
+**Drill-down:** Click SO row → opens form view of the Sales Order with a **"View Transactions"** button that opens a filtered list of all contributing transactions (Invoices, Deliveries, Payments, Petty Cash expenses, Service Bills).
 
-**PDF:** `qweb-html` report, Odoo Print button.
+**PDF:** `qweb-html` report — includes a per-SO **transaction breakdown table** below each SO row showing type, category, document number, date, status, amount, and linked journal entry.
+
+**Transaction Detail Model:** `accounting.sales_profitability_transaction` (SQL view, `_auto = False`), one row per source document via `UNION ALL`:
+
+| Source Document | Type | Category | Amount |
+|---|---|---|---|
+| `sales_invoice` (posted) | `invoice` | `revenue` | `amount_total` |
+| `sales_delivery` COGS lines (posted) | `delivery` | `cogs` | SUM debit-credit of expense lines |
+| `sales_invoice` commission lines (posted) | `invoice` | `commission` | SUM debit-credit of expense lines |
+| `sales_payment` (posted, via invoice) | `payment` | `payment` | `amount` |
+| `accounting_petty_cash_expense` (posted, tagged) | `petty_cash` | `supporting` | `total_amount` |
+| `purchases_bill` (posted, service PO, tagged) | `service_bill` | `supporting` | `amount_total` |
+
+ACL: read-only. No menu entry — accessed via drill-down from the profitability report.
 
 See full PRD: §"Sales Order Profitability Report — PRD" in the Appendix at end of this file.
 
@@ -1202,6 +1215,51 @@ class AccountingSalesProfitabilityReport(models.Model):
 
 - Hanya SO dengan invoice **posted** dan delivery **done** yang dihitung — SO yang masih draft/tanpa transaksi tampil dengan Revenue/Cost = 0.
 
+### 5.3 Model baru: `accounting.sales_profitability_transaction` (SQL View, Detail)
+
+Per-document transaction detail — one row per source document, accessed via "View Transactions" button on the profitability report form (per-row click). Also rendered in the PDF report per-SO.
+
+```python
+class AccountingSalesProfitabilityTransaction(models.Model):
+    _name = 'accounting.sales_profitability_transaction'
+    _description = 'Sales Order Profitability Transaction Detail'
+    _auto = False
+    _order = 'sale_order_name, doc_date desc'
+
+    sale_order_id = fields.Many2one('sales.sales_order')
+    sale_order_name = fields.Char()
+    sale_order_date = fields.Date()
+    transaction_type = fields.Selection([
+        ('invoice', 'Invoice'), ('delivery', 'Delivery'),
+        ('payment', 'Payment'), ('petty_cash', 'Petty Cash'),
+        ('service_bill', 'Service Bill'),
+    ])
+    category = fields.Selection([
+        ('revenue', 'Revenue'), ('cogs', 'COGS'),
+        ('commission', 'Commission'), ('supporting', 'Supporting Cost'),
+        ('payment', 'Payment'),
+    ])
+    doc_number = fields.Char()
+    doc_date = fields.Date()
+    doc_state = fields.Char()
+    amount = fields.Monetary()
+    move_id = fields.Many2one('accounting.move')
+    currency_id = fields.Many2one('res.currency')
+```
+
+**UNION ALL sources:**
+
+| Source Document | Type | Category | Amount |
+|---|---|---|---|
+| `sales_invoice` (posted, income lines) | `invoice` | `revenue` | `amount_total` |
+| `sales_delivery` (COGS move posted) | `delivery` | `cogs` | SUM expense lines |
+| `sales_invoice` (commission lines posted) | `invoice` | `commission` | SUM expense lines |
+| `sales_payment` (posted, via invoice) | `payment` | `payment` | `amount` |
+| `accounting_petty_cash_expense` (posted, tagged) | `petty_cash` | `supporting` | `total_amount` |
+| `purchases_bill` (posted, service PO, tagged) | `service_bill` | `supporting` | `amount_total` |
+
+Filter: `am.state = 'posted'` + `account_type IN ('income','expense')`. No menu entry — accessed via drill-down from the profitability report.
+
 ## 6. Wizard — Filter Laporan
 
 **Model:** `accounting.sales_profitability_report.wizard` (TransientModel)
@@ -1219,14 +1277,14 @@ Tombol **"Tampilkan"** membuka list view dengan domain filter via context.
 
 - **Menu:** `Accounting → Reporting → Sales Order Profitability`
 - **List View:** kolom SO Number, Customer, Order Date, Total Revenue, COGS, Commission Cost, Supporting Cost, Total Cost, Margin, Margin %.
-- **Drill-down:** klik baris SO → buka form Sales Order terkait.
-- **Cetak PDF:** `qweb-html`, tombol Print bawaan Odoo.
+- **Drill-down:** klik baris SO → buka form view profitability (read-only) → tombol "View Transactions" → buka list `accounting.sales_profitability_transaction` filtered per SO (Invoice, Delivery, Payment, Petty Cash, Service Bill).
+- **Cetak PDF:** `qweb-html` — termasuk tabel rincian transaksi per SO di bawah setiap baris SO.
 - **Form Petty Cash Expense:** tambahkan field `sales_order_id` (Many2one, opsional) di form `accounting.petty.cash.expense`.
 
 ## 8. Integrasi RBAC
 
 1. Entry baru di `general.menu` — `sales_profitability_report` dengan `ir_ui_menu_id` ter-set.
-2. ACL read-only (`ir.model.access.csv`) untuk model `accounting.sales_profitability_report` dan wizard-nya.
+2. ACL read-only (`ir.model.access.csv`) untuk model `accounting.sales_profitability_report`, `accounting.sales_profitability_transaction`, dan wizard-nya.
 
 ## 9. Fase Berikutnya (Out of Scope v1)
 
@@ -1252,12 +1310,13 @@ Tombol **"Tampilkan"** membuka list view dengan domain filter via context.
 
 | File/Area | Perubahan |
 |---|---|
-| `accounting/models/` | Model baru `accounting.sales_profitability_report` (SQL view) |
-| `accounting/models/` | Tambah field `sales_order_id` di `accounting.petty.cash.expense` |
-| `accounting/views/` | Tambah field `sales_order_id` di form view `accounting.petty.cash.expense` |
+| `accounting/models/` | Model baru `accounting.sales_profitability_report` (SQL view) + `accounting.sales_profitability_transaction` (SQL view, detail per-document) |
+| `accounting/models/` | Tambah `sales_order_id` di `accounting.petty.cash.expense` |
+| `accounting/views/` | Tambah `sales_order_id` di form view `accounting.petty.cash.expense` |
+| `accounting/views/` | Form view + tree view baru untuk profitability report (drill-down button) + tree view untuk transaction detail |
+| `accounting/views/templates.xml` | PDF report: tambahkan tabel rincian transaksi per SO |
 | `accounting/wizard/` | Wizard baru `accounting.sales_profitability_report.wizard` |
-| `accounting/views/` | List view report + wizard form view |
-| `accounting/security/ir.model.access.csv` | ACL read-only untuk model & wizard baru |
+| `accounting/security/ir.model.access.csv` | ACL read-only untuk model & wizard baru + transaction detail |
 | `general/data/` | Entry baru di `general.menu` dengan `ir_ui_menu_id` ter-set |
 | `tests/` | Test suite sesuai §10 |
 
