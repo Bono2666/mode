@@ -46,11 +46,5 @@
             <field name="menu_name">Purchase Approval</field>
             <field name="parent_menu">purchases</field>
         </record>
-        <record id="purchases_service_categories_menu" model="general.menu">
-            <field name="menu_id">service_categories</field>
-            <field name="menu_name">Service Categories</field>
-            <field name="parent_menu">purchases</field>
-            <field name="ir_ui_menu_id" ref="purchases.service_categories_menu_act"/>
-        </record>
     </data>
 </odoo>
