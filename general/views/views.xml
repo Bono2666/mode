@@ -434,6 +434,9 @@
     <record id="base.menu_management" model="ir.ui.menu">
         <field name="active" eval="False"/>
     </record>
+
+    <!-- Sembunyikan menu Dashboards untuk semua user -->
+    <function model="ir.ui.menu" name="_hide_dashboards_menu"/>
     
     <!-- actions opening views on models -->
     <record id="general.action_my_preferences" model="ir.actions.act_window">

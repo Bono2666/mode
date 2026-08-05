@@ -882,6 +882,17 @@ class IrUiMenu(models.Model):
         return super().load_web_menus(debug)
 
     @api.model
+    def _hide_dashboards_menu(self):
+        """Sembunyikan menu Dashboards (root) agar tidak tampil di navbar."""
+        dashboards_menu = self.sudo().search([
+            ('name', '=', 'Dashboards'),
+            ('parent_id', '=', False),
+        ], limit=1)
+        if dashboards_menu and dashboards_menu.active:
+            dashboards_menu.write({'active': False})
+            _logger.info('[menu-hide] Dashboards root menu deactivated')
+
+    @api.model
     def load_menus(self, debug):
         _logger.info('[menu-load] load_menus called for user %s (uid=%s)', self.env.user.login, self.env.uid)
         result = super(IrUiMenu, self).load_menus(debug)
